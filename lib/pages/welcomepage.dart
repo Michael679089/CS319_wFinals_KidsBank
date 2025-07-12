@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/kids_dashboard.dart';
+import 'package:wfinals_kidsbank/pages/login_page.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -92,7 +92,7 @@ class WelcomePage extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const KidsDashboard()),
+                            MaterialPageRoute(builder: (context) => const LoginPage()),
                           );
                         },
                         style: ElevatedButton.styleFrom(
