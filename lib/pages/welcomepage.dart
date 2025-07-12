@@ -45,8 +45,6 @@ class WelcomePage extends StatelessWidget {
                   ),
                 ),
 
-                // Removed: const SizedBox(height: 5),
-
                 // Pig image
                 Center(
                   child: Image.asset(
