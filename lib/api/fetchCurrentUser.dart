@@ -32,7 +32,7 @@ Future<String> fetchPrintCurrentUserJSON() async {
     };
     return jsonEncode(userMap);
   } else {
-    print('No user is currently signed in.');
+    print('fetchPrintCurrentUser: No user is currently signed in.');
     return jsonEncode(null);
   }
 }
