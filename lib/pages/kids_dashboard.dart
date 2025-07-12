@@ -53,7 +53,7 @@ class _KidsDashboardState extends State<KidsDashboard> {
                         TextField(
                           controller: titleController,
                           decoration: InputDecoration(
-                            hintText: "What will you withdraw?",
+                            hintText: "What are you withdrawing (for)?",
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pages/kids_dashboard.dart'; // ✅ relative import
+import 'pages/welcomepage.dart'; // ✅ relative import
 
 void main() {
   runApp(const MyApp());
@@ -11,13 +11,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // ✅ hides debug banner
+      debugShowCheckedModeBanner: false, //hides debug banner
       title: 'Kids Dashboard',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: KidsDashboard(), // ✅ set KidsDashboard as home screen
+      home: WelcomePage(), //set KidsDashboard as home screen
     );
   }
 }
