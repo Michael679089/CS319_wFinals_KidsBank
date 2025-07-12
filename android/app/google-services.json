@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "545950721467",
+    "project_id": "kidsbank-45877",
+    "storage_bucket": "kidsbank-45877.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:545950721467:android:251b00124b3417fe12909e",
+        "android_client_info": {
+          "package_name": "com.example.wfinals_kidsbank"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "545950721467-t54nhtn1aemijk12n1hkjvan3fu7kd04.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBO2T-WpcjxKcsBZJ4mPn7mXE5tFVATAKQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "545950721467-t54nhtn1aemijk12n1hkjvan3fu7kd04.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "545950721467-opjfag64c1g1d2re54g414re710vlqjq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.wfinalsKidsbank"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

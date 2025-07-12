@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/pages/login_page.dart';
+import 'package:wfinals_kidsbank/pages/signup_page.dart';
+
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -122,7 +124,7 @@ class WelcomePage extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const Placeholder()),
+                            MaterialPageRoute(builder: (context) => const SignupPage()),
                           );
                         },
                         style: ElevatedButton.styleFrom(
