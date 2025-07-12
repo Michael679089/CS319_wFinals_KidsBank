@@ -11,9 +11,8 @@ void login() {
 }
 
 
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -24,13 +23,12 @@ class MyHomePage extends StatefulWidget {
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
 
-  final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> { // The Widget Builder
+class _LoginPageState extends State<LoginPage> { // The Widget Builder
   List<QueryDocumentSnapshot<Map<String, dynamic>>> firestoreDocs = [];
 
   @override
