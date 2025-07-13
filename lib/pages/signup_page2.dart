@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'login_page.dart';
 
 class SignupCardPage extends StatefulWidget {
   final String email;
@@ -33,7 +34,7 @@ class _SignupCardPageState extends State<SignupCardPage> {
   late TextEditingController _expController;
   late TextEditingController _ccvController;
 
-  bool _obscureCcv = true;
+  final bool _obscureCcv = true;
 
   @override
   void initState() {
@@ -103,6 +104,14 @@ class _SignupCardPageState extends State<SignupCardPage> {
       });
 
       _showTopSnackBar('Account registered successfully!', isError: false);
+
+      // Wait for the snackbar to finish
+      await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+      // Navigate to the login page
+      Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
     } catch (e) {
       _showTopSnackBar('Error: ${e.toString()}');
     }

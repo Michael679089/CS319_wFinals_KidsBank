@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'signup_page.dart';
-import 'kids_dashboard.dart';
+import 'parent_setup_page.dart';
+import 'kids_setup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -41,61 +42,77 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-  final familyName = _familyNameController.text.trim();
-  final password = _passwordController.text;
+    final familyName = _familyNameController.text.trim();
+    final password = _passwordController.text;
 
-  if (familyName.isEmpty || password.isEmpty) {
-    if (!mounted) return;
-    _showTopSnackBar('Family name and password are required!');
-    return;
-  }
-
-  try {
-    // ✅ AWAIT 1: Firebase query
-    final userSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('family_name', isEqualTo: familyName)
-        .limit(1)
-        .get();
-
-    // Check after await
-    if (!mounted) return;
-
-    if (userSnapshot.docs.isEmpty) {
-      _showTopSnackBar('Family name not found!');
+    if (familyName.isEmpty || password.isEmpty) {
+      if (!mounted) return;
+      _showTopSnackBar('Family name and password are required!');
       return;
     }
 
-    final userEmail = userSnapshot.docs.first.get('email');
+    try {
+      // 1. Check if family name exists
+      final userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('family_name', isEqualTo: familyName)
+          .limit(1)
+          .get();
 
-    // AWAIT 2: Firebase Auth
-    await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: userEmail,
-      password: password,
-    );
+      if (!mounted) return;
 
-    // Check again after await
-    if (!mounted) return;
+      if (userSnapshot.docs.isEmpty) {
+        _showTopSnackBar('Family name not found!');
+        return;
+      }
 
-    if (_keepLoggedIn) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('savedFamilyName', familyName);
-      await prefs.setString('savedPassword', password);
-      await prefs.setBool('keepLoggedIn', true);
+      final userDoc = userSnapshot.docs.first;
+      final userEmail = userDoc.get('email');
+
+      // 2. Sign in to Firebase Auth
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: userEmail,
+        password: password,
+      );
+
+      if (_keepLoggedIn) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('savedFamilyName', familyName);
+        await prefs.setString('savedPassword', password);
+        await prefs.setBool('keepLoggedIn', true);
+      }
+
+      _showTopSnackBar('Login successful!', isError: false);
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      // 3. Check if parent setup is complete
+      final parentDoc = await FirebaseFirestore.instance
+          .collection('parents')
+          .doc(currentUser.uid)
+          .get();
+
+      if (!mounted) return;
+
+      if (parentDoc.exists) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const KidsSetupPage()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ParentSetupPage()),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showTopSnackBar('Login failed: ${e.toString()}');
     }
-
-    // Safe to use context now
-    _showTopSnackBar('Login successful!', isError: false);
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const KidsDashboard()),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    _showTopSnackBar('Login failed: ${e.toString()}');
   }
-}
+
   void _showTopSnackBar(String message, {bool isError = true}) {
     final snackBar = SnackBar(
       content: Text(

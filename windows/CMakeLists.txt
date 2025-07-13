@@ -1,5 +1,6 @@
 # Project-level configuration.
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.5...3.20)
+set(CMAKE_CXX_STANDARD 17)
 project(wfinals_kidsbank LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
