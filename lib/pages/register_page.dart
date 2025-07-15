@@ -8,9 +8,53 @@ import 'package:wfinals_kidsbank/pages/login_page.dart';
 
 import '../api/fetchCurrentUser.dart';
 
+class Register_RoleSelector_Page extends StatelessWidget {
+  const Register_RoleSelector_Page({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    debugPrint("You called RoleSelectPage.");
 
-class RegisterPage extends StatelessWidget {
+    return Scaffold(
+      appBar: AppBar(title: Text('Select Role')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                debugPrint("user selected child");
+                // Navigate back to Login Page.
+                Navigator.pop(context);
+              },
+              child: Text('Register as Child'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                debugPrint("user selected parent");
+                // Navigate to RegisterPage with selected role
+
+                debugPrint("Redirecting to RegisterPage");
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => _RegisterPage(selectedRole: "Parent"),
+                  ),
+                );
+              },
+              child: Text('Register as Parent'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterPage extends StatelessWidget {
+  final String selectedRole;
+
+  const _RegisterPage({super.key, required this.selectedRole});
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +70,15 @@ class RegisterPage extends StatelessWidget {
     var familyNameController = TextEditingController();
 
     // MY Widget Variables:
-    const Text myTitleText = const Text( 
-      'REGISTER PAGE', 
+    const Text myTitleText = const Text(
+      'REGISTER PAGE',
       style: TextStyle(fontSize: 32),
     );
 
     SizedBox mySizedBox = SizedBox(height: 50);
     const Text myRegisterText = Text(
-      'Already have an account? Click here', 
-      style: TextStyle(
-        color: Colors.blueAccent
-      ) 
+      'Already have an account? Click here',
+      style: TextStyle(color: Colors.blueAccent),
     );
 
     TextField myFamilyNameTextField = TextField(
@@ -60,7 +102,7 @@ class RegisterPage extends StatelessWidget {
         labelText: 'Enter Password',
       ),
     );
-    
+
     ElevatedButton submitBTN = ElevatedButton(
       onPressed: () async {
         String email = emailController.text.trim();
@@ -71,40 +113,47 @@ class RegisterPage extends StatelessWidget {
         debugPrint('pass: $pass');
 
         if (email.isEmpty && pass.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('WARNING: Fields are empty')));
-        }
-        else if (email.isEmpty && pass.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('WARNING: Email is empty')));
-        }
-        else if (email.isNotEmpty && pass.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('WARNING: Pass is empty')));
-        }
-        else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registered!')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('WARNING: Fields are empty')));
+        } else if (email.isEmpty && pass.isNotEmpty) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('WARNING: Email is empty')));
+        } else if (email.isNotEmpty && pass.isEmpty) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('WARNING: Pass is empty')));
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Registered!')));
 
-          final UserCredential? myCreateAuthAccResponse = await myFireAuthAPI.createAccountToFirebaseAuth(
-              email: email,
-              password: pass,
-              familyName: familyName,
-          );          
+          final UserCredential? myCreateAuthAccResponse = await myFireAuthAPI
+              .createAccountToFirebaseAuth(
+                email: email,
+                password: pass,
+                familyName: familyName,
+              );
           if (myCreateAuthAccResponse != Null) {
             passController.text = "";
           }
         }
-      }, 
-      child: Text('Register'), 
+      },
+      child: Text('Register'),
     );
     InkWell myTextLoginPageRedirect = InkWell(
       onTap: () {
-        Navigator.pop(context, MaterialPageRoute(builder:(context) => LoginPage()) );
+        Navigator.pop(
+          context,
+          MaterialPageRoute(builder: (context) => LoginPage()),
+        );
       },
       child: Text(
-        "Already have an account? Login Page here", 
-        style: TextStyle(color: Colors.blueAccent)
-      )
+        "Already have an account? Login Page here",
+        style: TextStyle(color: Colors.blueAccent),
+      ),
     );
-    
-
 
     return Scaffold(
       body: Column(
@@ -120,7 +169,7 @@ class RegisterPage extends StatelessWidget {
           mySizedBox,
           myTextLoginPageRedirect,
         ],
-      )
+      ),
     );
   }
 }

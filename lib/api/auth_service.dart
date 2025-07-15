@@ -8,10 +8,10 @@ import 'package:wfinals_kidsbank/database/models/user_model.dart';
 class AuthService {
   final FirestoreAPI firestoreAPI = FirestoreAPI();
 
-  // functions: 
+  // functions:
 
   // Create
-  Future<UserCredential?> createAccountToFirebaseAuth({
+  Future<Map<String, Object>?> createAccountToFirebaseAuth({
     required String email,
     required String password,
     required String familyName,
@@ -20,10 +20,8 @@ class AuthService {
 
     debugPrint("Creating an Auth Account...");
     try {
-      userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
       debugPrint("Auth Account created for: ${userCredential.user?.email}");
     } on FirebaseAuthException catch (e) {
       debugPrint('Firebase Auth Error: ${e.code} - ${e.message}');
@@ -35,18 +33,23 @@ class AuthService {
 
     // ✅ At this point, we know userCredential is non-null
     final String userId = userCredential.user!.uid;
-
-    // Create user and parent objects
     final newUser = UserModel(
       userId: userId,
       familyName: familyName,
+      email: email,
     );
 
-    // save the NEW user to user collection -> firestore api
-    debugPrint("Saving the auth created to user collecton and parent collection");
-    await firestoreAPI.addAuthUserToUserCollection(newUser);
+    debugPrint("Check if email is legit");
+    verifyEmail(userCredential.user);
 
-    return userCredential;
+    return {"status": "success", "user": newUser};
+  }
+
+  Future<void> verifyEmail(User? user) async {
+    if (user != null && !user.emailVerified) {
+      await user.sendEmailVerification();
+      debugPrint("Verification email sent to ${user.email}");
+    }
   }
 
   /// Google Sign-In and saving to Firestore
@@ -62,14 +65,16 @@ class AuthService {
         return null;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
       final User? user = userCredential.user;
 
       if (user == null) {

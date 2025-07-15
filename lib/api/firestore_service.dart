@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:wfinals_kidsbank/database/models/user_model.dart';
 import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 
-
 class FirestoreAPI {
   final FirebaseFirestore db = FirebaseFirestore.instance;
 
@@ -22,8 +21,6 @@ class FirestoreAPI {
       debugPrint("userId: ${user.userId}; familyName: ${user.familyName}");
 
       debugPrint("➡️ Now creating Parent document...");
-      await addToParentCollection(user.userId);
-
     } catch (e) {
       debugPrint("❌ ERROR: Failed to create user! $e");
     }
@@ -46,7 +43,9 @@ class FirestoreAPI {
           'familyName': 'Administrator',
           'createdAt': FieldValue.serverTimestamp(),
         });
-        debugPrint('initializeTheDatabase: Default admin_template user created.');
+        debugPrint(
+          'initializeTheDatabase: Default admin_template user created.',
+        );
       }
 
       // Optional: initialize a sample parent document
@@ -72,7 +71,7 @@ class FirestoreAPI {
     final CollectionReference parentsCollection = db.collection('parents');
 
     final ParentModel parent = ParentModel(
-      parentId: userId,           // using userId as parentId
+      parentId: userId, // using userId as parentId
       firstName: "",
       lastName: "",
       pincode: "0",
