@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/pages/authentication_page.dart';
-import 'kids_dashboard.dart';
+import 'parent_dashboard.dart';
 
 class ParentLoginPage extends StatefulWidget {
   const ParentLoginPage({super.key});
@@ -83,7 +83,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const KidsDashboard()),
+        MaterialPageRoute(builder: (_) => const ParentDashboard()),
       );
     } catch (e) {
       _showSnackbar("Error: ${e.toString()}");

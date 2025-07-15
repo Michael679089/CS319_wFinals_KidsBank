@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wfinals_kidsbank/pages/kids_login_page.dart';
 import 'welcomepage.dart';
-// ignore: unnecessary_import
-import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -18,11 +16,13 @@ class AuthenticationPage extends StatefulWidget {
 class _AuthenticationPageState extends State<AuthenticationPage> {
   String? selectedName;
   String? selectedRole;
+  String? selectedKidDocId;
+  String? selectedAvatarPath;
 
   String parentName = '';
   String parentAvatar = '';
   String userId = '';
-  List<Map<String, dynamic>> kids = [];
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> kidsDocs = [];
 
   @override
   void initState() {
@@ -52,7 +52,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
           .get();
 
       setState(() {
-        kids = kidsSnapshot.docs.map((doc) => doc.data()).toList();
+        kidsDocs = kidsSnapshot.docs;
       });
     }
   }
@@ -60,50 +60,48 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-  canPop: false, // Prevent back navigation
-   onPopInvokedWithResult: (didPop, result) async {
-    // Do nothing when back is pressed
-  },
-    child: Scaffold(
-      backgroundColor: const Color(0xFFFFCA26),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  Text(
-                    "Hi!",
-                    style: TextStyle(
-                      fontSize: 56,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: GoogleFonts.fredoka().fontFamily,
-                    ),
-                  ),
-                  Text(
-                    "Who is using?",
-                    style: TextStyle(
-                      fontSize: 28.8,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: GoogleFonts.fredoka().fontFamily,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  /// Main Container (full height)
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFCA26),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.black, width: 2),
+      canPop: false, // Prevent back navigation
+      onPopInvokedWithResult: (didPop, result) async {},
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFCA26),
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    Text(
+                      "Hi!",
+                      style: TextStyle(
+                        fontSize: 56,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: GoogleFonts.fredoka().fontFamily,
                       ),
-                      padding: const EdgeInsets.all(16),
-                      child: LayoutBuilder(
+                    ),
+                    Text(
+                      "Who is using?",
+                      style: TextStyle(
+                        fontSize: 28.8,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: GoogleFonts.fredoka().fontFamily,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    /// Main Container (full height)
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFCA26),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.black, width: 2),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: LayoutBuilder(
                           builder: (context, constraints) {
                             return SingleChildScrollView(
                               child: ConstrainedBox(
@@ -118,30 +116,32 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                           setState(() {
                                             selectedName = parentName;
                                             selectedRole = "parent";
+                                            selectedKidDocId = null; // clear kid selection
                                           });
                                         },
                                         child: Row(
                                           children: [
-                                              Container(
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black.withAlpha((0.3 * 255).toInt()),
-                                                        blurRadius: 10,
-                                                        spreadRadius: 2,
-                                                        offset: const Offset(0, 5),
-                                                      ),
-                                                    ],
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withAlpha((0.3 * 255).toInt()),
+                                                    blurRadius: 10,
+                                                    spreadRadius: 2,
+                                                    offset: const Offset(0, 5),
                                                   ),
-                                            child: CircleAvatar(
-                                              backgroundImage: AssetImage(parentAvatar),
-                                              radius: 60,
-                                              backgroundColor: selectedName == parentName && selectedRole == "parent"
-                                                  ? Colors.blueAccent
-                                                  : Colors.transparent,
+                                                ],
+                                              ),
+                                              child: CircleAvatar(
+                                                backgroundImage: AssetImage(parentAvatar),
+                                                radius: 60,
+                                                backgroundColor:
+                                                    selectedName == parentName && selectedRole == "parent"
+                                                        ? Colors.blueAccent
+                                                        : Colors.transparent,
+                                              ),
                                             ),
-                                          ),
                                             const SizedBox(width: 16),
                                             Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,17 +175,20 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                         alignment: WrapAlignment.start,
                                         spacing: 16,
                                         runSpacing: 16,
-                                        children: kids.map((kid) {
+                                        children: kidsDocs.map((kidDoc) {
+                                          final kid = kidDoc.data();
                                           return GestureDetector(
                                             onTap: () {
                                               setState(() {
                                                 selectedName = kid['firstName'];
                                                 selectedRole = "kid";
+                                                selectedKidDocId = kidDoc.id;
+                                                selectedAvatarPath = kid['avatar'];
                                               });
                                             },
                                             child: Column(
                                               children: [
-                                              Container(
+                                                Container(
                                                   decoration: BoxDecoration(
                                                     shape: BoxShape.circle,
                                                     boxShadow: [
@@ -197,15 +200,15 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                       ),
                                                     ],
                                                   ),
-                                               child: CircleAvatar(
-                                                  backgroundImage: AssetImage(kid['avatar']),
-                                                  radius: 40,
-                                                  backgroundColor:
-                                                      selectedName == kid['firstName'] && selectedRole == "kid"
-                                                          ? Colors.blueAccent
-                                                          : Colors.transparent,
+                                                  child: CircleAvatar(
+                                                    backgroundImage: AssetImage(kid['avatar']),
+                                                    radius: 40,
+                                                    backgroundColor:
+                                                        selectedName == kid['firstName'] && selectedRole == "kid"
+                                                            ? Colors.blueAccent
+                                                            : Colors.transparent,
+                                                  ),
                                                 ),
-                                              ),
                                                 const SizedBox(height: 6),
                                                 Text(
                                                   kid['firstName'],
@@ -223,7 +226,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
 
                                       const Spacer(),
 
-                                      // Login Button always at bottom of container
+                                      // Login Button always at bottom
                                       Padding(
                                         padding: const EdgeInsets.only(top: 30.0),
                                         child: SizedBox(
@@ -238,18 +241,21 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                               }
 
                                               if (selectedRole == 'parent') {
-                                                // Navigate to Parent Login Page
                                                 Navigator.pushReplacement(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => ParentLoginPage(),
+                                                    builder: (context) => const ParentLoginPage(),
                                                   ),
                                                 );
                                               } else {
                                                 Navigator.pushReplacement(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => KidsLoginPage(),
+                                                    builder: (context) => KidsLoginPage(
+                                                      kidDocId: selectedKidDocId!,
+                                                      kidName: selectedName!,
+                                                      avatarPath: selectedAvatarPath!,
+                                                    ),
                                                   ),
                                                 );
                                               }
@@ -263,18 +269,6 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                               ),
                                               elevation: 2,
                                               shadowColor: Colors.grey.withAlpha(128),
-                                            ).copyWith(
-                                              elevation: WidgetStateProperty.resolveWith<double>((states) {
-                                                if (states.contains(WidgetState.pressed)) return 12;
-                                                if (states.contains(WidgetState.hovered)) return 8;
-                                                return 2;
-                                              }),
-                                              shadowColor: WidgetStateProperty.resolveWith<Color>((states) {
-                                                if (states.contains(WidgetState.pressed) || states.contains(WidgetState.hovered)) {
-                                                  return Colors.black.withAlpha(180);
-                                                }
-                                                return Colors.grey.withAlpha(128);
-                                              }),
                                             ),
                                             child: Text(
                                               selectedName != null ? 'Log in as $selectedName' : 'Log in',
@@ -298,8 +292,11 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                           onPressed: () async {
                                             await FirebaseAuth.instance.signOut();
                                             if (!mounted) return;
-                                            // ignore: use_build_context_synchronously
-                                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const WelcomePage()));
+                                            Navigator.pushReplacement(
+                                              // ignore: use_build_context_synchronously
+                                              context,
+                                              MaterialPageRoute(builder: (context) => const WelcomePage()),
+                                            );
                                           },
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.black,
@@ -319,8 +316,6 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                           ),
                                         ),
                                       ),
-
-                                      
                                     ],
                                   ),
                                 ),
@@ -328,29 +323,29 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                             );
                           },
                         ),
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 20),
-                ],
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          /// Owl image in front
-          Positioned(
-            top: 43,
-            right: -25,
-            child: Image.asset(
-              'assets/owl.png',
-              height: 150,
-              width: 240,
-              fit: BoxFit.contain,
+            /// Owl image
+            Positioned(
+              top: 43,
+              right: -25,
+              child: Image.asset(
+                'assets/owl.png',
+                height: 150,
+                width: 240,
+                fit: BoxFit.contain,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }

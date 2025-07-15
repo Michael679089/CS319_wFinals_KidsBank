@@ -1,38 +1,122 @@
+// imports
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart'; // Uncomment for Firebase
-import 'kids_chores_page.dart';
+import 'package:wfinals_kidsbank/pages/kids_chores_page.dart';
+import 'package:wfinals_kidsbank/pages/kids_drawer.dart';
 
 class KidsDashboard extends StatefulWidget {
-  const KidsDashboard({super.key});
+  final String kidId;
+
+  const KidsDashboard({super.key, required this.kidId});
 
   @override
   State<KidsDashboard> createState() => _KidsDashboardState();
 }
 
 class _KidsDashboardState extends State<KidsDashboard> {
-  String kidName = "Jane"; // later fetch from Firebase
-  double balance = 25.75; // later fetch from Firebase
+  String kidName = '';
+  double balance = 0.0;
+  bool isLoading = true;
 
-  final List<Map<String, dynamic>> chores = [
-    {'title': 'Clean Room', 'description': 'Tomorrow', 'price': 3},
-    {'title': 'Lababo Duty', 'description': 'Tomorrow', 'price': 8},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchKidInfo();
+  }
 
-  void _showWithdrawModal(BuildContext context) {
+  Future<void> fetchKidInfo() async {
+    try {
+      final kidSnapshot = await FirebaseFirestore.instance
+          .collection('kids')
+          .doc(widget.kidId)
+          .get();
+
+      if (kidSnapshot.exists) {
+        final kidData = kidSnapshot.data()!;
+        setState(() {
+          kidName = kidData['firstName'];
+        });
+      }
+
+      final paymentSnapshot = await FirebaseFirestore.instance
+          .collection('kids_payment_info')
+          .doc(widget.kidId)
+          .get();
+
+      setState(() {
+        balance = paymentSnapshot['usable_balance']?.toDouble() ?? 0.0;
+      });
+    } catch (e) {
+      debugPrint('Error fetching kid info: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Stream<List<Map<String, dynamic>>> getChoresStream() {
+    return FirebaseFirestore.instance
+        .collection('chores')
+        .where('kid_id', isEqualTo: widget.kidId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              return {
+                'id': doc.id,
+                'title': doc['chore_title'],
+                'description': doc['chore_desc'],
+                'price': doc['reward_money'],
+                'status': doc['status'],
+              };
+            }).toList());
+  }
+
+  Future<void> markChoreAsCompleted(String choreId, String title) async {
+    await FirebaseFirestore.instance
+        .collection('chores')
+        .doc(choreId)
+        .update({'status': 'completed'});
+
+    await FirebaseFirestore.instance.collection('notifications').add({
+      'type': 'chore_completed',
+      'kid_id': widget.kidId,
+      'kid_name': kidName,
+      'chore_title': title,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    showCustomSnackBar("✅ \"$title\" marked as completed!", isError: false);
+  }
+
+  void showCustomSnackBar(String message, {bool isError = false}) {
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+      backgroundColor: isError ? Colors.red : Colors.green,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.only(top: 50, left: 16, right: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      duration: const Duration(seconds: 2),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+void _showWithdrawModal() {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     double withdrawAmount = 1.0;
 
     showDialog(
       context: context,
-      barrierDismissible: true,
       builder: (context) {
         return Center(
           child: Material(
             color: Colors.transparent,
             child: SingleChildScrollView(
-              reverse: true,
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom * 0.4,
               ),
@@ -47,7 +131,6 @@ class _KidsDashboardState extends State<KidsDashboard> {
                 child: StatefulBuilder(
                   builder: (context, setModalState) {
                     return Column(
-                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         TextField(
@@ -55,10 +138,7 @@ class _KidsDashboardState extends State<KidsDashboard> {
                           decoration: InputDecoration(
                             hintText: "What are you withdrawing (for)?",
                             filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -68,33 +148,17 @@ class _KidsDashboardState extends State<KidsDashboard> {
                           decoration: InputDecoration(
                             hintText: "For what?",
                             filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "Amount",
-                            style: GoogleFonts.fredoka(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             InkWell(
                               onTap: () {
                                 if (withdrawAmount > 1) {
-                                  setModalState(() {
-                                    withdrawAmount -= 1;
-                                  });
+                                  setModalState(() => withdrawAmount -= 1);
                                 }
                               },
                               child: Container(
@@ -111,25 +175,17 @@ class _KidsDashboardState extends State<KidsDashboard> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.white,
                                 border: Border.all(color: Colors.black),
                                 borderRadius: BorderRadius.circular(15),
                               ),
                               child: Text(
                                 "\$${withdrawAmount.toStringAsFixed(2)}",
-                                style: GoogleFonts.fredoka(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const SizedBox(width: 5),
                             InkWell(
-                              onTap: () {
-                                setModalState(() {
-                                  withdrawAmount += 1;
-                                });
-                              },
+                              onTap: () => setModalState(() => withdrawAmount += 1),
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
@@ -144,55 +200,44 @@ class _KidsDashboardState extends State<KidsDashboard> {
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton(
-                          onPressed: () {
-                            final String title = titleController.text.trim();
-                            final String description = descriptionController.text.trim();
+                          onPressed: () async {
+                            final title = titleController.text.trim();
+                            final desc = descriptionController.text.trim();
 
-                            if (title.isEmpty || description.isEmpty || withdrawAmount <= 0) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Please fill in all fields and set a valid amount."),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
+                            if (title.isEmpty || desc.isEmpty || withdrawAmount <= 0) {
+                              showCustomSnackBar("Please fill all fields and enter a valid amount.", isError: true);
                               return;
                             }
 
                             if (withdrawAmount > balance) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Cannot withdraw more than your balance."),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
+                              showCustomSnackBar("Cannot withdraw more than your balance.", isError: true);
                               return;
                             }
+
+                            Navigator.pop(context);
+
+                            await FirebaseFirestore.instance
+                                .collection('kids_payment_info')
+                                .doc(widget.kidId)
+                                .update({
+                              'usable_balance': FieldValue.increment(-withdrawAmount),
+                            });
+
+                            await FirebaseFirestore.instance.collection('notifications').add({
+                              'type': 'withdrawal',
+                              'kid_id': widget.kidId,
+                              'kid_name': kidName,
+                              'title': title,
+                              'description': desc,
+                              'amount': withdrawAmount,
+                              'timestamp': FieldValue.serverTimestamp(),
+                            });
 
                             setState(() {
                               balance -= withdrawAmount;
                             });
 
-                            Navigator.pop(context);
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Withdrawal of \$${withdrawAmount.toStringAsFixed(2)} submitted!",
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-
-                            // Uncomment for Firestore saving
-                            /*
-                            FirebaseFirestore.instance.collection('withdraw_requests').add({
-                              'kidName': kidName,
-                              'title': title,
-                              'description': description,
-                              'amount': withdrawAmount,
-                              'timestamp': FieldValue.serverTimestamp(),
-                            });
-                            */
+                            showCustomSnackBar("Withdrawal of \$${withdrawAmount.toStringAsFixed(2)} submitted!", isError: false);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF60C56F),
@@ -223,204 +268,246 @@ class _KidsDashboardState extends State<KidsDashboard> {
     );
   }
 
-  void _showEmptyBalanceAlert(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          "Balance Empty",
-          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          "Your balance is empty! You cannot withdraw.",
-          style: GoogleFonts.fredoka(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              "OK",
-              style: GoogleFonts.fredoka(
-                color: const Color(0xFF927BD9),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFFFCA26),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Hello, $kidName",
-                  style: GoogleFonts.fredoka(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFAEDDFF),
-                  borderRadius: BorderRadius.circular(50),
-                  border: Border.all(color: Colors.black, width: 3),
-                ),
-                child: Column(
-                  children: [
-                    Image.asset(
-                      "assets/piggy_bank.png",
-                      height: 200,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "\$${balance.toStringAsFixed(2)}",
-                      style: GoogleFonts.fredoka(
-                        fontSize: 50,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => KidsChoresPage(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF927BD9),
-                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 25),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: const BorderSide(color: Colors.black, width: 2),
-                      ),
-                    ),
-                    child: Text(
-                      "Chores",
-                      style: GoogleFonts.fredoka(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: balance <= 0
-                        ? () => _showEmptyBalanceAlert(context)
-                        : () => _showWithdrawModal(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFD6327),
-                      padding: const EdgeInsets.symmetric(horizontal: 65, vertical: 25),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: const BorderSide(color: Colors.black, width: 2),
-                      ),
-                    ),
-                    child: Text(
-                      "Withdraw",
-                      style: GoogleFonts.fredoka(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "Chores",
-                style: GoogleFonts.fredoka(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Expanded(
-                child: chores.isNotEmpty
-                    ? ListView.builder(
-                        itemCount: chores.length,
-                        itemBuilder: (context, index) {
-                          final chore = chores[index];
-                          return SizedBox(
-                            height: 95,
-                            child: Card(
-                              color: const Color(0xFFEFE6E8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: const BorderSide(color: Colors.black, width: 2),
-                              ),
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              child: ListTile(
-                                leading: const Icon(Icons.check_circle, color: Colors.green),
-                                title: Text(
-                                  chore['title'],
-                                  style: GoogleFonts.fredoka(
-                                    fontSize: 23,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  chore['description'],
-                                  style: GoogleFonts.inter(fontSize: 12),
-                                ),
-                                trailing: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFAEDDFF),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.black, width: 2),
-                                  ),
-                                  child: Text(
-                                    "\$${chore['price']}",
-                                    style: GoogleFonts.fredoka(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {},
+      child: Scaffold(
+        drawer: KidsDrawer(selectedPage: 'dashboard', kidId: widget.kidId),
+        resizeToAvoidBottomInset: false,
+        backgroundColor: const Color(0xFFFFCA26),
+        body: SafeArea(
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "Hello, $kidName",
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 44,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Text(
-                          "No chores assigned yet!",
-                          style: GoogleFonts.fredoka(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
                           ),
+                          Builder(
+                            builder: (context) {
+                              return GestureDetector(
+                                onTap: () {
+                                  Scaffold.of(context).openDrawer();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(0),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.black, width: 2),
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/hamburger_icon.png',
+                                      height: 50,
+                                      width: 50,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Balance Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFAEDDFF),
+                          borderRadius: BorderRadius.circular(50),
+                          border: Border.all(color: Colors.black, width: 3),
+                        ),
+                        child: Column(
+                          children: [
+                            Image.asset('assets/piggy_bank.png', height: 200),
+                            const SizedBox(height: 10),
+                            Text(
+                              "\$${balance.toStringAsFixed(2)}",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 50,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-              ),
-            ],
-          ),
+
+                      const SizedBox(height: 16),
+
+                      // Buttons Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => KidsChoresPage(kidId: widget.kidId),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF927BD9),
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: const BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            child: Text(
+                              "Chores",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: balance <= 0 ? null : _showWithdrawModal,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  balance <= 0 ? Colors.grey : const Color(0xFFFD6327),
+                              padding: const EdgeInsets.symmetric(horizontal: 65, vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: const BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            child: Text(
+                              "Withdraw",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Chores List
+                      Text(
+                        "Chores",
+                        style: GoogleFonts.fredoka(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      Expanded(
+                        child: StreamBuilder<List<Map<String, dynamic>>>(
+                          stream: getChoresStream(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  "No chores assigned yet!",
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final chores = snapshot.data!;
+                            final pendingChores = chores.where((c) => c['status'] == 'pending').toList();
+
+                            if (pendingChores.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  "No chores assigned yet!",
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              itemCount: pendingChores.length,
+                              itemBuilder: (context, index) {
+                                final chore = pendingChores[index];
+                                return GestureDetector(
+                                  onTap: () => markChoreAsCompleted(chore['id'], chore['title']),
+                                  child: SizedBox(
+                                    height: 90,
+                                    child: Card(
+                                      color: const Color(0xFFEFE6E8),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: const BorderSide(color: Colors.black, width: 2),
+                                      ),
+                                      margin: const EdgeInsets.symmetric(vertical: 6),
+                                      child: ListTile(
+                                        leading: const Icon(Icons.task_alt, color: Colors.green, size: 30),
+                                        title: Text(
+                                          chore['title'],
+                                          style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold),
+                                        ),
+                                        subtitle: Text(
+                                          chore['description'],
+                                          style: GoogleFonts.inter(fontSize: 12),
+                                        ),
+                                        trailing: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFAEDDFF),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: Colors.black, width: 2),
+                                          ),
+                                          child: Text(
+                                            "\$${chore['price']}",
+                                            style: GoogleFonts.fredoka(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
         ),
       ),
     );

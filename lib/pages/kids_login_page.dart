@@ -1,12 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/authentication_page.dart';
 import 'kids_dashboard.dart';
+import 'authentication_page.dart';
 
 class KidsLoginPage extends StatefulWidget {
-  const KidsLoginPage({super.key});
+  final String kidDocId;
+  final String kidName;
+  final String avatarPath;
+
+  const KidsLoginPage({
+    super.key,
+    required this.kidDocId,
+    required this.kidName,
+    required this.avatarPath,
+  });
 
   @override
   State<KidsLoginPage> createState() => _KidsLoginPageState();
@@ -14,87 +22,6 @@ class KidsLoginPage extends StatefulWidget {
 
 class _KidsLoginPageState extends State<KidsLoginPage> {
   final TextEditingController passwordController = TextEditingController();
-
-  String kidName = '';
-  String avatarPath = '';
-  String userId = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadKidData();
-  }
-
-  Future<void> _loadKidData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final snapshot = await FirebaseFirestore.instance
-        .collection('kids')
-        .where('user_id', isEqualTo: user.uid)
-        .limit(1)
-        .get();
-
-    if (snapshot.docs.isNotEmpty) {
-      final doc = snapshot.docs.first;
-      setState(() {
-        kidName = doc['firstName'];
-        avatarPath = doc['avatar'];
-        userId = user.uid;
-      });
-    }
-  }
-
-  Future<void> _login() async {
-    final password = passwordController.text.trim();
-
-    if (password.isEmpty) {
-      _showSnackbar("Password cannot be empty.");
-      return;
-    }
-
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('kids')
-          .where('user_id', isEqualTo: userId)
-          .limit(1)
-          .get();
-
-      if (snapshot.docs.isEmpty || snapshot.docs.first['password'] != password) {
-        _showSnackbar("Incorrect password.");
-        return;
-      }
-
-      _showSnackbar("Login successful!", isError: false);
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const KidsDashboard()),
-      );
-    } catch (e) {
-      _showSnackbar("Error: ${e.toString()}");
-    }
-  }
-
-  void _showSnackbar(String message, {bool isError = true}) {
-    final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: GoogleFonts.fredoka(color: Colors.white),
-      ),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      duration: const Duration(seconds: 2),
-    );
-
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(snackBar);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,30 +39,28 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Avatar with shadow
+                    // Avatar
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha((0.3 * 255).toInt()),
-                            spreadRadius: 1,
                             blurRadius: 10,
+                            spreadRadius: 1,
                             offset: const Offset(10, 12),
                           ),
                         ],
                       ),
                       child: CircleAvatar(
-                        backgroundImage: avatarPath.isNotEmpty
-                            ? AssetImage(avatarPath)
-                            : const AssetImage('assets/avatar1.png'),
+                        backgroundImage: AssetImage(widget.avatarPath),
                         radius: 70,
                         backgroundColor: const Color(0xFF4E88CF),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      kidName.isNotEmpty ? "Hi $kidName!" : "Hi!",
+                      "Hi ${widget.kidName}!",
                       style: GoogleFonts.fredoka(
                         fontSize: 58.2,
                         fontWeight: FontWeight.bold,
@@ -174,7 +99,8 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                         ElevatedButton.icon(
                           onPressed: () => Navigator.pushReplacement(
                             context,
-                            MaterialPageRoute(builder: (context) => const AuthenticationPage())),
+                            MaterialPageRoute(builder: (context) => const AuthenticationPage()),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
@@ -202,6 +128,59 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
         ),
       ),
     );
+  }
+
+  void _login() async {
+    final password = passwordController.text.trim();
+
+    if (password.isEmpty) {
+      _showSnackbar("Password cannot be empty.");
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('kids')
+          .doc(widget.kidDocId)
+          .get();
+
+      if (!doc.exists || doc['password'] != password) {
+        _showSnackbar("Incorrect password.");
+        return;
+      }
+
+      _showSnackbar("Login successful!", isError: false);
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (!mounted) return;
+
+      //Navigate and pass kidId to KidsDashboard
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => KidsDashboard(kidId: widget.kidDocId),
+        ),
+      );
+    } catch (e) {
+      _showSnackbar("Error: ${e.toString()}");
+    }
+  }
+
+  void _showSnackbar(String message, {bool isError = true}) {
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: GoogleFonts.fredoka(color: Colors.white),
+      ),
+      backgroundColor: isError ? Colors.red : Colors.green,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
+      duration: const Duration(seconds: 2),
+    );
+
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(snackBar);
   }
 
   Widget _buildLabel(String text) {

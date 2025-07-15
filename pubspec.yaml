@@ -69,6 +69,9 @@ flutter:
   - assets/dots.png
   - assets/owl.png
   - assets/piggy_bank.png
+  - assets/piggy_bank1.png
+  - assets/owl2.png
+  - assets/hamburger_icon.png
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
