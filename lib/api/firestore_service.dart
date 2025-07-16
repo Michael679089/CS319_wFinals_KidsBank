@@ -15,10 +15,15 @@ class FirestoreAPI {
     final DocumentReference userRef = userCollection.doc(user.userId);
 
     try {
-      await userRef.set(user.toMap()); // Use the model's map representation
+      await userRef.set({
+        ...user.toMap(),
+        'created_at': FieldValue.serverTimestamp(), // Set server timestamp here
+      });
 
       debugPrint("✅ User created:");
-      debugPrint("userId: ${user.userId}; familyName: ${user.familyName}");
+      debugPrint(
+        "userId: ${user.userId}; familyName: ${user.familyName}; email: ${user.email};",
+      );
 
       debugPrint("➡️ Now creating Parent document...");
     } catch (e) {

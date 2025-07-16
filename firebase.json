@@ -1,1 +1,38 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"kidsbank-45877","appId":"1:545950721467:android:251b00124b3417fe12909e","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"kidsbank-45877","configurations":{"android":"1:545950721467:android:251b00124b3417fe12909e","ios":"1:545950721467:ios:f55c7a57e8249fa112909e","macos":"1:545950721467:ios:f55c7a57e8249fa112909e","web":"1:545950721467:web:3caaa9c9af4e854b12909e","windows":"1:545950721467:web:8deecb11179e8b6412909e"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kidsbank-45877",
+          "appId": "1:545950721467:android:251b00124b3417fe12909e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kidsbank-45877",
+          "configurations": {
+            "android": "1:545950721467:android:251b00124b3417fe12909e",
+            "ios": "1:545950721467:ios:f55c7a57e8249fa112909e",
+            "macos": "1:545950721467:ios:f55c7a57e8249fa112909e",
+            "web": "1:545950721467:web:3caaa9c9af4e854b12909e",
+            "windows": "1:545950721467:web:8deecb11179e8b6412909e"
+          }
+        }
+      }
+    }
+  },
+  "emulators": {
+    "singleProjectMode": true,
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true,
+      "port": 8081
+    }
+  }
+}

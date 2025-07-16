@@ -5,8 +5,7 @@ import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
 import 'package:wfinals_kidsbank/api/auth_service.dart';
 import 'package:wfinals_kidsbank/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/pages/login_page.dart';
-
-import '../api/fetchCurrentUser.dart';
+import 'package:wfinals_kidsbank/pages/verifyEmail_page.dart';
 
 class Register_RoleSelector_Page extends StatelessWidget {
   const Register_RoleSelector_Page({super.key});
@@ -33,6 +32,14 @@ class Register_RoleSelector_Page extends StatelessWidget {
               onPressed: () {
                 debugPrint("user selected parent");
                 // Navigate to RegisterPage with selected role
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Sorry, your parents need to register first before you get an account.',
+                    ),
+                  ),
+                );
 
                 debugPrint("Redirecting to RegisterPage");
                 Navigator.pushReplacement(
@@ -112,31 +119,33 @@ class _RegisterPage extends StatelessWidget {
         debugPrint('email: $email');
         debugPrint('pass: $pass');
 
+        debugPrint("User clicked Register");
         if (email.isEmpty && pass.isEmpty) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('WARNING: Fields are empty')));
-        } else if (email.isEmpty && pass.isNotEmpty) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('WARNING: Email is empty')));
-        } else if (email.isNotEmpty && pass.isEmpty) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('WARNING: Pass is empty')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('WARNING: One of the Fields are empty')),
+          );
         } else {
+          final createAuthAccountResp = await myFireAuthAPI
+              .createAccountToFirebaseAuth(
+                familyName: familyName,
+                password: pass,
+                email: email,
+              );
+          final responseMessage = createAuthAccountResp?["message"];
+          final responseStatus = createAuthAccountResp?["status"];
+
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Registered!')));
+          ).showSnackBar(SnackBar(content: Text(responseMessage.toString())));
 
-          final UserCredential? myCreateAuthAccResponse = await myFireAuthAPI
-              .createAccountToFirebaseAuth(
-                email: email,
-                password: pass,
-                familyName: familyName,
-              );
-          if (myCreateAuthAccResponse != Null) {
-            passController.text = "";
+          if (responseStatus == "success") {
+            debugPrint("redirecting to verifyEmail_Page");
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VerifyEmailPage(email, pass),
+              ),
+            );
           }
         }
       },
@@ -168,6 +177,7 @@ class _RegisterPage extends StatelessWidget {
           submitBTN,
           mySizedBox,
           myTextLoginPageRedirect,
+          mySizedBox,
         ],
       ),
     );
