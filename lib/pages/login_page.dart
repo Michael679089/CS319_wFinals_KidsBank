@@ -115,10 +115,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _showTopSnackBar(String message, {bool isError = true}) {
     final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: GoogleFonts.fredoka(color: Colors.white),
-      ),
+      content: Text(message, style: GoogleFonts.fredoka(color: Colors.white)),
       backgroundColor: isError ? Colors.red : Colors.green,
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
@@ -158,15 +155,23 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Family Name',
-                        style: GoogleFonts.fredoka(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Family Name',
+                      style: GoogleFonts.fredoka(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     _buildInputField(_familyNameController),
                     const SizedBox(height: 16),
-                    Text('Password',
-                        style: GoogleFonts.fredoka(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Password',
+                      style: GoogleFonts.fredoka(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     _buildInputField(_passwordController, isPassword: true),
                     const SizedBox(height: 20),
@@ -218,8 +223,10 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildInputField(TextEditingController controller,
-      {bool isPassword = false}) {
+  Widget _buildInputField(
+    TextEditingController controller, {
+    bool isPassword = false,
+  }) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.black, width: 3),
