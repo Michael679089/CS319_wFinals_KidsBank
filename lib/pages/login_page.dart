@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 // For Firebase Connection:
-import 'package:wfinals_kidsbank/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

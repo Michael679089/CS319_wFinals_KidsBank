@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:wfinals_kidsbank/api/auth_service.dart';
-import 'package:wfinals_kidsbank/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/user_model.dart';
 
 class RegisterPage extends StatefulWidget {
