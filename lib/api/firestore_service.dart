@@ -17,15 +17,13 @@ class FirestoreAPI {
     try {
       await userRef.set({
         ...user.toMap(),
-        'created_at': FieldValue.serverTimestamp(), // Set server timestamp here
+        'createdAt': FieldValue.serverTimestamp(), // Set server timestamp here
       });
 
       debugPrint("✅ User created:");
       debugPrint(
         "userId: ${user.userId}; familyName: ${user.familyName}; email: ${user.email};",
       );
-
-      debugPrint("➡️ Now creating Parent document...");
     } catch (e) {
       debugPrint("❌ ERROR: Failed to create user! $e");
     }
@@ -90,5 +88,25 @@ class FirestoreAPI {
     } catch (e) {
       debugPrint("Failed to create parent document: $e");
     }
+  }
+
+  Future<bool> doesEmailExist(String email) async {
+    final querySnapshot = await db
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .get();
+    return querySnapshot.docs.isNotEmpty;
+  }
+
+  Future<void> addUserToFirestore({
+    required String uid,
+    required String email,
+    required String familyName,
+  }) async {
+    await db.collection('users').doc(uid).set({
+      'email': email,
+      'familyName': familyName,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 }

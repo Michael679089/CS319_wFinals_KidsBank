@@ -1,86 +1,170 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 
 import 'package:wfinals_kidsbank/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/user_model.dart';
 
 class AuthService {
-  final FirestoreAPI firestoreAPI = FirestoreAPI();
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final FirestoreAPI _firestoreAPI = FirestoreAPI();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // FUNCTIONS:
+  // Stream for auth state changes
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Create Auth Account:
-  Future<Map<String, Object>?> createAccountToFirebaseAuth({
-    required String email,
-    required String password,
-    required String familyName,
+  // my private functions
+  void _invokeErrorSnackBar(ScaffoldMessengerState messengerState, String err) {
+    messengerState.showSnackBar(
+      SnackBar(
+        content: Text(err),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _invokeSuccessSnackBar(
+    ScaffoldMessengerState messengerState,
+    String successMessage,
+  ) {
+    messengerState.showSnackBar(
+      SnackBar(
+        content: Text(successMessage),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  // My PUBLIC actions:
+
+  User? getCurrentUser() {
+    if (_auth.currentUser != null) {
+      return _auth.currentUser;
+    } else {
+      return null;
+    }
+  }
+
+  // Create Firebase Auth account and send verification email
+  Future<Map<String, String>> createAccountToFirebaseAuth({
+    required UserModel myUserModel,
+    required BuildContext context,
   }) async {
     debugPrint("createAccountToFirebaseAuth is called");
 
+    final messenger = ScaffoldMessenger.of(context);
+    var email = myUserModel.email;
+    var password = myUserModel.password;
+
+    // Step 1: Check if email exists in Firestore
     try {
-      firestoreAPI.db.collection("users");
-
-      // Step 1: Check if email exists in Firestore
-      final querySnapshot = await firestoreAPI.db
-          .collection("users")
-          .where("email", isEqualTo: email)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        debugPrint(
-          {
-            "status": "error",
-            "message": "Email already registered.",
-          }.toString(),
-        );
-        return {"status": "error", "message": "Email already registered."};
+      final emailExists = await _firestoreAPI.doesEmailExist(email);
+      if (emailExists) {
+        debugPrint('Error: Email already registered in Firestore: $email');
+        _invokeErrorSnackBar(messenger, "Email Already Registered");
+        return {'status': 'error', 'message': 'Email already registered.'};
       }
+    } catch (e) {
+      debugPrint('Error checking email in Firestore: $e');
+      _invokeErrorSnackBar(messenger, e.toString());
+      return {'status': 'error', 'message': 'Failed to check email: $e'};
+    }
 
-      // Step 2: Create account in Firebase Auth & Send Email
-      UserCredential userCredential = await FirebaseAuth.instance
+    // Step 2: Create account in Firebase Auth and send verification email
+    try {
+      UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
-      await userCredential.user?.sendEmailVerification();
-      debugPrint("createAuthAcc: Sent email verification.");
-      var user = userCredential.user;
+      User? user = userCredential.user;
 
       if (user == null) {
-        return {
-          "status": "error",
-          "message": "User creation failed in Firebase Auth.",
-        };
+        debugPrint('Error: User creation failed in Firebase Auth');
+        _invokeErrorSnackBar(messenger, "User creation failed");
+        return {'status': 'error', 'message': 'User creation failed.'};
       }
 
-      // Step 3: Create a UserModel instance & Save to Firestore (users collection) using toMap:
-      final myUserModel = UserModel(
-        userId: user.uid,
-        familyName: familyName,
-        email: email,
-        createdAt: "",
+      // Send verification email - It looks like user is already logged in.
+      await user.sendEmailVerification();
+      debugPrint('Sent email verification to $email');
+      _invokeSuccessSnackBar(
+        messenger,
+        'Verification email sent. Please check your inbox.',
       );
-      await firestoreAPI.db.collection("users").doc(user.uid).set({
-        ...myUserModel.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      debugPrint("✅ User created successfully.");
       return {
-        "status": "success",
-        "message":
-            "${myUserModel.email} is now registered. Please verify email.",
+        'status': 'success',
+        'message': 'Account created successfully for $email.',
       };
-    } catch (e) {
-      debugPrint("❌ Exception: $e");
-      return {"status": "error", "message": e.toString()};
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        debugPrint("ERROR: Registering email - already in use: $email");
+
+        // check it's verification status
+        try {
+          UserCredential signInCredential = await _auth
+              .signInWithEmailAndPassword(email: email, password: password);
+          User? user = signInCredential.user;
+
+          if (user != null) {
+            // user is logged in
+            var isEmailVerified = user.emailVerified;
+            if (!isEmailVerified) {
+              await user.sendEmailVerification();
+              debugPrint('Resent verification email to $email');
+              if (!context.mounted) {
+                return {
+                  'status': 'email-not-verified',
+                  'message': 'Verification email resent for $email.',
+                };
+              }
+              _invokeSuccessSnackBar(
+                messenger,
+                'Verification email resent. Please check your inbox.',
+              );
+              return {
+                'status': 'email-not-verified',
+                'message': 'Verification email resent for $email.',
+              };
+            } else {
+              // Verified account: prompt to log in
+              debugPrint('Email is verified, please log in: $email');
+              if (!context.mounted) {
+                return {
+                  'status': 'email-verified',
+                  'message': 'Email is already verified. Please log in.',
+                };
+              }
+              _invokeErrorSnackBar(
+                messenger,
+                'Email is already verified. Please log in.',
+              );
+              return {
+                'status': 'email-verified',
+                'message': 'Email is already verified. Please log in.',
+              };
+            }
+          }
+        } on FirebaseAuthException catch (signInErr) {
+          debugPrint(
+            "ERROR: Signing in to check verification status: $signInErr",
+          );
+          _invokeErrorSnackBar(messenger, '$signInErr');
+          return {
+            'status': 'error',
+            'message': 'Failed to sign in: $signInErr',
+          };
+        }
+      }
+      _invokeErrorSnackBar(messenger, 'Failed to create FireAuth Account: $e');
+      return {
+        'status': 'error',
+        'message': 'Failed to create FireAuth Account: $e',
+      };
     }
   }
 
   // Put a function here that checks if there's a user currently logged in.
   Future<Map<String, Object?>> checkLoggedInUser() async {
     await FirebaseAuth.instance.currentUser?.reload();
-    final user = FirebaseAuth.instance.currentUser;
+    User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       return {"isLoggedIn": false, "user": null};
@@ -89,49 +173,15 @@ class AuthService {
     }
   }
 
-  Future<UserCredential?> signInTemporary(String email, String password) async {
-    try {
-      final userCred = await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCred;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<bool> deleteUserAccount(String userUid) async {
-    try {
-      // Step 1: Delete from Firestore
-      await firestoreAPI.db.collection("users").doc(userUid).delete();
-      debugPrint("Deleted user from Firestore: $userUid");
-
-      // Step 2: Delete from Firebase Auth
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null && currentUser.uid == userUid) {
-        await currentUser.delete();
-        debugPrint("Deleted user from Firebase Auth: $userUid");
-      } else {
-        debugPrint(
-          "Cannot delete from Firebase Auth — user not signed in or UID mismatch.",
-        );
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint("Error deleting user account: $e");
-      return false;
-    }
-  }
-
   Future<Map<String, Object>> loginAccountWithEmailAndPass(
     String email,
     String password,
   ) async {
     try {
-      final UserCredential loginResult = await _firebaseAuth
-          .signInWithEmailAndPassword(email: email, password: password);
+      final UserCredential loginResult = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
       if (!loginResult.user!.emailVerified) {
         debugPrint("unverified email users can't log in");
@@ -155,63 +205,12 @@ class AuthService {
 
   Future<Map<String, Object>> logoutAccount() async {
     try {
-      await _firebaseAuth.signOut();
+      await _auth.signOut();
       debugPrint("✅ User signed out successfully.");
       return {"status": "success", "message": "signout successful"};
     } catch (e) {
       debugPrint("❌ Error signing out: $e");
       return {"status": "failed", "message": "signout ${e}"};
-    }
-  }
-
-  /// Google Sign-In and saving to Firestore
-  Future<UserCredential?> signInWithGoogle() async {
-    debugPrint("sign-in with Google is called!");
-    debugPrint("Attempting Google Sign-In...");
-
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-
-      if (googleUser == null) {
-        debugPrint("Google Sign-In canceled.");
-        return null;
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithCredential(credential);
-      final User? user = userCredential.user;
-
-      if (user == null) {
-        debugPrint("Google user is null after sign-in.");
-        return null;
-      }
-
-      // Use displayName as familyName fallback
-      final newUser = UserModel(
-        userId: user.uid,
-        familyName: user.displayName ?? 'Unknown',
-        email: userCredential.user!.email as String,
-        createdAt: "",
-      );
-
-      await firestoreAPI.addAuthUserToUserCollection(newUser);
-      debugPrint("Google user saved to Firestore.");
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      debugPrint("Firebase Auth Exception (Google): ${e.code} - ${e.message}");
-      return null;
-    } catch (e) {
-      debugPrint("General Google Sign-In error: $e");
-      return null;
     }
   }
 }

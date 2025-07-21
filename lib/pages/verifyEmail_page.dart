@@ -1,128 +1,176 @@
-import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:wfinals_kidsbank/api/auth_service.dart';
-import 'package:wfinals_kidsbank/pages/login_page.dart';
+import 'package:wfinals_kidsbank/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/models/user_model.dart';
 
-class VerifyEmailPage extends StatefulWidget {
-  final String email;
-  final String pass;
-
-  const VerifyEmailPage(this.email, this.pass, {super.key});
+class VerificationEmailPage extends StatefulWidget {
+  const VerificationEmailPage({super.key});
 
   @override
-  State<VerifyEmailPage> createState() => _VerifyEmailPageState();
+  State<VerificationEmailPage> createState() => _VerificationEmailPageState();
 }
 
-class _VerifyEmailPageState extends State<VerifyEmailPage> {
-  final authService = AuthService();
-  bool isButtonDisabled = false;
-  int cooldownSeconds = 5;
+class _VerificationEmailPageState extends State<VerificationEmailPage> {
+  bool _isLoading = false; // Track loading state for async operations
 
-  Future<void> _checkVerification(String email, String pass) async {
-    setState(() => isButtonDisabled = true); // Disable the button immediately
-
+  // Functions:
+  Future<void> _sendVerificationEmail() async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
-      var signinTempResponse = await authService.signInTemporary(email, pass);
-      if (signinTempResponse == null) return;
-      UserCredential userCredential = signinTempResponse;
-
-      User? myUser = userCredential.user;
-      if (myUser == null) return;
-      await myUser.reload();
-      bool isEmailVerified = myUser.emailVerified;
-
-      if (!mounted) return;
-      if (!isEmailVerified) {
-        try {
-          await myUser.sendEmailVerification(); // ✅ Await it
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("📨 Verification email re-sent.")),
-          );
-        } on FirebaseAuthException catch (e) {
-          if (!mounted) return;
-          if (e.code == 'too-many-requests') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("🚫 Too many requests. Please wait a while."),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text("❌ Error: ${e.message}")));
-          }
-          await authService.logoutAccount();
-          return;
-        }
-
-        await authService.logoutAccount();
-        return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification email sent. Please check your inbox.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Email verified! Redirecting...")),
+          const SnackBar(
+            content: Text('No user signed in or email already verified.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
         );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
-        );
-        await authService.logoutAccount();
       }
     } catch (e) {
-      debugPrint(e.toString());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send verification email: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } finally {
-      // ✅ Always run this, no matter what
-      Timer(Duration(seconds: cooldownSeconds), () {
-        if (mounted) {
-          setState(() => isButtonDisabled = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _checkVerificationStatus() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await user.reload();
+        if (user.emailVerified) {
+          if (!mounted) return;
+
+          // user has been finally verified, add email to user collection
+          var myFirestoreAPI = FirestoreAPI();
+          final args =
+              ModalRoute.of(context)?.settings.arguments as Map<String, String>;
+          UserModel newUser = UserModel(
+            userId: user.uid,
+            familyName: args["family-name"] as String,
+            email: user.email as String,
+            password: args["password"] as String,
+            createdAt: FieldValue.serverTimestamp().toString(),
+          );
+          myFirestoreAPI.addAuthUserToUserCollection(newUser);
+
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false, // Clear navigation stack
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email not yet verified. Please check your inbox.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
-      });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error checking verification status: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, String>;
+    var email = args['register-email'];
+
+    if (email == null) {
+      Navigator.pop(context);
+      return Scaffold();
+    }
+
+    // made sure email is not null
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Verify Your Email")),
+      appBar: AppBar(title: const Text('Verify Email')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.email_outlined, size: 64, color: Colors.blue),
-              const SizedBox(height: 16),
               const Text(
-                "A verification link has been sent to:",
+                'Please verify your email address to continue.',
+                style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                email,
+                style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16.0),
+              const Text(
+                'A verification email has been sent to your inbox. '
+                'Click the link in the email to verify your account.',
                 style: TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              Text(
-                widget.email,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                "Please check your inbox and click the link to verify your account.",
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: isButtonDisabled
-                    ? null
-                    : () => _checkVerification(widget.email, widget.pass),
-                child: isButtonDisabled
-                    ? const Text("Please wait...")
-                    : const Text("I have verified my email!"),
-              ),
+              const SizedBox(height: 24.0),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: _sendVerificationEmail,
+                          child: const Text('Resend Verification Email'),
+                        ),
+                        const SizedBox(height: 16.0),
+                        ElevatedButton(
+                          onPressed: _checkVerificationStatus,
+                          child: const Text('I’ve Verified My Email'),
+                        ),
+                      ],
+                    ),
             ],
           ),
         ),
