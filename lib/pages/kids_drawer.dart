@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/authentication_page.dart';
+import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
 import 'package:wfinals_kidsbank/pages/kids_dashboard.dart';
 import 'package:wfinals_kidsbank/pages/kids_chores_page.dart';
 import 'package:wfinals_kidsbank/pages/kids_notification.dart';
@@ -30,12 +30,10 @@ class KidsDrawer extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const AuthenticationPage()),
+                MaterialPageRoute(builder: (_) => const VerifyEmailPage()),
               );
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text("Log out"),
           ),
         ],
@@ -55,21 +53,21 @@ class KidsDrawer extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                 Container(
-                          padding: const EdgeInsets.all(0),
-                          decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black, width: 2),
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'assets/hamburger_icon.png',
-                                      height: 50,
-                                      width: 50,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
+                Container(
+                  padding: const EdgeInsets.all(0),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/hamburger_icon.png',
+                      height: 50,
+                      width: 50,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Text(
                   "Menu",
@@ -146,10 +144,7 @@ class KidsDrawer extends StatelessWidget {
           Center(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 20),
-              child: Image.asset(
-                'assets/owl2.png',
-                width: 200,
-              ),
+              child: Image.asset('assets/owl2.png', width: 200),
             ),
           ),
         ],

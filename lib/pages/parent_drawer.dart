@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/authentication_page.dart';
+import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
 import 'package:wfinals_kidsbank/pages/parent_dashboard.dart';
 import 'parent_chores_page.dart';
 import 'notifications_page.dart';
@@ -24,12 +24,10 @@ class ParentDrawer extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).pop(); // close dialog
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const AuthenticationPage()),
+                MaterialPageRoute(builder: (_) => const VerifyEmailPage()),
               );
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text("Log out"),
           ),
         ],
@@ -55,7 +53,11 @@ class ParentDrawer extends StatelessWidget {
                     color: Colors.black,
                   ),
                   padding: const EdgeInsets.all(5),
-                  child: const Icon(Icons.menu, color: Color(0xFFFFCA26), size: 28),
+                  child: const Icon(
+                    Icons.menu,
+                    color: Color(0xFFFFCA26),
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -92,7 +94,9 @@ class ParentDrawer extends StatelessWidget {
             onTap: () {
               if (selectedPage != 'notifications') {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const ParentNotificationsPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const ParentNotificationsPage(),
+                  ),
                 );
               }
             },
@@ -118,10 +122,7 @@ class ParentDrawer extends StatelessWidget {
           Center(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 20),
-              child: Image.asset(
-                'assets/owl2.png',
-                width: 200,
-              ),
+              child: Image.asset('assets/owl2.png', width: 200),
             ),
           ),
         ],

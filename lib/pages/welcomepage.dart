@@ -1,7 +1,7 @@
 import 'dart:io'; // For exit(0)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/signup_page.dart';
+import 'package:wfinals_kidsbank/pages/register_account_page.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -181,7 +181,8 @@ class WelcomePage extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const SignupPage(),
+                                builder: (context) =>
+                                    const RegisterAccountPage(),
                               ),
                             );
                           },

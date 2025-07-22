@@ -6,14 +6,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'parent_login_page.dart';
 
-class AuthenticationPage extends StatefulWidget {
-  const AuthenticationPage({super.key});
+class VerifyEmailPage extends StatefulWidget {
+  const VerifyEmailPage({super.key});
 
   @override
-  State<AuthenticationPage> createState() => _AuthenticationPageState();
+  State<VerifyEmailPage> createState() => _VerifyEmailPageState();
 }
 
-class _AuthenticationPageState extends State<AuthenticationPage> {
+class _VerifyEmailPageState extends State<VerifyEmailPage> {
   String? selectedName;
   String? selectedRole;
   String? selectedKidDocId;
@@ -105,10 +105,13 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                           builder: (context, constraints) {
                             return SingleChildScrollView(
                               child: ConstrainedBox(
-                                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
                                 child: IntrinsicHeight(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       // Parent avatar + label
                                       GestureDetector(
@@ -116,7 +119,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                           setState(() {
                                             selectedName = parentName;
                                             selectedRole = "parent";
-                                            selectedKidDocId = null; // clear kid selection
+                                            selectedKidDocId =
+                                                null; // clear kid selection
                                           });
                                         },
                                         child: Row(
@@ -126,7 +130,10 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                 shape: BoxShape.circle,
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withAlpha((0.3 * 255).toInt()),
+                                                    color: Colors.black
+                                                        .withAlpha(
+                                                          (0.3 * 255).toInt(),
+                                                        ),
                                                     blurRadius: 10,
                                                     spreadRadius: 2,
                                                     offset: const Offset(0, 5),
@@ -134,24 +141,31 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                 ],
                                               ),
                                               child: CircleAvatar(
-                                                backgroundImage: AssetImage(parentAvatar),
+                                                backgroundImage: AssetImage(
+                                                  parentAvatar,
+                                                ),
                                                 radius: 60,
                                                 backgroundColor:
-                                                    selectedName == parentName && selectedRole == "parent"
-                                                        ? Colors.blueAccent
-                                                        : Colors.transparent,
+                                                    selectedName ==
+                                                            parentName &&
+                                                        selectedRole == "parent"
+                                                    ? Colors.blueAccent
+                                                    : Colors.transparent,
                                               ),
                                             ),
                                             const SizedBox(width: 16),
                                             Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   parentName,
                                                   style: TextStyle(
                                                     fontSize: 34,
                                                     fontWeight: FontWeight.w700,
-                                                    fontFamily: GoogleFonts.fredoka().fontFamily,
+                                                    fontFamily:
+                                                        GoogleFonts.fredoka()
+                                                            .fontFamily,
                                                   ),
                                                 ),
                                                 Text(
@@ -159,7 +173,9 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                   style: TextStyle(
                                                     fontSize: 34,
                                                     fontWeight: FontWeight.w500,
-                                                    fontFamily: GoogleFonts.fredoka().fontFamily,
+                                                    fontFamily:
+                                                        GoogleFonts.fredoka()
+                                                            .fontFamily,
                                                   ),
                                                 ),
                                               ],
@@ -183,7 +199,8 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                 selectedName = kid['firstName'];
                                                 selectedRole = "kid";
                                                 selectedKidDocId = kidDoc.id;
-                                                selectedAvatarPath = kid['avatar'];
+                                                selectedAvatarPath =
+                                                    kid['avatar'];
                                               });
                                             },
                                             child: Column(
@@ -193,20 +210,32 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                     shape: BoxShape.circle,
                                                     boxShadow: [
                                                       BoxShadow(
-                                                        color: Colors.black.withAlpha((0.3 * 255).toInt()),
+                                                        color: Colors.black
+                                                            .withAlpha(
+                                                              (0.3 * 255)
+                                                                  .toInt(),
+                                                            ),
                                                         blurRadius: 10,
                                                         spreadRadius: 2,
-                                                        offset: const Offset(0, 5),
+                                                        offset: const Offset(
+                                                          0,
+                                                          5,
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
                                                   child: CircleAvatar(
-                                                    backgroundImage: AssetImage(kid['avatar']),
+                                                    backgroundImage: AssetImage(
+                                                      kid['avatar'],
+                                                    ),
                                                     radius: 40,
                                                     backgroundColor:
-                                                        selectedName == kid['firstName'] && selectedRole == "kid"
-                                                            ? Colors.blueAccent
-                                                            : Colors.transparent,
+                                                        selectedName ==
+                                                                kid['firstName'] &&
+                                                            selectedRole ==
+                                                                "kid"
+                                                        ? Colors.blueAccent
+                                                        : Colors.transparent,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 6),
@@ -215,7 +244,9 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                   style: TextStyle(
                                                     fontSize: 16.7,
                                                     fontWeight: FontWeight.w600,
-                                                    fontFamily: GoogleFonts.fredoka().fontFamily,
+                                                    fontFamily:
+                                                        GoogleFonts.fredoka()
+                                                            .fontFamily,
                                                   ),
                                                 ),
                                               ],
@@ -228,14 +259,23 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
 
                                       // Login Button always at bottom
                                       Padding(
-                                        padding: const EdgeInsets.only(top: 30.0),
+                                        padding: const EdgeInsets.only(
+                                          top: 30.0,
+                                        ),
                                         child: SizedBox(
                                           width: double.infinity,
                                           child: ElevatedButton(
                                             onPressed: () {
-                                              if (selectedName == null || selectedRole == null) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(content: Text("Please select a user above first")),
+                                              if (selectedName == null ||
+                                                  selectedRole == null) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      "Please select a user above first",
+                                                    ),
+                                                  ),
                                                 );
                                                 return;
                                               }
@@ -244,38 +284,55 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                                 Navigator.pushReplacement(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => const ParentLoginPage(),
+                                                    builder: (context) =>
+                                                        const ParentLoginPage(),
                                                   ),
                                                 );
                                               } else {
                                                 Navigator.pushReplacement(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => KidsLoginPage(
-                                                      kidDocId: selectedKidDocId!,
-                                                      kidName: selectedName!,
-                                                      avatarPath: selectedAvatarPath!,
-                                                    ),
+                                                    builder: (context) =>
+                                                        KidsLoginPage(
+                                                          kidDocId:
+                                                              selectedKidDocId!,
+                                                          kidName:
+                                                              selectedName!,
+                                                          avatarPath:
+                                                              selectedAvatarPath!,
+                                                        ),
                                                   ),
                                                 );
                                               }
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(vertical: 14),
-                                              side: const BorderSide(color: Colors.black, width: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 14,
+                                                  ),
+                                              side: const BorderSide(
+                                                color: Colors.black,
+                                                width: 2,
+                                              ),
                                               shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(20),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
                                               ),
                                               elevation: 2,
-                                              shadowColor: Colors.grey.withAlpha(128),
+                                              shadowColor: Colors.grey
+                                                  .withAlpha(128),
                                             ),
                                             child: Text(
-                                              selectedName != null ? 'Log in as $selectedName' : 'Log in',
+                                              selectedName != null
+                                                  ? 'Log in as $selectedName'
+                                                  : 'Log in',
                                               style: TextStyle(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.w700,
-                                                fontFamily: GoogleFonts.fredoka().fontFamily,
+                                                fontFamily:
+                                                    GoogleFonts.fredoka()
+                                                        .fontFamily,
                                                 color: Colors.black,
                                               ),
                                             ),
@@ -290,28 +347,39 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                                         width: double.infinity,
                                         child: OutlinedButton(
                                           onPressed: () async {
-                                            await FirebaseAuth.instance.signOut();
+                                            await FirebaseAuth.instance
+                                                .signOut();
                                             if (!mounted) return;
                                             Navigator.pushReplacement(
                                               // ignore: use_build_context_synchronously
                                               context,
-                                              MaterialPageRoute(builder: (context) => const WelcomePage()),
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const WelcomePage(),
+                                              ),
                                             );
                                           },
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.black,
-                                            side: const BorderSide(color: Colors.black, width: 2),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(20),
+                                            side: const BorderSide(
+                                              color: Colors.black,
+                                              width: 2,
                                             ),
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
                                           ),
                                           child: Text(
                                             'Log out',
                                             style: TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.w600,
-                                              fontFamily: GoogleFonts.fredoka().fontFamily,
+                                              fontFamily: GoogleFonts.fredoka()
+                                                  .fontFamily,
                                             ),
                                           ),
                                         ),

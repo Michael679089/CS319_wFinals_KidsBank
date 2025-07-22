@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'kids_dashboard.dart';
-import 'authentication_page.dart';
+import 'verify_email_page.dart';
 
 class KidsLoginPage extends StatefulWidget {
   final String kidDocId;
@@ -80,7 +80,10 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFFCA26),
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(color: Colors.black, width: 2),
+                              side: const BorderSide(
+                                color: Colors.black,
+                                width: 2,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -99,16 +102,24 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                         ElevatedButton.icon(
                           onPressed: () => Navigator.pushReplacement(
                             context,
-                            MaterialPageRoute(builder: (context) => const AuthenticationPage()),
+                            MaterialPageRoute(
+                              builder: (context) => const VerifyEmailPage(),
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 30,
+                              vertical: 12,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
                           label: Text(
                             "Back",
                             style: GoogleFonts.fredoka(
@@ -168,10 +179,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
 
   void _showSnackbar(String message, {bool isError = true}) {
     final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: GoogleFonts.fredoka(color: Colors.white),
-      ),
+      content: Text(message, style: GoogleFonts.fredoka(color: Colors.white)),
       backgroundColor: isError ? Colors.red : Colors.green,
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.only(top: 16, left: 16, right: 16),

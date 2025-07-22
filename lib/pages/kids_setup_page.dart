@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/authentication_page.dart';
+import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
 import 'create_kids_account_page.dart';
 import 'login_page.dart';
 
@@ -62,7 +62,9 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Log Out'),
-            content: const Text('Do you want to log out and return to the login page?'),
+            content: const Text(
+              'Do you want to log out and return to the login page?',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -91,161 +93,169 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
           );
         }
       },
-    child: Scaffold(
-      backgroundColor: const Color(0xFFFFCA26),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFCA26),
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
 
-            // Parent Info Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: parentAvatar.isNotEmpty
-                        ? AssetImage(parentAvatar)
-                        : const AssetImage('assets/avatar1.png'),
-                    radius: 50,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        parentName.isNotEmpty ? parentName : "Parent",
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: GoogleFonts.fredoka().fontFamily,
+              // Parent Info Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: parentAvatar.isNotEmpty
+                          ? AssetImage(parentAvatar)
+                          : const AssetImage('assets/avatar1.png'),
+                      radius: 50,
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          parentName.isNotEmpty ? parentName : "Parent",
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: GoogleFonts.fredoka().fontFamily,
+                          ),
                         ),
-                      ),
-                      Text(
-                        "[Parent]",
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: GoogleFonts.fredoka().fontFamily,
+                        Text(
+                          "[Parent]",
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: GoogleFonts.fredoka().fontFamily,
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                "Set up kid’s account",
-                style: TextStyle(
-                  fontSize: 28.8,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: GoogleFonts.fredoka().fontFamily,
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-            // Kids List Container
-            Expanded(
-              child: Padding(
+              // Title
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFefe6e8),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.black, width: 2),
+                child: Text(
+                  "Set up kid’s account",
+                  style: TextStyle(
+                    fontSize: 28.8,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: GoogleFonts.fredoka().fontFamily,
                   ),
-                  padding: const EdgeInsets.all(16),
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _loadKids(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                ),
+              ),
 
-                      final kids = snapshot.data ?? [];
+              const SizedBox(height: 20),
 
-                      return ListView(
-                        children: [
-                          ...kids.map((kid) => _buildKidTile(kid)),
-                          const SizedBox(height: 12),
+              // Kids List Container
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFefe6e8),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.black, width: 2),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _loadKids(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
 
-                          // "+" Add Kid Button
-                          Center(
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const CreateKidAccountPage(),
+                        final kids = snapshot.data ?? [];
+
+                        return ListView(
+                          children: [
+                            ...kids.map((kid) => _buildKidTile(kid)),
+                            const SizedBox(height: 12),
+
+                            // "+" Add Kid Button
+                            Center(
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const CreateKidAccountPage(),
+                                    ),
+                                  );
+                                },
+                                child: CircleAvatar(
+                                  backgroundColor: const Color(0xFF4E88CF),
+                                  radius: 30,
+                                  child: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: 32,
                                   ),
-                                );
-                              },
-                              child: CircleAvatar(
-                                backgroundColor: const Color(0xFF4E88CF),
-                                radius: 30,
-                                child: const Icon(Icons.add, color: Colors.white, size: 32),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Continue Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VerifyEmailPage(),
+                        ),
                       );
                     },
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Continue Button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AuthenticationPage(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4E88CF),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Colors.black, width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4E88CF),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: Colors.black, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                  child: Text(
-                    'Continue',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: GoogleFonts.fredoka().fontFamily,
-                      color: Colors.black,
+                    child: Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: GoogleFonts.fredoka().fontFamily,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
-    )
     );
   }
 
@@ -260,10 +270,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundImage: AssetImage(kid['avatar']),
-            radius: 26,
-          ),
+          CircleAvatar(backgroundImage: AssetImage(kid['avatar']), radius: 26),
           const SizedBox(width: 12),
           Text(
             kid['firstName'],

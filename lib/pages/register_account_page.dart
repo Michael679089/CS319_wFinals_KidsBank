@@ -3,12 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'login_page.dart';
 import 'package:wfinals_kidsbank/pages/signup_page2.dart';
 
-class SignupPage extends StatefulWidget {
+class RegisterAccountPage extends StatefulWidget {
   final String? initialEmail;
   final String? initialPassword;
   final String? initialFamilyName;
 
-  const SignupPage({
+  const RegisterAccountPage({
     super.key,
     this.initialEmail,
     this.initialPassword,
@@ -16,10 +16,10 @@ class SignupPage extends StatefulWidget {
   });
 
   @override
-  State<SignupPage> createState() => _SignupPageState();
+  State<RegisterAccountPage> createState() => _RegisterAccountPageState();
 }
 
-class _SignupPageState extends State<SignupPage> {
+class _RegisterAccountPageState extends State<RegisterAccountPage> {
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
   late TextEditingController _familyNameController;
@@ -32,13 +32,21 @@ class _SignupPageState extends State<SignupPage> {
   bool _obscurePassword = true;
   bool _isLoginPressed = false;
 
+  // INITSTATE
+
   @override
   void initState() {
     super.initState();
     _emailController = TextEditingController(text: widget.initialEmail ?? '');
-    _passwordController = TextEditingController(text: widget.initialPassword ?? '');
-    _familyNameController = TextEditingController(text: widget.initialFamilyName ?? '');
+    _passwordController = TextEditingController(
+      text: widget.initialPassword ?? '',
+    );
+    _familyNameController = TextEditingController(
+      text: widget.initialFamilyName ?? '',
+    );
   }
+
+  // BUILD
 
   @override
   Widget build(BuildContext context) {
@@ -172,20 +180,23 @@ class _SignupPageState extends State<SignupPage> {
                           child: ElevatedButton(
                             onPressed: () async {
                               // Navigate to Page 2 and await returned card info
-                              final result = await Navigator.push<Map<String, String>>(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SignupCardPage(
-                                    email: _emailController.text.trim(),
-                                    password: _passwordController.text.trim(),
-                                    familyName: _familyNameController.text.trim(),
-                                    cardName: cardName,
-                                    cardNumber: cardNumber,
-                                    exp: exp,
-                                    ccv: ccv,
-                                  ),
-                                ),
-                              );
+                              final result =
+                                  await Navigator.push<Map<String, String>>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SignupCardPage(
+                                        email: _emailController.text.trim(),
+                                        password: _passwordController.text
+                                            .trim(),
+                                        familyName: _familyNameController.text
+                                            .trim(),
+                                        cardName: cardName,
+                                        cardNumber: cardNumber,
+                                        exp: exp,
+                                        ccv: ccv,
+                                      ),
+                                    ),
+                                  );
 
                               // If card info returned, update local variables
                               if (result != null) {

@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/authentication_page.dart';
+import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
 import 'parent_dashboard.dart';
 
 class ParentLoginPage extends StatefulWidget {
@@ -30,7 +30,10 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance.collection('parents').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('parents')
+        .doc(user.uid)
+        .get();
     if (doc.exists) {
       setState(() {
         parentName = doc['firstname'];
@@ -55,7 +58,10 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
     }
 
     try {
-      final parentDoc = await FirebaseFirestore.instance.collection('parents').doc(userId).get();
+      final parentDoc = await FirebaseFirestore.instance
+          .collection('parents')
+          .doc(userId)
+          .get();
       if (!parentDoc.exists || parentDoc['password'] != password) {
         _showSnackbar("Incorrect password.");
         return;
@@ -92,10 +98,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
 
   void _showSnackbar(String message, {bool isError = true}) {
     final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: GoogleFonts.fredoka(color: Colors.white),
-      ),
+      content: Text(message, style: GoogleFonts.fredoka(color: Colors.white)),
       backgroundColor: isError ? Colors.red : Colors.green,
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
@@ -172,7 +175,10 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFFCA26),
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(color: Colors.black, width: 2),
+                              side: const BorderSide(
+                                color: Colors.black,
+                                width: 2,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -190,16 +196,25 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                         const SizedBox(width: 12),
                         ElevatedButton.icon(
                           onPressed: () => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => const AuthenticationPage())),
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const VerifyEmailPage(),
+                            ),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 30,
+                              vertical: 12,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
                           label: Text(
                             "Back",
                             style: GoogleFonts.fredoka(

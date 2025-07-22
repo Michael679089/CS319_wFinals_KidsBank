@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
-import 'signup_page.dart';
-import 'parent_setup_page.dart';
-import 'kids_setup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,99 +12,18 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  bool _keepLoggedIn = false;
   bool _isSignUpPressed = false;
-
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   AuthService myAuthService = AuthService();
+  NavigatorState? navigator;
+
+  // Saved Credentials
+  String savedEmail = "";
+  String savedPassword = "";
+  bool _keepLoggedIn = false;
 
   // FUNCTIONS:
-
-  Future<void> _loadSavedCredentials() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedFamilyName = prefs.getString('savedFamilyName') ?? '';
-    final savedPassword = prefs.getString('savedPassword') ?? '';
-    final keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
-
-    if (keepLoggedIn) {
-      setState(() {
-        _familyNameController.text = savedFamilyName;
-        _passwordController.text = savedPassword;
-        _keepLoggedIn = true;
-      });
-    }
-  }
-
-  Future<void> _handleLogin() async {
-    final familyName = _familyNameController.text.trim();
-    final password = _passwordController.text;
-
-    if (familyName.isEmpty || password.isEmpty) {
-      if (!mounted) return;
-      _invokeTopSnackBar('Family name and password are required!');
-      return;
-    }
-
-    try {
-      // 1. Check if family name exists
-      final userSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('family_name', isEqualTo: familyName)
-          .limit(1)
-          .get();
-
-      if (!mounted) return;
-
-      if (userSnapshot.docs.isEmpty) {
-        _invokeTopSnackBar('Family name not found!');
-        return;
-      }
-
-      final userDoc = userSnapshot.docs.first;
-      final userEmail = userDoc.get('email');
-
-      // 2. Sign in to Firebase Auth
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: userEmail,
-        password: password,
-      );
-
-      if (_keepLoggedIn) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('savedFamilyName', familyName);
-        await prefs.setString('savedPassword', password);
-        await prefs.setBool('keepLoggedIn', true);
-      }
-
-      _invokeTopSnackBar('Login successful!', isError: false);
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return;
-
-      // 3. Check if parent setup is complete
-      final parentDoc = await FirebaseFirestore.instance
-          .collection('parents')
-          .doc(currentUser.uid)
-          .get();
-
-      if (!mounted) return;
-
-      if (parentDoc.exists) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const KidsSetupPage()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const ParentSetupPage()),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      _invokeTopSnackBar('Login failed: ${e.toString()}');
-    }
-  }
 
   void _invokeTopSnackBar(String message, {bool isError = true}) {
     final snackBar = SnackBar(
@@ -123,26 +38,83 @@ class _LoginPageState extends State<LoginPage> {
       ..showSnackBar(snackBar);
   }
 
-  // The INITSTATE:
+  void _tryAutoLogin() async {
+    debugPrint("loginPage.dart - Updating Credentials is called");
+
+    NavigatorState navigator = Navigator.of(context);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      savedEmail = prefs.getString('savedEmail') ?? '';
+      savedPassword = prefs.getString('savedPassword') ?? '';
+      _keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
+      debugPrint(
+        "loginPage.dart - SharedPreferences works - $savedEmail - $savedPassword",
+      );
+
+      if (_keepLoggedIn) {
+        navigator.pushNamed("/account-selector-page");
+        debugPrint(
+          "loginPage.dart - Auto Login successful - redirected to account-selector-page",
+        );
+      }
+    } catch (e) {
+      debugPrint("ERROR: loginPage.dart - an error occured here: $e");
+    }
+  }
+
+  Future<void> _handleLogin() async {
+    debugPrint("loginPage.dart - handleLogin is called");
+
+    if (_passwordController.text.isEmpty || _emailController.text.isEmpty) {
+      _invokeTopSnackBar("ERROR: some fields are missing");
+      return;
+    }
+
+    try {
+      myAuthService.loginAccountWithEmailAndPass(
+        _emailController.text,
+        _passwordController.text,
+      );
+    } on FirebaseAuthException catch (e) {
+      debugPrint("ERROR: Logging in to Auth $e");
+      return;
+    }
+    debugPrint(
+      "loginPage.dart - Login Success - currentuser:${myAuthService.getCurrentUser()}",
+    );
+
+    if (_keepLoggedIn) {
+      debugPrint(savedEmail);
+      debugPrint(savedPassword);
+      debugPrint(_keepLoggedIn.toString());
+
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setString('savedEmail', _emailController.text);
+      prefs.setString('savedPassword', _passwordController.text);
+      prefs.setBool('keepLoggedIn', _keepLoggedIn);
+      debugPrint(
+        "loginPage.dart - Added or Setted strings to SharedPreferences",
+      );
+      debugPrint(
+        "loginPage.dart - savedemail - ${prefs.getString("savedEmail")} | savedemail - ${prefs.getString("savedPassword")} | _keepLoggedIn - ${prefs.getBool("keepLoggedIn")} |",
+      );
+    }
+  }
+
+  // INITSTATE - runs before build, runs only once.
   @override
   void initState() {
     super.initState();
 
-    var currentUserResponse = myAuthService.getCurrentUser();
-
-    if (currentUserResponse != null) {
-      debugPrint("login page - user is still logged in. Redirect to Home_Page");
-    } else {
-      debugPrint("login page - no logged in user found. User can login.");
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryAutoLogin(); // Load credentials synchronously
+    });
   }
 
   // BUILD Function
 
-  final TextEditingController _familyNameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
-  // widget variables:
+  // custom widget variables:
   Widget _buildInputField(
     TextEditingController controller, {
     bool isPassword = false,
@@ -152,7 +124,12 @@ class _LoginPageState extends State<LoginPage> {
         border: Border.all(color: Colors.black, width: 3),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: TextField(
+      child: TextFormField(
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter some text';
+          }
+        },
         controller: controller,
         obscureText: isPassword,
         decoration: InputDecoration(
@@ -197,6 +174,8 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    navigator = Navigator.of(context);
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFCA26),
       body: Center(
@@ -234,7 +213,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _buildInputField(_familyNameController),
+                    _buildInputField(_emailController),
                     const SizedBox(height: 16),
                     Text(
                       'Password',
@@ -271,9 +250,12 @@ class _LoginPageState extends State<LoginPage> {
                 onTapDown: (_) => setState(() => _isSignUpPressed = true),
                 onTapUp: (_) {
                   setState(() => _isSignUpPressed = false);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SignupPage()),
+                  navigator?.pushNamed(
+                    "/register-page",
+                    arguments: {
+                      "email-text-value": _emailController.text,
+                      "password-text-value": _passwordController.text,
+                    },
                   );
                 },
                 onTapCancel: () => setState(() => _isSignUpPressed = false),
