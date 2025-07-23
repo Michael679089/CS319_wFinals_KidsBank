@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:wfinals_kidsbank/pages/kids_setup_page.dart';
 import 'package:wfinals_kidsbank/pages/login_page.dart';
 import 'package:wfinals_kidsbank/pages/parent_dashboard.dart';
+import 'package:wfinals_kidsbank/pages/parent_login_page.dart';
 import 'package:wfinals_kidsbank/pages/parent_setup_page.dart';
 import 'package:wfinals_kidsbank/pages/register_account_page.dart';
 import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
@@ -38,6 +39,7 @@ class MyApp extends StatelessWidget {
         '/kids-setup-page': (context) => const KidsSetupPage(),
         '/parent-dashboard-page': (context) => const ParentDashboard(),
         '/account-selector-page': (context) => const AccountSelectorPage(),
+        '/parent-login-page': (context) => const ParentLoginPage(),
       },
       onUnknownRoute: (settings) => MaterialPageRoute(
         builder: (context) => Scaffold(

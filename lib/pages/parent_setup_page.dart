@@ -279,139 +279,119 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    var navigator = Navigator.of(context);
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) return;
-
-        // Navigate to parent dashboard instead of logging out
-        if (context.mounted) {
-          navigator.pushNamedAndRemoveUntil(
-            '/parent-dashboard-page',
-            (route) => false,
-          );
-        }
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFFFCA26),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: AssetImage(selectedAvatar),
-                      radius: 60,
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFCA26),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  CircleAvatar(
+                    backgroundImage: AssetImage(selectedAvatar),
+                    radius: 60,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: _showAvatarPicker,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.purple,
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 4,
-                      child: GestureDetector(
-                        onTap: _showAvatarPicker,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.purple,
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            color: Colors.white,
-                            size: 20,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Set up your account',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: GoogleFonts.fredoka().fontFamily,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9F1F1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.black, width: 2),
+                ),
+                child: Column(
+                  children: [
+                    _buildLabel('First Name'),
+                    _buildField(firstNameController),
+                    const SizedBox(height: 20),
+                    _buildLabel('Last Name'),
+                    _buildField(lastNameController),
+                    const SizedBox(height: 20),
+                    _buildLabel('Date of Birth'),
+                    _buildField(
+                      dateOfBirthController,
+                      onTap: _pickDate,
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildLabel('Pincode'),
+                    _buildField(
+                      pincodeController,
+                      obscure: true,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                    ),
+                    const SizedBox(height: 25),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4E88CF),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: const BorderSide(color: Colors.black, width: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
                         ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.black,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Continue',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: GoogleFonts.fredoka().fontFamily,
+                                  color: Colors.black,
+                                ),
+                              ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  'Set up your account',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: GoogleFonts.fredoka().fontFamily,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9F1F1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildLabel('First Name'),
-                      _buildField(firstNameController),
-                      const SizedBox(height: 20),
-                      _buildLabel('Last Name'),
-                      _buildField(lastNameController),
-                      const SizedBox(height: 20),
-                      _buildLabel('Date of Birth'),
-                      _buildField(
-                        dateOfBirthController,
-                        onTap: _pickDate,
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 20),
-                      _buildLabel('Pincode'),
-                      _buildField(
-                        pincodeController,
-                        obscure: true,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                      ),
-                      const SizedBox(height: 25),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isSubmitting ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4E88CF),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(
-                              color: Colors.black,
-                              width: 2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.black,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  'Continue',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily:
-                                        GoogleFonts.fredoka().fontFamily,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

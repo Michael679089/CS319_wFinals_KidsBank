@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 
 // Models:
@@ -168,5 +169,26 @@ class FirestoreAPI {
       'ccv': ccv,
       'createdAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<List<KidModel>> getKidsByFamilyUserId(String familyUserId) async {
+    try {
+      final query = await db
+          .collection('kids')
+          .where('familyUserId', isEqualTo: familyUserId)
+          .get();
+      return query.docs.map((doc) => KidModel.fromMap(doc.data())).toList();
+    } catch (e) {
+      throw Exception('ERROR: Fetching kids: $e');
+    }
+  }
+
+  Future<String?> getFamilyPaymentCardNumber(String userId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('family_payment_info')
+        .where('user_id', isEqualTo: userId)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    return snapshot.docs.first.data()['card_number'] as String?;
   }
 }
