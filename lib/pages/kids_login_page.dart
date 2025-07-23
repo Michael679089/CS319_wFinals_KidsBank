@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'kids_dashboard.dart';
-import 'verify_email_page.dart';
+import 'verify_email_page_2.dart';
 
 class KidsLoginPage extends StatefulWidget {
   final String kidDocId;

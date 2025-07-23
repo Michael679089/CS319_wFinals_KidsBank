@@ -87,4 +87,21 @@ class FirestoreAPI {
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+  Future<void> addCardPaymentInfo(
+    String userId,
+    String cardName,
+    String cardNumber,
+    String expirationDate,
+    String ccv,
+  ) async {
+    FirebaseFirestore.instance.collection('family_payment_info').add({
+      'user_id': userId,
+      'card_name': cardName,
+      'card_number': cardNumber,
+      'exp': expirationDate,
+      'ccv': ccv,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

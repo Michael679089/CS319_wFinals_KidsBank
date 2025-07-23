@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
+import 'package:wfinals_kidsbank/pages/verify_email_page_2.dart';
 import 'package:wfinals_kidsbank/pages/parent_dashboard.dart';
 import 'parent_chores_page.dart';
 import 'notifications_page.dart';

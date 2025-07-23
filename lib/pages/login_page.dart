@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,8 +20,8 @@ class _LoginPageState extends State<LoginPage> {
   NavigatorState? navigator;
 
   // Saved Credentials
-  String savedEmail = "";
-  String savedPassword = "";
+  String? savedEmail = "";
+  String? savedPassword = "";
   bool _keepLoggedIn = false;
 
   // FUNCTIONS:
@@ -43,23 +44,57 @@ class _LoginPageState extends State<LoginPage> {
 
     NavigatorState navigator = Navigator.of(context);
 
+    // Step 1: Try login in using Shared Preferences.
     try {
       final prefs = await SharedPreferences.getInstance();
-      savedEmail = prefs.getString('savedEmail') ?? '';
-      savedPassword = prefs.getString('savedPassword') ?? '';
+      savedEmail = prefs.getString('savedEmail');
+      savedPassword = prefs.getString('savedPassword');
       _keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
-      debugPrint(
-        "loginPage.dart - SharedPreferences works - $savedEmail - $savedPassword",
-      );
 
       if (_keepLoggedIn) {
         navigator.pushNamed("/account-selector-page");
         debugPrint(
-          "loginPage.dart - Auto Login successful - redirected to account-selector-page",
+          "loginPage.dart - Auto Login successful (via Shared Preferences) - redirected to account-selector-page",
+        );
+        return;
+      } else {
+        debugPrint(
+          "loginPage.dart - SharedPreferences Failed - $savedEmail - $savedPassword",
         );
       }
     } catch (e) {
       debugPrint("ERROR: loginPage.dart - an error occured here: $e");
+    }
+
+    // Alt Step 1: If Shared Preferences is false, try AuthCurrentUser
+    try {
+      var user = myAuthService.getCurrentUser();
+      debugPrint("loginPage.dart - Trying to get currentUser");
+      debugPrint("loginPage.dart - Result: ${user.toString()}");
+
+      if (user != null) {
+        debugPrint("loginPage.dart - currentUser Found! -> ${user.email}");
+
+        // Step 2: Check if user is verified.
+        if (user.emailVerified) {
+          navigator.pushNamed("/account-selector-page");
+          debugPrint(
+            "loginPage.dart - Auto Login successful (via Auth.CurrentUser) - redirected to account-selector-page",
+          );
+        } else {
+          navigator.pushNamed(
+            "/verify-email-page",
+            arguments: {"register-email": user.email.toString()},
+          );
+          debugPrint(
+            "loginPage.dart - Oops account still not verified - Redirected to verify-email-page",
+          );
+        }
+      } else {
+        debugPrint("loginPage.dart - no currentUser found, User can login");
+      }
+    } catch (e) {
+      debugPrint("ERROR: loginPage.dart - failed getting currentUser: $e");
     }
   }
 
@@ -102,6 +137,12 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // The DISPOSE
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   // INITSTATE - runs before build, runs only once.
   @override
   void initState() {
@@ -124,12 +165,7 @@ class _LoginPageState extends State<LoginPage> {
         border: Border.all(color: Colors.black, width: 3),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: TextFormField(
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter some text';
-          }
-        },
+      child: TextField(
         controller: controller,
         obscureText: isPassword,
         decoration: InputDecoration(

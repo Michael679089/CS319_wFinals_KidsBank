@@ -6,14 +6,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'parent_login_page.dart';
 
-class VerifyEmailPage extends StatefulWidget {
-  const VerifyEmailPage({super.key});
+class VerifyEmailPage2 extends StatefulWidget {
+  const VerifyEmailPage2({super.key});
 
   @override
-  State<VerifyEmailPage> createState() => _VerifyEmailPageState();
+  State<VerifyEmailPage2> createState() => _VerifyEmailPageState();
 }
 
-class _VerifyEmailPageState extends State<VerifyEmailPage> {
+class _VerifyEmailPageState extends State<VerifyEmailPage2> {
   String? selectedName;
   String? selectedRole;
   String? selectedKidDocId;
