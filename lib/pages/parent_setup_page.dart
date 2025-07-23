@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'kids_setup_page.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 import 'login_page.dart';
 
 class ParentSetupPage extends StatefulWidget {
@@ -14,10 +15,21 @@ class ParentSetupPage extends StatefulWidget {
 }
 
 class _ParentSetupPageState extends State<ParentSetupPage> {
+  // TextEditingController Variables
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController dateOfBirthController = TextEditingController();
+  final TextEditingController pincodeController = TextEditingController();
+
   String selectedAvatar = 'assets/avatar1.png';
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController dobController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  OverlayEntry? _overlayEntry;
+  bool _isSubmitting = false;
+
+  // My Services
+  FirestoreAPI myFirestoreAPI = FirestoreAPI();
+  AuthService myAuthService = AuthService();
+
+  // FUNCTIONS
 
   void _showAvatarPicker() {
     showDialog(
@@ -54,49 +66,96 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
   }
 
   Future<void> _submit() async {
-    final name = nameController.text.trim();
-    final dob = dobController.text.trim();
-    final password = passwordController.text;
+    if (_isSubmitting) return;
 
-    if (name.isEmpty || dob.isEmpty || password.isEmpty) {
-      _showSnackbar('All fields are required', isError: true);
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final firstName = firstNameController.text.trim();
+    final lastName = lastNameController.text.trim();
+    final birthdate = dateOfBirthController.text.trim();
+    final pincode = pincodeController.text.trim();
+
+    // Validate inputs
+    if (firstName.isEmpty) {
+      _showSnackbar('First name is required', isError: true);
+      setState(() {
+        _isSubmitting = false;
+      });
+      return;
+    }
+    if (lastName.isEmpty) {
+      _showSnackbar('Last name is required', isError: true);
+      setState(() {
+        _isSubmitting = false;
+      });
+      return;
+    }
+    if (birthdate.isEmpty) {
+      _showSnackbar('Date of birth is required', isError: true);
+      setState(() {
+        _isSubmitting = false;
+      });
+      return;
+    }
+    if (pincode.isEmpty || pincode.length < 4) {
+      _showSnackbar('Pincode must be at least 4 digits', isError: true);
+      setState(() {
+        _isSubmitting = false;
+      });
       return;
     }
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = await myAuthService.getCurrentUser();
       if (user == null) {
         _showSnackbar('User not authenticated', isError: true);
+        setState(() {
+          _isSubmitting = false;
+        });
         return;
       }
+      final userId = user.uid;
 
-      await FirebaseFirestore.instance.collection('parents').doc(user.uid).set({
-        'firstname': name,
-        'date_of_birth': dob,
-        'password': password,
-        'avatar': selectedAvatar,
-        'user_id': user.uid,
-        'created_at': FieldValue.serverTimestamp(),
-      });
-
-      _showSnackbar('Setup completed successfully!', isError: false);
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-      Navigator.pushReplacement(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(builder: (context) => const KidsSetupPage()),
+      final newParent = ParentModel(
+        avatar: selectedAvatar,
+        familyUserId: userId,
+        firstName: firstName,
+        lastName: lastName,
+        pincode: pincode,
+        birthdate: birthdate,
       );
+
+      await myFirestoreAPI.addParentToParentCollection(newParent);
+      _showSnackbar('Parent added successfully', isError: false);
+
+      if (context.mounted) {
+        Navigator.pushNamed(context, '/kids-setup-page');
+      }
     } catch (e) {
-      _showSnackbar('Error saving data: $e', isError: true);
+      _showSnackbar('Failed to add parent: $e', isError: true);
+    } finally {
+      if (context.mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
+  }
+
+  void _removeAllOverlays() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
   }
 
   void _showSnackbar(String message, {required bool isError}) {
     final overlay = Overlay.of(context);
     final color = isError ? Colors.red : Colors.green;
 
-    final overlayEntry = OverlayEntry(
+    _removeAllOverlays();
+
+    _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: MediaQuery.of(context).viewInsets.top + 40,
         left: 20,
@@ -124,10 +183,11 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       ),
     );
 
-    overlay.insert(overlayEntry);
+    overlay.insert(_overlayEntry!);
 
     Future.delayed(const Duration(seconds: 3), () {
-      overlayEntry.remove();
+      _overlayEntry?.remove();
+      _overlayEntry = null;
     });
   }
 
@@ -145,153 +205,27 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
             onSurface: Colors.black,
           ),
           textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF4E88CF)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF4E88CF),
+            ),
           ),
         ),
         child: child!,
       ),
     );
     if (picked != null) {
-      dobController.text = DateFormat('yyyy-MM-dd').format(picked);
+      dateOfBirthController.text = DateFormat('yyyy-MM-dd').format(picked);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) return;
-
-        final shouldLogout = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Log Out'),
-            content: const Text('Do you want to log out and return to the login page?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('No'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                      (route) => false,
-                    );
-                  }
-                },
-                child: const Text('Yes'),
-              ),
-            ],
-          ),
-        );
-
-        if (shouldLogout == true && context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-            (route) => false,
-          );
-        }
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFFFCA26),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: AssetImage(selectedAvatar),
-                      radius: 60,
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 4,
-                      child: GestureDetector(
-                        onTap: _showAvatarPicker,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.purple,
-                          ),
-                          child: const Icon(Icons.edit, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Set up your account',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: GoogleFonts.fredoka().fontFamily,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9F1F1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildLabel('Name'),
-                      _buildField(nameController),
-                      const SizedBox(height: 20),
-                      _buildLabel('Date of birth'),
-                      _buildField(dobController, onTap: _pickDate, readOnly: true),
-                      const SizedBox(height: 20),
-                      _buildLabel('Password'),
-                      _buildField(
-                        passwordController,
-                        obscure: true,
-                      ),
-                      const SizedBox(height: 25),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4E88CF),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(color: Colors.black, width: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: Text(
-                            'Continue',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: GoogleFonts.fredoka().fontFamily,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    firstNameController.dispose();
+    lastNameController.dispose();
+    dateOfBirthController.dispose();
+    pincodeController.dispose();
+    _removeAllOverlays();
+    super.dispose();
   }
 
   Widget _buildLabel(String text) {
@@ -338,6 +272,147 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
           counterText: "",
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var navigator = Navigator.of(context);
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+
+        // Navigate to parent dashboard instead of logging out
+        if (context.mounted) {
+          navigator.pushNamedAndRemoveUntil(
+            '/parent-dashboard-page',
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFCA26),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: AssetImage(selectedAvatar),
+                      radius: 60,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: _showAvatarPicker,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.purple,
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Set up your account',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: GoogleFonts.fredoka().fontFamily,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9F1F1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildLabel('First Name'),
+                      _buildField(firstNameController),
+                      const SizedBox(height: 20),
+                      _buildLabel('Last Name'),
+                      _buildField(lastNameController),
+                      const SizedBox(height: 20),
+                      _buildLabel('Date of Birth'),
+                      _buildField(
+                        dateOfBirthController,
+                        onTap: _pickDate,
+                        readOnly: true,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildLabel('Pincode'),
+                      _buildField(
+                        pincodeController,
+                        obscure: true,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                      ),
+                      const SizedBox(height: 25),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isSubmitting ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4E88CF),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: const BorderSide(
+                              color: Colors.black,
+                              width: 2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.black,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  'Continue',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily:
+                                        GoogleFonts.fredoka().fontFamily,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

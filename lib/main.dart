@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
+import 'package:wfinals_kidsbank/pages/kids_setup_page.dart';
 import 'package:wfinals_kidsbank/pages/login_page.dart';
+import 'package:wfinals_kidsbank/pages/parent_dashboard.dart';
+import 'package:wfinals_kidsbank/pages/parent_setup_page.dart';
 import 'package:wfinals_kidsbank/pages/register_account_page.dart';
+import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 import 'package:wfinals_kidsbank/pages/verirfy_email_page.dart';
 import 'pages/welcomepage.dart';
 import 'firebase_options.dart'; // auto-generated file by flutterfire CLI
@@ -31,6 +34,9 @@ class MyApp extends StatelessWidget {
         '/login-page': (context) => const LoginPage(),
         '/register-page': (context) => const RegisterAccountPage(),
         '/verify-email-page': (context) => const VerificationEmailPage(),
+        '/parent-setup-page': (context) => const ParentSetupPage(),
+        '/kids-setup-page': (context) => const KidsSetupPage(),
+        '/parent-dashboard-page': (context) => const ParentDashboard(),
         '/account-selector-page': (context) => const AccountSelectorPage(),
       },
       onUnknownRoute: (settings) => MaterialPageRoute(

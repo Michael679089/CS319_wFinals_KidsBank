@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 
 // Models:
 import 'package:wfinals_kidsbank/database/models/user_model.dart';
@@ -65,6 +66,70 @@ class FirestoreAPI {
       }
     } catch (e) {
       debugPrint('ERROR: Failed to initialize database: $e');
+    }
+  }
+
+  Future<String> fetchFamilyNameOfUserID(String userId) async {
+    var familyName = '';
+
+    try {
+      // Step 1: Get Selected Doc
+      final selectedDocument = db.collection("users").doc(userId);
+
+      // Step 2: Get document snapshot
+      final docSnapShot = await selectedDocument.get();
+
+      if (docSnapShot.exists) {
+        familyName = docSnapShot.data()?["family_name"] as String? ?? '';
+      }
+    } catch (e) {
+      debugPrint('Error fetching family name: $e');
+    }
+
+    return familyName;
+  }
+
+  Future<bool> isThereMoreThanOneParentInThisAccount(String userId) async {
+    var parentsList = db.collection("parents");
+
+    // Query for documents where userId matches and count them
+    final querySnapshot = await parentsList
+        .where('familyUserId', isEqualTo: userId)
+        .get();
+
+    // Return true if more than one document is found
+    return querySnapshot.docs.isNotEmpty;
+  }
+
+  Future<List<ParentModel>> getParentsByFamilyUserId(
+    String familyUserId,
+  ) async {
+    try {
+      final query = await db
+          .collection('parents')
+          .where('familyUserId', isEqualTo: familyUserId)
+          .get();
+
+      return query.docs.map((doc) => ParentModel.fromMap(doc.data())).toList();
+    } catch (e) {
+      throw Exception('ERROR: Fetching parents: $e');
+    }
+  }
+
+  Future<String> addParentToParentCollection(ParentModel parent) async {
+    try {
+      final collection = db.collection('parents');
+
+      // Use Firestore's auto-generated document ID as parentId
+      final docRef = collection
+          .doc(); // Generates a new document with a unique ID
+
+      // Save the parent data to Firestore with parentId included
+      await docRef.set(parent.toMap(parentId: docRef.id));
+
+      return docRef.id; // Return the unique parentId
+    } catch (e) {
+      throw Exception('ERROR: Add parent: $e');
     }
   }
 

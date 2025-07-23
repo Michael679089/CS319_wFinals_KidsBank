@@ -1,9 +1,9 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,9 +14,13 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isSignUpPressed = false;
+  bool _isLoadingIndicatorActive = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  // My Services
   AuthService myAuthService = AuthService();
+  FirestoreAPI myFirestoreAPI = FirestoreAPI();
   NavigatorState? navigator;
 
   // Saved Credentials
@@ -40,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _tryAutoLogin() async {
-    debugPrint("loginPage.dart - Updating Credentials is called");
+    debugPrint("loginPage.dart - Trying Auto Login");
 
     NavigatorState navigator = Navigator.of(context);
 
@@ -77,7 +81,21 @@ class _LoginPageState extends State<LoginPage> {
 
         // Step 2: Check if user is verified.
         if (user.emailVerified) {
-          navigator.pushNamed("/account-selector-page");
+          setState(() {
+            _isLoadingIndicatorActive = true;
+          });
+          var familyName = await myFirestoreAPI.fetchFamilyNameOfUserID(
+            user.uid,
+          );
+          var userId = user.uid;
+          setState(() {
+            _isLoadingIndicatorActive = false;
+          });
+          navigator.pushNamed(
+            "/account-selector-page",
+            arguments: {"family-name": familyName, "family-user-id": userId},
+          );
+
           debugPrint(
             "loginPage.dart - Auto Login successful (via Auth.CurrentUser) - redirected to account-selector-page",
           );
@@ -214,101 +232,127 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFCA26),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Title Section ---
-              Text(
-                'KidsBank',
-                style: GoogleFonts.fredoka(
-                  fontSize: 50,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 30),
-              // Input Section ---
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black, width: 3),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'E-Mail',
-                      style: GoogleFonts.fredoka(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+      body: Stack(
+        children: [
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Title Section ---
+                  Text(
+                    'KidsBank',
+                    style: GoogleFonts.fredoka(
+                      fontSize: 50,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
-                    const SizedBox(height: 8),
-                    _buildInputField(_emailController),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Password',
-                      style: GoogleFonts.fredoka(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  const SizedBox(height: 30),
+                  // Input Section ---
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.black, width: 3),
                     ),
-                    const SizedBox(height: 8),
-                    _buildInputField(_passwordController, isPassword: true),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: _buildLoginButton(),
-                    ),
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Checkbox(
-                          value: _keepLoggedIn,
-                          onChanged: (val) {
-                            setState(() => _keepLoggedIn = val ?? false);
-                          },
+                        Text(
+                          'E-Mail',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        Text('Keep us logged in', style: GoogleFonts.fredoka()),
+                        const SizedBox(height: 8),
+                        _buildInputField(_emailController),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Password',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildInputField(_passwordController, isPassword: true),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: _buildLoginButton(),
+                        ),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _keepLoggedIn,
+                              onChanged: _isLoadingIndicatorActive
+                                  ? null
+                                  : (val) {
+                                      setState(
+                                        () => _keepLoggedIn = val ?? false,
+                                      );
+                                    },
+                            ),
+                            Text(
+                              'Keep us logged in',
+                              style: GoogleFonts.fredoka(),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Register Section ---
-              Text('Need an account?', style: GoogleFonts.inter()),
-              GestureDetector(
-                onTapDown: (_) => setState(() => _isSignUpPressed = true),
-                onTapUp: (_) {
-                  setState(() => _isSignUpPressed = false);
-                  navigator?.pushNamed(
-                    "/register-page",
-                    arguments: {
-                      "email-text-value": _emailController.text,
-                      "password-text-value": _passwordController.text,
-                    },
-                  );
-                },
-                onTapCancel: () => setState(() => _isSignUpPressed = false),
-                child: Text(
-                  'Sign up',
-                  style: GoogleFonts.fredoka(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: _isSignUpPressed
-                        ? const Color(0xFF4E88CF)
-                        : Colors.black,
                   ),
+                  const SizedBox(height: 20),
+                  // Register Section ---
+                  Text('Need an account?', style: GoogleFonts.inter()),
+                  GestureDetector(
+                    onTapDown: _isLoadingIndicatorActive
+                        ? null
+                        : (_) => setState(() => _isSignUpPressed = true),
+                    onTapUp: _isLoadingIndicatorActive
+                        ? null
+                        : (_) {
+                            setState(() => _isSignUpPressed = false);
+                            navigator?.pushNamed(
+                              "/register-page",
+                              arguments: {
+                                "email-text-value": _emailController.text,
+                                "password-text-value": _passwordController.text,
+                              },
+                            );
+                          },
+                    onTapCancel: _isLoadingIndicatorActive
+                        ? null
+                        : () => setState(() => _isSignUpPressed = false),
+                    child: Text(
+                      'Sign up',
+                      style: GoogleFonts.fredoka(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: _isSignUpPressed
+                            ? const Color(0xFF4E88CF)
+                            : Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_isLoadingIndicatorActive)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4e88cf)),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }

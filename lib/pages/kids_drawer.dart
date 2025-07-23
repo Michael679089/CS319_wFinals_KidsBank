@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/verify_email_page_2.dart';
+import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 import 'package:wfinals_kidsbank/pages/kids_dashboard.dart';
 import 'package:wfinals_kidsbank/pages/kids_chores_page.dart';
 import 'package:wfinals_kidsbank/pages/kids_notification.dart';
@@ -30,7 +30,7 @@ class KidsDrawer extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const VerifyEmailPage()),
+                MaterialPageRoute(builder: (_) => const AccountSelectorPage()),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

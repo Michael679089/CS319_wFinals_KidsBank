@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/verify_email_page_2.dart';
+import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 import 'create_kids_account_page.dart';
 import 'login_page.dart';
 
@@ -226,7 +226,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const VerifyEmailPage(),
+                          builder: (context) => const AccountSelectorPage(),
                         ),
                       );
                     },

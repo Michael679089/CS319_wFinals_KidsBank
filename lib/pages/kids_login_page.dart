@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'kids_dashboard.dart';
-import 'verify_email_page_2.dart';
+import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 
 class KidsLoginPage extends StatefulWidget {
   final String kidDocId;
@@ -103,7 +103,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                           onPressed: () => Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const VerifyEmailPage(),
+                              builder: (context) => const AccountSelectorPage(),
                             ),
                           ),
                           style: ElevatedButton.styleFrom(

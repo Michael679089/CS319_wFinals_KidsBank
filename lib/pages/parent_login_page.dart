@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/verify_email_page_2.dart';
+import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 import 'parent_dashboard.dart';
 
 class ParentLoginPage extends StatefulWidget {
@@ -198,7 +198,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                           onPressed: () => Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const VerifyEmailPage(),
+                              builder: (context) => const AccountSelectorPage(),
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
