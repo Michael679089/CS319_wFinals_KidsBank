@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
-import 'parent_dashboard.dart';
 
 class ParentLoginPage extends StatefulWidget {
   const ParentLoginPage({super.key});
@@ -16,38 +14,54 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController cardController = TextEditingController();
 
+  // Saved Credentials
+  String parentId = '';
   String parentName = '';
   String avatarPath = '';
-  String userId = '';
+  String familyUserId = '';
+  String familyName = '';
 
+  // INITSTATE FUNCTION
   @override
   void initState() {
     super.initState();
-    _loadParentData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadParentData();
+    });
   }
 
   Future<void> _loadParentData() async {
+    // Step 1: Get Parent Name, Avatar Path, and User Id
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('parents')
-        .doc(user.uid)
-        .get();
-    if (doc.exists) {
-      setState(() {
-        parentName = doc['firstname'];
-        avatarPath = doc['avatar'];
-        userId = user.uid;
-      });
+    final myModalRoute = ModalRoute.of(context);
+    if (myModalRoute == null) {
+      return;
     }
+    final args = myModalRoute.settings.arguments as Map<String, String?>;
+    setState(() {
+      parentId = args['parentId'] as String;
+      parentName = args["name"] as String;
+      avatarPath = args["avatar"] as String;
+      familyName = args["family-name"] as String;
+      familyUserId = user.uid;
+    });
+
+    debugPrint(
+      "parentLoginPage - successfully loaded the data - parentID: $parentId",
+    );
   }
 
   Future<void> _login() async {
-    final password = passwordController.text.trim();
+    // The Login Function
+    final pincode = passwordController.text.trim();
     final cardDigits = cardController.text.trim();
+    var navigator = Navigator.of(context);
 
-    if (password.isEmpty) {
+    // Step 1: Cleaning the input
+    if (pincode.isEmpty) {
       _showSnackbar("Password cannot be empty.");
       return;
     }
@@ -57,39 +71,48 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
       return;
     }
 
+    // Step 2: Password Input Done - Now Get the real passcode from Firestore and Verify it.
     try {
-      final parentDoc = await FirebaseFirestore.instance
-          .collection('parents')
-          .doc(userId)
-          .get();
-      if (!parentDoc.exists || parentDoc['password'] != password) {
+      final parentCollection = FirebaseFirestore.instance.collection("parents");
+      final parentDoc = await parentCollection.doc(parentId).get();
+
+      if (parentDoc['pincode'] != pincode) {
         _showSnackbar("Incorrect password.");
+        debugPrint("parentLoginPage - ERROR: User input Wrong Password.");
         return;
       }
 
-      final paymentDocs = await FirebaseFirestore.instance
-          .collection('family_payment_info')
-          .where('user_id', isEqualTo: userId)
+      // Step 3: Now for card digits verify if correct.
+      final familyPaymentCollection = FirebaseFirestore.instance.collection(
+        "family_payment_info",
+      );
+      final familyPaymentSnapshot = await familyPaymentCollection
+          .where("user_id", isEqualTo: familyUserId)
           .get();
+      final familyPaymentDoc = familyPaymentSnapshot.docs.first;
+      var cardNumber = familyPaymentDoc["card_number"].toString();
 
-      final isValidCard = paymentDocs.docs.any((doc) {
-        final cardNumber = doc['card_number'].toString();
-        return cardNumber.length >= 4 && cardNumber.endsWith(cardDigits);
-      });
-
-      if (!isValidCard) {
+      if (cardNumber.length >= 4) {
+        if (cardNumber.endsWith(cardDigits)) {
+          debugPrint("parentLoginPage - Card Digits Verified");
+        }
+      } else {
+        debugPrint(
+          "parentLoginPage - ERROR: cardNumber isn't more than 4 numbers",
+        );
         _showSnackbar("Card not found.");
         return;
       }
 
+      // Step 4: CardDigits is verified, user can proceed to Parent Dashboard Page.
       _showSnackbar("Login successful!", isError: false);
 
-      await Future.delayed(const Duration(milliseconds: 1500));
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const ParentDashboard()),
+      debugPrint(
+        "parentLoginPage - Parent Login Successful. Redirecting to Parent-Dashboard-Page",
+      );
+      navigator.pushReplacementNamed(
+        '/parent-dashboard-page',
+        arguments: {"family-name": familyName, "family-user-id": familyUserId},
       );
     } catch (e) {
       _showSnackbar("Error: ${e.toString()}");
@@ -110,8 +133,12 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
       ..showSnackBar(snackBar);
   }
 
+  // BUILD
+
   @override
   Widget build(BuildContext context) {
+    var navigator = Navigator.of(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {},
@@ -157,9 +184,11 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildLabel("Please input your password"),
+                    _buildLabel(
+                      "Please input this parent's sub-account pincode",
+                    ),
                     const SizedBox(height: 8),
-                    _buildPasswordField(passwordController),
+                    _buildPincodeField(passwordController),
 
                     const SizedBox(height: 20),
                     _buildLabel("Last 4 digits of linked card"),
@@ -194,13 +223,17 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // The Back BUTTON
                         ElevatedButton.icon(
-                          onPressed: () => Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AccountSelectorPage(),
-                            ),
-                          ),
+                          onPressed: () {
+                            navigator.pushReplacementNamed(
+                              "/account-selector-page",
+                              arguments: {
+                                "family-name": familyName,
+                                "family-user-id": familyUserId,
+                              },
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(
@@ -236,6 +269,8 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
     );
   }
 
+  // My Widgets For Build
+
   Widget _buildLabel(String text) {
     return RichText(
       text: TextSpan(
@@ -255,7 +290,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
     );
   }
 
-  Widget _buildPasswordField(TextEditingController controller) {
+  Widget _buildPincodeField(TextEditingController controller) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -266,7 +301,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
         controller: controller,
         obscureText: true,
         obscuringCharacter: '•',
-        keyboardType: TextInputType.visiblePassword,
+        keyboardType: TextInputType.number,
         style: GoogleFonts.fredoka(
           fontSize: 20,
           fontWeight: FontWeight.w700,

@@ -26,10 +26,34 @@ class _ParentDashboardState extends State<ParentDashboard> {
     const Color.fromARGB(255, 240, 217, 233),
   ];
 
+  // Saved credentials
+  String familyName = '';
+  String familyUserId = '';
+
+  // The INITSTATE Function
+
   @override
   void initState() {
     super.initState();
     _loadKidsData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMyFamilyData();
+    });
+  }
+
+  // Other Functions:
+
+  void _loadMyFamilyData() async {
+    final myModalRoute = ModalRoute.of(context);
+    if (myModalRoute == null) {
+      return;
+    }
+    final args = myModalRoute.settings.arguments as Map<String, String?>;
+    setState(() {
+      familyName = args['family-name'] as String;
+      familyUserId = args["family-user-id"] as String;
+    });
   }
 
   Future<void> _loadKidsData() async {
@@ -103,6 +127,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
 
     double rewardAmount = 1.00;
+
+    var messenger = ScaffoldMessenger.of(context);
 
     showDialog(
       context: context,
@@ -292,7 +318,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                 if (title.isEmpty ||
                                     description.isEmpty ||
                                     rewardAmount <= 0) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(
                                       content: Text(
                                         "Please fill in all fields and set a valid reward.",
@@ -375,6 +401,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
       text: '1.00',
     );
     double fundAmount = 1.00;
+
+    var navigator = Navigator.of(context);
+    var messenger = ScaffoldMessenger.of(context);
 
     showDialog(
       context: context,
@@ -546,9 +575,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                           .text
                                           .trim();
                                       if (message.isEmpty || fundAmount <= 0) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        messenger.showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               "⚠️ Enter a message and valid amount.",
@@ -596,10 +623,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                                   FieldValue.serverTimestamp(),
                                             });
 
-                                        Navigator.pop(context);
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        navigator.pop();
+                                        messenger.showSnackBar(
                                           SnackBar(
                                             content: Text(
                                               "✅ Deposited \$${fundAmount.toStringAsFixed(2)} successfully!",
@@ -612,9 +637,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         );
                                       } catch (e) {
                                         debugPrint("Error during deposit: $e");
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        messenger.showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               "❌ Failed to deposit funds.",
@@ -684,9 +707,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         }
 
                                         if (fundAmount > currentBalance) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
+                                          messenger.showSnackBar(
                                             const SnackBar(
                                               content: Text(
                                                 "❌ Insufficient balance for withdrawal.",
@@ -719,10 +740,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                                   FieldValue.serverTimestamp(),
                                             });
 
-                                        Navigator.pop(context);
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        navigator.pop();
+                                        messenger.showSnackBar(
                                           SnackBar(
                                             content: Text(
                                               "✅ Withdrew \$${fundAmount.toStringAsFixed(2)} successfully!",
@@ -737,9 +756,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         debugPrint(
                                           "Error during withdrawal: $e",
                                         );
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        messenger.showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               "❌ Failed to withdraw funds.",
@@ -788,6 +805,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
+  // BUILD Function:
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -796,7 +815,11 @@ class _ParentDashboardState extends State<ParentDashboard> {
         // Do nothing when back is pressed
       },
       child: Scaffold(
-        drawer: const ParentDrawer(selectedPage: 'dashboard'),
+        drawer: ParentDrawer(
+          selectedPage: 'dashboard',
+          familyName: familyName,
+          familyUserId: familyUserId,
+        ),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(
           backgroundColor: const Color(0xFFFFCA26),

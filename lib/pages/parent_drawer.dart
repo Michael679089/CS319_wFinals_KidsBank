@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 import 'package:wfinals_kidsbank/pages/parent_dashboard.dart';
-import 'parent_chores_page.dart';
-import 'notifications_page.dart';
 
 class ParentDrawer extends StatelessWidget {
   final String selectedPage;
-  const ParentDrawer({super.key, required this.selectedPage});
+
+  // Saved credentials
+  final String familyName;
+  final String familyUserId;
+
+  // Constructor of our drawer navbar page
+  const ParentDrawer({
+    super.key,
+    required this.selectedPage,
+    required this.familyName,
+    required this.familyUserId,
+  });
 
   void _confirmLogout(BuildContext context) {
+    var navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -22,9 +32,14 @@ class ParentDrawer extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop(); // close dialog
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const AccountSelectorPage()),
+              navigator.pop(); // close dialog
+
+              navigator.pushReplacementNamed(
+                "/account-selector-page",
+                arguments: {
+                  "family-name": familyName,
+                  "family-user-id": familyUserId,
+                },
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -37,6 +52,8 @@ class ParentDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var navigator = Navigator.of(context);
+
     return Drawer(
       backgroundColor: const Color(0xFFFFCA26),
       child: Column(
@@ -81,8 +98,12 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'dashboard',
             onTap: () {
               if (selectedPage != 'dashboard') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const ParentDashboard()),
+                navigator.pushReplacementNamed(
+                  "/parent-dashboard-page",
+                  arguments: {
+                    "family-name": familyName,
+                    "family-user-id": familyUserId,
+                  },
                 );
               }
             },
@@ -93,10 +114,12 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'notifications',
             onTap: () {
               if (selectedPage != 'notifications') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => const ParentNotificationsPage(),
-                  ),
+                navigator.pushReplacementNamed(
+                  "/parent-notification-page",
+                  arguments: {
+                    "family-name": familyName,
+                    "family-user-id": familyUserId,
+                  },
                 );
               }
             },
@@ -107,8 +130,12 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'chores',
             onTap: () {
               if (selectedPage != 'chores') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const ParentChoresPage()),
+                navigator.pushReplacementNamed(
+                  "/parent-chores-page",
+                  arguments: {
+                    "family-name": familyName,
+                    "family-user-id": familyUserId,
+                  },
                 );
               }
             },
@@ -129,6 +156,8 @@ class ParentDrawer extends StatelessWidget {
       ),
     );
   }
+
+  // Widgets for BUILD
 
   Widget _buildMenuItem(
     BuildContext context, {

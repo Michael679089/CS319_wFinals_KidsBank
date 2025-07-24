@@ -102,35 +102,33 @@ class FirestoreAPI {
     return querySnapshot.docs.isNotEmpty;
   }
 
-  Future<List<ParentModel>> getParentsByFamilyUserId(
-    String familyUserId,
-  ) async {
-    try {
-      final query = await db
-          .collection('parents')
-          .where('familyUserId', isEqualTo: familyUserId)
-          .get();
-
-      return query.docs.map((doc) => ParentModel.fromMap(doc.data())).toList();
-    } catch (e) {
-      throw Exception('ERROR: Fetching parents: $e');
-    }
-  }
-
   Future<String> addParentToParentCollection(ParentModel parent) async {
     try {
       final collection = db.collection('parents');
+      final docRef = collection.doc(); // Generate a new document ID
+      final parentId = docRef.id;
 
-      // Use Firestore's auto-generated document ID as parentId
-      final docRef = collection
-          .doc(); // Generates a new document with a unique ID
+      // Create a new ParentModel with the generated ID
+      final parentWithId = ParentModel(
+        parentId: parentId,
+        firstName: parent.firstName,
+        lastName: parent.lastName,
+        avatar: parent.avatar,
+        familyUserId: parent.familyUserId,
+        pincode: parent.pincode,
+        birthdate: parent.birthdate,
+        createdAt: parent.createdAt ?? DateTime.now(),
+      );
 
-      // Save the parent data to Firestore with parentId included
-      await docRef.set(parent.toMap(parentId: docRef.id));
+      // Save the parent data with the ID included
+      await docRef.set(parentWithId.toMap());
 
-      return docRef.id; // Return the unique parentId
+      debugPrint(
+        "FirestoreAPI - Successfully added parent: ${parent.firstName} ${parent.lastName} (ID: $parentId)",
+      );
+      return parentId;
     } catch (e) {
-      throw Exception('ERROR: Add parent: $e');
+      throw Exception('ERROR: Adding parent to "parent" Collection: $e');
     }
   }
 
@@ -171,15 +169,77 @@ class FirestoreAPI {
     });
   }
 
+  Future<List<ParentModel>> getParentsByFamilyUserId(
+    String familyUserId,
+  ) async {
+    if (familyUserId.isEmpty) {
+      debugPrint(
+        "FirestoreAPI - getParentsByFamilyUserId: Empty familyUserId provided",
+      );
+      throw Exception('Invalid familyUserId: Cannot be empty');
+    }
+
+    try {
+      final query = await db
+          .collection('parents')
+          .where('familyUserId', isEqualTo: familyUserId)
+          .get();
+
+      if (query.docs.isEmpty) {
+        debugPrint(
+          "FirestoreAPI - getParentsByFamilyUserId: No parents found for familyUserId: $familyUserId",
+        );
+        return [];
+      }
+
+      return query.docs.map((doc) {
+        final data = doc.data();
+        return ParentModel.fromMap({
+          ...data,
+          'parentId': doc.id, // Include document ID as parentId
+        });
+      }).toList();
+    } catch (e) {
+      debugPrint(
+        "FirestoreAPI - Error fetching parents for familyUserId $familyUserId: $e",
+      );
+      throw Exception('Failed to fetch parents: $e');
+    }
+  }
+
   Future<List<KidModel>> getKidsByFamilyUserId(String familyUserId) async {
+    if (familyUserId.isEmpty) {
+      debugPrint(
+        "FirestoreAPI - getKidsByFamilyUserId: Empty familyUserId provided",
+      );
+      throw Exception('Invalid familyUserId: Cannot be empty');
+    }
+
     try {
       final query = await db
           .collection('kids')
           .where('familyUserId', isEqualTo: familyUserId)
           .get();
-      return query.docs.map((doc) => KidModel.fromMap(doc.data())).toList();
+
+      if (query.docs.isEmpty) {
+        debugPrint(
+          "FirestoreAPI - getKidsByFamilyUserId: No kids found for familyUserId: $familyUserId",
+        );
+        return [];
+      }
+
+      return query.docs.map((doc) {
+        final data = doc.data();
+        return KidModel.fromMap({
+          ...data,
+          'kidId': doc.id, // Include document ID as kidId
+        });
+      }).toList();
     } catch (e) {
-      throw Exception('ERROR: Fetching kids: $e');
+      debugPrint(
+        "FirestoreAPI - Error fetching kids for familyUserId $familyUserId: $e",
+      );
+      throw Exception('Failed to fetch kids: $e');
     }
   }
 

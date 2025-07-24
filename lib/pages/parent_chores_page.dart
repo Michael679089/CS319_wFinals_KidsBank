@@ -15,10 +15,18 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
   String? selectedKidId;
   String selectedStatus = 'All';
 
+  // Saved credentials
+  String familyName = '';
+  String familyUserId = '';
+
   @override
   void initState() {
     super.initState();
     loadKids();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMyFamilyData();
+    });
   }
 
   Future<void> loadKids() async {
@@ -38,6 +46,18 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
     });
   }
 
+  void _loadMyFamilyData() async {
+    final myModalRoute = ModalRoute.of(context);
+    if (myModalRoute == null) {
+      return;
+    }
+    final args = myModalRoute.settings.arguments as Map<String, String?>;
+    setState(() {
+      familyName = args['family-name'] as String;
+      familyUserId = args["family-user-id"] as String;
+    });
+  }
+
   Future<List<Map<String, dynamic>>> fetchChores() async {
     if (selectedKidId == null) return [];
 
@@ -47,18 +67,21 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
 
     final snapshot = await query.get();
 
-    return snapshot.docs.map((doc) {
-      return {
-        'id': doc.id,
-        'title': doc['chore_title'],
-        'description': doc['chore_desc'],
-        'reward': doc['reward_money'],
-        'status': doc['status'],
-      };
-    }).where((chore) {
-      if (selectedStatus == 'All') return true;
-      return chore['status'] == selectedStatus.toLowerCase();
-    }).toList();
+    return snapshot.docs
+        .map((doc) {
+          return {
+            'id': doc.id,
+            'title': doc['chore_title'],
+            'description': doc['chore_desc'],
+            'reward': doc['reward_money'],
+            'status': doc['status'],
+          };
+        })
+        .where((chore) {
+          if (selectedStatus == 'All') return true;
+          return chore['status'] == selectedStatus.toLowerCase();
+        })
+        .toList();
   }
 
   /// Map status to colors
@@ -81,7 +104,11 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {},
       child: Scaffold(
-        drawer: const ParentDrawer(selectedPage: 'chores'),
+        drawer: ParentDrawer(
+          selectedPage: 'chores',
+          familyName: familyName,
+          familyUserId: familyUserId,
+        ),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(
           backgroundColor: const Color(0xFFFFCA26),
@@ -97,7 +124,12 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
           centerTitle: true,
           leading: Builder(
             builder: (context) => Padding(
-              padding: const EdgeInsets.only(left: 12, right: 4, top: 5, bottom: 10),
+              padding: const EdgeInsets.only(
+                left: 12,
+                right: 4,
+                top: 5,
+                bottom: 10,
+              ),
               child: InkWell(
                 onTap: () => Scaffold.of(context).openDrawer(),
                 child: Container(
@@ -106,10 +138,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                     color: Colors.black,
                   ),
                   padding: const EdgeInsets.all(8),
-                  child: const Icon(
-                    Icons.menu,
-                    color: Color(0xFFFFCA26),
-                  ),
+                  child: const Icon(Icons.menu, color: Color(0xFFFFCA26)),
                 ),
               ),
             ),
@@ -139,7 +168,9 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: selectedKidId == kid['id'] ? Colors.black : Colors.transparent,
+                            color: selectedKidId == kid['id']
+                                ? Colors.black
+                                : Colors.transparent,
                             width: 3,
                           ),
                         ),
@@ -160,12 +191,17 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                 children: [
                   DropdownButton<String>(
                     value: selectedStatus,
-                    items: ['All', 'Pending', 'Completed', 'Rewarded'].map((status) {
+                    items: ['All', 'Pending', 'Completed', 'Rewarded'].map((
+                      status,
+                    ) {
                       return DropdownMenuItem<String>(
                         value: status,
                         child: Text(
                           status,
-                          style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.fredoka(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       );
                     }).toList(),
@@ -205,7 +241,10 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                     }
 
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFDF2D0),
                         borderRadius: BorderRadius.circular(20),
@@ -228,11 +267,15 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.assignment, color: Colors.black),
+                                const Icon(
+                                  Icons.assignment,
+                                  color: Colors.black,
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         chore['title'],
@@ -244,7 +287,9 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                                       const SizedBox(height: 4),
                                       Text(
                                         chore['description'],
-                                        style: GoogleFonts.fredoka(fontSize: 15),
+                                        style: GoogleFonts.fredoka(
+                                          fontSize: 15,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -262,9 +307,11 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      chore['status'][0].toUpperCase() + chore['status'].substring(1),
+                                      chore['status'][0].toUpperCase() +
+                                          chore['status'].substring(1),
                                       style: GoogleFonts.fredoka(
-                                        color: statusColor, // Dynamic status color
+                                        color:
+                                            statusColor, // Dynamic status color
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
                                       ),

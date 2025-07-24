@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ParentModel {
   final String avatar;
   final String familyUserId;
+  final String parentId;
   final String firstName;
   final String lastName;
   final String pincode;
@@ -13,6 +14,7 @@ class ParentModel {
   const ParentModel({
     required this.avatar,
     required this.familyUserId,
+    required this.parentId,
     required this.firstName,
     required this.lastName,
     required this.pincode,
@@ -25,6 +27,7 @@ class ParentModel {
     return ParentModel(
       avatar: map["avatar"] as String,
       familyUserId: map['familyUserId'] as String,
+      parentId: map["parentId"] as String,
       firstName: map['firstName'] as String,
       lastName: map['lastName'] as String,
       pincode: map['pincode'] as String,
@@ -34,12 +37,11 @@ class ParentModel {
   }
 
   // SERIALIZATION
-  Map<String, dynamic> toMap({String? parentId}) {
+  Map<String, dynamic> toMap() {
     return {
       'avatar': avatar,
       'familyUserId': familyUserId,
-      if (parentId != null)
-        'parentId': parentId, // Include parentId if provided
+      'parentId': parentId,
       'firstName': firstName,
       'lastName': lastName,
       'pincode': pincode,

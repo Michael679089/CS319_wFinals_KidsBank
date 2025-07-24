@@ -4,16 +4,14 @@ A new Flutter project.
 
 OUR MAIN REPO: https://github.com/Michael679089/CS319_Flutter-Application-Development
 
-## Getting Started
 
-This project is a starting point for a Flutter application.
+----
 
-A few resources to get you started if this is your first Flutter project:
+# Things Fixed so far:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. Currently I fixed the parent-dashboar-page
+2. Fixed the parent-chores-page
+3. Fixed the parent-notification-page
+4. Fixed the parent-setup-page
+5. Made the account-selector-page for each family. 
 

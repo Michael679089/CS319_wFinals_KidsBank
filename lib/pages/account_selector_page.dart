@@ -108,17 +108,18 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
 
   void selectParent(ParentModel parent, String parentId) {
     setState(() {
-      selectedParentId = parentId;
-      selectedKidId = null;
+      selectedParentId = parent.parentId;
+      selectedKidId = null; // Deselecting Kid
       selectedName = "${parent.firstName} ${parent.lastName}";
       selectedRole = "parent";
       selectedAvatar = parent.avatar;
     });
+    debugPrint("accountSelectorPage - Selected parent = $parent --- $parentId");
   }
 
   void selectKid(KidModel kid, String kidId) {
     setState(() {
-      selectedParentId = null;
+      selectedParentId = null; // Deselecting Parent
       selectedKidId = kidId;
       selectedName = kid.firstName;
       selectedRole = "kid";
@@ -156,6 +157,11 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           'family-user-id': familyUserId,
         },
       );
+      debugPrint(
+        "accountSelectorPage - Redirecting to parent-login-page with data: ...",
+      );
+      debugPrint("--> $selectedName");
+      debugPrint("--> $selectedParentId");
     } else {
       navigator.pushNamed(
         '/kids-login-page',
@@ -163,12 +169,15 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           'kidDocId': selectedKidId,
           'kidName': selectedName,
           'avatarPath': selectedAvatar,
+          'family-name': familyName,
+          'family-user-id': familyUserId,
         },
       );
     }
   }
 
   void addParent() async {
+    // For Adding New Parents Function - Opens up Parent Set Up Page.
     debugPrint("accountSelectorPage - Add Parent button tapped");
 
     var myOverlayOf = Overlay.of(context);
@@ -347,6 +356,8 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     debugPrint("accountSelectorPage - ...");
     debugPrint("... Parent:");
     for (var parent in parents) {
+      var myParentId = parent.parentId;
+      debugPrint(myParentId);
       debugPrint("${parent.toMap()}");
     }
     debugPrint("... Kid:");
@@ -380,7 +391,8 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     );
   }
 
-  // BUILD
+  // BUILD FUNCTION
+
   @override
   Widget build(BuildContext context) {
     Column myColumn = Column(
@@ -407,7 +419,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           child: Column(
             children: [
               Container(
-                color: Colors.black,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -574,7 +585,9 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
+
+            // Add Parent Button
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: GestureDetector(
@@ -658,54 +671,63 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: kids.asMap().entries.map((entry) {
-            final kid = entry.value;
-            final kidId = entry.key.toString();
+          children: [
+            ...kids.asMap().entries.map((entry) {
+              final kid = entry.value;
+              final kidId = entry.key.toString();
 
-            return Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: GestureDetector(
-                onTap: () => selectKid(kid, kidId),
-                child: Column(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha((0.3 * 255).toInt()),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 5),
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: GestureDetector(
+                  onTap: () => selectKid(kid, kidId),
+                  child: Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(
+                                (0.3 * 255).toInt(),
+                              ),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: selectedKidId == kidId
+                                ? Colors.blueAccent
+                                : Colors.transparent,
+                            width: 3,
                           ),
-                        ],
-                        border: Border.all(
-                          color: selectedKidId == kidId
-                              ? Colors.blueAccent
-                              : Colors.transparent,
-                          width: 3,
+                        ),
+                        child: CircleAvatar(
+                          backgroundImage: AssetImage(kid.avatar),
+                          radius: 40,
+                          child: kid.avatar.isEmpty ? const Text("Hi") : null,
                         ),
                       ),
-                      child: CircleAvatar(
-                        backgroundImage: AssetImage(kid.avatar),
-                        radius: 40,
-                        child: kid.avatar.isEmpty ? const Text("Hi") : null,
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            kid.firstName,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: GoogleFonts.fredoka().fontFamily,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      kid.firstName,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: GoogleFonts.fredoka().fontFamily,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }),
+          ],
         ),
       ),
     );

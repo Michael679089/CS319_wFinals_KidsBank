@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/parent_model.dart';
-import 'login_page.dart';
 
 class ParentSetupPage extends StatefulWidget {
   const ParentSetupPage({super.key});
@@ -66,6 +64,8 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
   }
 
   Future<void> _submit() async {
+    var navigator = Navigator.of(context);
+
     if (_isSubmitting) return;
 
     setState(() {
@@ -108,7 +108,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
     }
 
     try {
-      final user = await myAuthService.getCurrentUser();
+      final user = myAuthService.getCurrentUser();
       if (user == null) {
         _showSnackbar('User not authenticated', isError: true);
         setState(() {
@@ -120,6 +120,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
 
       final newParent = ParentModel(
         avatar: selectedAvatar,
+        parentId: "",
         familyUserId: userId,
         firstName: firstName,
         lastName: lastName,
@@ -131,7 +132,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       _showSnackbar('Parent added successfully', isError: false);
 
       if (context.mounted) {
-        Navigator.pushNamed(context, '/kids-setup-page');
+        navigator.pushNamed('/kids-setup-page');
       }
     } catch (e) {
       _showSnackbar('Failed to add parent: $e', isError: true);
