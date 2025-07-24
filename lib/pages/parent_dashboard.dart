@@ -29,6 +29,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
   // Saved credentials
   String familyName = '';
   String familyUserId = '';
+  String parentId = '';
 
   // The INITSTATE Function
 
@@ -50,9 +51,17 @@ class _ParentDashboardState extends State<ParentDashboard> {
       return;
     }
     final args = myModalRoute.settings.arguments as Map<String, String?>;
+
+    var newFamilyUserId = args["family-user-id"] as String;
+
+    var familyCollection = FirebaseFirestore.instance.collection("users");
+    var familySnapshot = await familyCollection.doc(newFamilyUserId).get();
+    var newFamilyName = familySnapshot["family_name"];
+
     setState(() {
-      familyName = args['family-name'] as String;
-      familyUserId = args["family-user-id"] as String;
+      familyName = newFamilyName;
+      familyUserId = newFamilyUserId;
+      parentId = args["parent-id"] as String;
     });
   }
 
@@ -819,6 +828,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
           selectedPage: 'dashboard',
           familyName: familyName,
           familyUserId: familyUserId,
+          parentId: parentId,
         ),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(

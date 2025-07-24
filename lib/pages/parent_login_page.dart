@@ -42,7 +42,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
     }
     final args = myModalRoute.settings.arguments as Map<String, String?>;
     setState(() {
-      parentId = args['parentId'] as String;
+      parentId = args['parent-id'] as String;
       parentName = args["name"] as String;
       avatarPath = args["avatar"] as String;
       familyName = args["family-name"] as String;
@@ -112,7 +112,11 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
       );
       navigator.pushReplacementNamed(
         '/parent-dashboard-page',
-        arguments: {"family-name": familyName, "family-user-id": familyUserId},
+        arguments: {
+          "family-name": familyName,
+          "family-user-id": familyUserId,
+          "parent-id": parentId,
+        },
       );
     } catch (e) {
       _showSnackbar("Error: ${e.toString()}");

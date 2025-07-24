@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'kids_setup_page.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 
 class CreateKidAccountPage extends StatefulWidget {
   const CreateKidAccountPage({super.key});
@@ -14,10 +15,50 @@ class CreateKidAccountPage extends StatefulWidget {
 
 class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
   String selectedAvatar = 'assets/avatar1.png';
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController dobController = TextEditingController();
-  final TextEditingController numberController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController dateOfBirthController = TextEditingController();
+  final TextEditingController phoneNumController = TextEditingController();
+  final TextEditingController pincodeController = TextEditingController();
+
+  // Saved Credentials
+  String parentId = '';
+  bool _didUserCameFromParentDashboard = false;
+
+  // INIT STATE FUNCTION
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadParentInfo();
+    });
+  }
+
+  // Other Functions:
+
+  Future<void> _loadParentInfo() async {
+    final familyUser = FirebaseAuth.instance.currentUser;
+    if (familyUser != null) {
+      // Step 1: Try to get the Parent that got here name.
+      final myModalRoute = ModalRoute.of(context);
+
+      if (myModalRoute == null) {
+        debugPrint("kidsSetupPage - ERROR: myModalRoute was null");
+        return;
+      }
+      final args = myModalRoute.settings.arguments as Map<String, dynamic>;
+      var newParentId = args["parent-id"] as String;
+
+      setState(() {
+        parentId = newParentId;
+        _didUserCameFromParentDashboard =
+            args["came-from-parent-dashboard"] as bool;
+      });
+    }
+
+    debugPrint("createKidsAccountPage - succesfully load parent info");
+  }
 
   void _showAvatarPicker() {
     showDialog(
@@ -71,7 +112,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
       ),
     );
     if (picked != null) {
-      dobController.text = DateFormat('yyyy-MM-dd').format(picked);
+      dateOfBirthController.text = DateFormat('yyyy-MM-dd').format(picked);
     }
   }
 
@@ -114,10 +155,12 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
   }
 
   Future<void> _submit() async {
-    final name = nameController.text.trim();
-    final dob = dobController.text.trim();
-    final phone = numberController.text.trim();
-    final password = passwordController.text;
+    final name = firstNameController.text.trim();
+    final dob = dateOfBirthController.text.trim();
+    final phone = phoneNumController.text.trim();
+    final password = pincodeController.text;
+
+    var navigator = Navigator.of(context);
 
     if (name.isEmpty || dob.isEmpty || phone.isEmpty || password.isEmpty) {
       _showSnackbar('All fields are required', isError: true);
@@ -125,29 +168,53 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
     }
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final myAuthService = AuthService();
+      final user = myAuthService.getCurrentUser();
       if (user == null) {
         _showSnackbar('User not authenticated', isError: true);
         return;
       }
 
-      await FirebaseFirestore.instance.collection('kids').add({
-        'firstName': name,
-        'date_of_birth': dob,
-        'phone': phone,
-        'password': password,
-        'avatar': selectedAvatar,
-        'user_id': user.uid,
-        'created_at': FieldValue.serverTimestamp(),
-      });
+      var kidCollection = FirebaseFirestore.instance.collection("kids");
+      var kidId = kidCollection.doc().id;
+
+      var firstName = firstNameController.text;
+      var lastName = lastNameController.text;
+      var dateOfBirth = dateOfBirthController.text; // year-month-day 2015-01-28
+      var dateParts = dateOfBirth.split('-');
+      var year = int.parse(dateParts[0]); // e.g., 2015
+      var month = int.parse(dateParts[1]); // e.g., 1
+      var day = int.parse(dateParts[2]); // e.g., 28
+      DateTime dateOfBirthParsed = DateTime(year, month, day);
+      var phoneNumber = phoneNumController.text;
+      var pincode = pincodeController.text;
+      var avatar = selectedAvatar;
+      var familyUserId = user.uid;
+
+      KidModel newKidModel = KidModel(
+        id: kidId,
+        firstName: firstName,
+        lastName: lastName,
+        dateOfBirth: dateOfBirthParsed,
+        phone: phoneNumber,
+        pincode: pincode,
+        avatar: avatar,
+        familyUserId: familyUserId,
+      );
+      // Set the document with the specific kidId instead of adding a new one
+      await kidCollection.doc(kidId).set(newKidModel.toMap());
 
       _showSnackbar('Kid account created successfully!', isError: false);
 
-      await Future.delayed(const Duration(milliseconds: 1500));
-      Navigator.pushReplacement(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(builder: (context) => const KidsSetupPage()),
+      debugPrint(
+        "createKidsAccountPage - succesfully created kid, redirecting to kids-setup-page",
+      );
+      navigator.pushReplacementNamed(
+        "/kids-setup-page",
+        arguments: {
+          "parent-id": parentId,
+          "came-from-parent-dashboard": _didUserCameFromParentDashboard,
+        },
       );
     } catch (e) {
       _showSnackbar('Error saving data: $e', isError: true);
@@ -182,7 +249,11 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                           shape: BoxShape.circle,
                           color: Colors.purple,
                         ),
-                        child: const Icon(Icons.edit, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -214,17 +285,26 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                 ),
                 child: Column(
                   children: [
-                    _buildLabel('Name'),
-                    _buildField(nameController),
+                    _buildLabel('First Name'),
+                    _buildField(firstNameController),
+                    _buildLabel('Last Name'),
+                    _buildField(lastNameController),
                     const SizedBox(height: 20),
                     _buildLabel('Date of birth'),
-                    _buildField(dobController, onTap: _pickDate, readOnly: true),
+                    _buildField(
+                      dateOfBirthController,
+                      onTap: _pickDate,
+                      readOnly: true,
+                    ),
                     const SizedBox(height: 20),
-                    _buildLabel('Number'),
-                    _buildField(numberController, keyboardType: TextInputType.phone),
+                    _buildLabel('Phone Number #(ex: +63)'),
+                    _buildField(
+                      phoneNumController,
+                      keyboardType: TextInputType.phone,
+                    ),
                     const SizedBox(height: 20),
                     _buildLabel('Password'),
-                    _buildField(passwordController, obscure: true),
+                    _buildField(pincodeController, obscure: true),
                     const SizedBox(height: 25),
                     SizedBox(
                       width: double.infinity,

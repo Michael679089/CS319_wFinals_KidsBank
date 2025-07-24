@@ -18,6 +18,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
   // Saved credentials
   String familyName = '';
   String familyUserId = '';
+  String parentId = '';
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
     setState(() {
       familyName = args['family-name'] as String;
       familyUserId = args["family-user-id"] as String;
+      parentId = args["parent-id"] as String;
     });
   }
 
@@ -108,6 +110,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
           selectedPage: 'chores',
           familyName: familyName,
           familyUserId: familyUserId,
+          parentId: parentId,
         ),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(

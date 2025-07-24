@@ -345,7 +345,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           if (_isLoadingIndicatorActive)
             Container(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withAlpha(150),
               child: const Center(
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4e88cf)),

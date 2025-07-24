@@ -9,7 +9,7 @@ OUR MAIN REPO: https://github.com/Michael679089/CS319_Flutter-Application-Develo
 
 # Things Fixed so far:
 
-1. Currently I fixed the parent-dashboar-page
+1. Currently I fixed the parent-dashboard-page
 2. Fixed the parent-chores-page
 3. Fixed the parent-notification-page
 4. Fixed the parent-setup-page

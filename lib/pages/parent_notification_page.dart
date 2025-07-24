@@ -62,6 +62,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
   // Saved credentials
   String familyName = '';
   String familyUserId = '';
+  String parentId = '';
 
   // INITSTATE Function:
 
@@ -85,6 +86,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
     setState(() {
       familyName = args['family-name'] as String;
       familyUserId = args["family-user-id"] as String;
+      parentId = args["parent-id"] as String;
     });
   }
 
@@ -462,6 +464,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
           selectedPage: 'notifications',
           familyName: familyName,
           familyUserId: familyUserId,
+          parentId: parentId,
         ),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:wfinals_kidsbank/pages/create_kids_account_page.dart';
 import 'package:wfinals_kidsbank/pages/kids_setup_page.dart';
 import 'package:wfinals_kidsbank/pages/login_page.dart';
 import 'package:wfinals_kidsbank/pages/parent_chores_page.dart';
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
         '/parent-notification-page': (context) =>
             const ParentNotificationsPage(),
         '/parent-chores-page': (context) => const ParentChoresPage(),
+        '/create-kids-account-page': (context) => const CreateKidAccountPage(),
       },
       onUnknownRoute: (settings) => MaterialPageRoute(
         builder: (context) => Scaffold(

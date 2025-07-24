@@ -150,7 +150,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       navigator.pushNamed(
         '/parent-login-page',
         arguments: {
-          'parentId': selectedParentId,
+          'parent-id': selectedParentId,
           'name': selectedName,
           'avatar': selectedAvatar,
           'family-name': familyName,

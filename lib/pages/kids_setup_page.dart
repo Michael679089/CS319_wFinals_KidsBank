@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
-import 'create_kids_account_page.dart';
 import 'login_page.dart';
 
 class KidsSetupPage extends StatefulWidget {
@@ -16,27 +15,58 @@ class KidsSetupPage extends StatefulWidget {
 class _KidsSetupPageState extends State<KidsSetupPage> {
   String parentName = '';
   String parentAvatar = '';
-  String userId = '';
+  String familyUserId = '';
+  String parentId = '';
+
+  bool _didUserCameFromParentDashboard = false;
+
+  // INITSTATE Function:
 
   @override
   void initState() {
     super.initState();
-    _loadParentInfo();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadParentInfo();
+    });
   }
 
+  // Other Functions:
+
   Future<void> _loadParentInfo() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final parentDoc = await FirebaseFirestore.instance
-          .collection('parents')
-          .doc(user.uid)
-          .get();
+    final familyUser = FirebaseAuth.instance.currentUser;
+    if (familyUser != null) {
+      // Step 1: Try to get the Parent that got here name.
+      final myModalRoute = ModalRoute.of(context);
+
+      if (myModalRoute == null) {
+        debugPrint("kidsSetupPage - ERROR: myModalRoute was null");
+        return;
+      }
+      final args = myModalRoute.settings.arguments as Map<String, dynamic>;
+      var newParentId = args["parent-id"] as String;
+
+      // 1 - making sure user didn't came from dashboard if it was available
+      try {
+        _didUserCameFromParentDashboard =
+            args["came-from-parent-dashboard"] as bool;
+      } catch (e) {
+        debugPrint("kidsSetupPage - parent didn't come from dashboard");
+      }
+
+      var parentCollection = FirebaseFirestore.instance.collection("parents");
+      var parentDoc = await parentCollection.doc(newParentId).get();
+      var lastName =
+          "${parentDoc['lastName']?.toString().substring(0, 1).toUpperCase()}.";
+      var newParentName = "${parentDoc['firstName']}, $lastName.";
+      var newParentAvatar = parentDoc['avatar'];
 
       if (parentDoc.exists) {
         setState(() {
-          parentName = parentDoc['firstname'];
-          parentAvatar = parentDoc['avatar'];
-          userId = user.uid;
+          parentName = newParentName;
+          parentAvatar = newParentAvatar;
+          familyUserId = familyUser.uid;
+          parentId = newParentId;
         });
       }
     }
@@ -45,18 +75,52 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
   Future<List<Map<String, dynamic>>> _loadKids() async {
     final kidsSnapshot = await FirebaseFirestore.instance
         .collection('kids')
-        .where('user_id', isEqualTo: userId)
+        .where('user_id', isEqualTo: familyUserId)
         .get();
 
     return kidsSnapshot.docs.map((doc) => doc.data()).toList();
   }
 
+  void addKid() async {
+    var navigator = Navigator.of(context);
+
+    navigator.pushNamed(
+      '/create-kids-account-page',
+      arguments: {
+        "parent-id": parentId,
+        "came-from-parent-dashboard": _didUserCameFromParentDashboard,
+      },
+    );
+    debugPrint(
+      "kidsSetupPage - addKids BTN pressed, redirected to create-kids-account-page",
+    );
+  }
+
+  //
+  // BUILD FUNCTION
+  //
+
   @override
   Widget build(BuildContext context) {
+    var navigator = Navigator.of(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) return;
+        if (didPop) {
+          return;
+        }
+
+        if (_didUserCameFromParentDashboard) {
+          navigator.pushReplacementNamed(
+            "/parent-dashboard-page",
+            arguments: {"family-user-id": familyUserId, "parent-id": parentId},
+          );
+          debugPrint(
+            "kidsSetupPage - User that came from parent dashboard pressed back on phone - redirected to Parent-Dashbaord-Page",
+          );
+          return;
+        }
 
         final shouldLogout = await showDialog<bool>(
           context: context,
@@ -183,17 +247,11 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                             ...kids.map((kid) => _buildKidTile(kid)),
                             const SizedBox(height: 12),
 
-                            // "+" Add Kid Button
+                            // "+" Add Kid Button - Where the Add Kid Logic is
                             Center(
                               child: GestureDetector(
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const CreateKidAccountPage(),
-                                    ),
-                                  );
+                                  addKid();
                                 },
                                 child: CircleAvatar(
                                   backgroundColor: const Color(0xFF4E88CF),

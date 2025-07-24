@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/parent_dashboard.dart';
 
 class ParentDrawer extends StatelessWidget {
   final String selectedPage;
@@ -8,6 +7,7 @@ class ParentDrawer extends StatelessWidget {
   // Saved credentials
   final String familyName;
   final String familyUserId;
+  final String parentId;
 
   // Constructor of our drawer navbar page
   const ParentDrawer({
@@ -15,6 +15,7 @@ class ParentDrawer extends StatelessWidget {
     required this.selectedPage,
     required this.familyName,
     required this.familyUserId,
+    required this.parentId,
   });
 
   void _confirmLogout(BuildContext context) {
@@ -135,6 +136,24 @@ class ParentDrawer extends StatelessWidget {
                   arguments: {
                     "family-name": familyName,
                     "family-user-id": familyUserId,
+                  },
+                );
+              }
+            },
+          ),
+          _buildMenuItem(
+            context,
+            label: "Make Child Account",
+            isSelected: selectedPage == 'make-new-child-account',
+            onTap: () {
+              if (selectedPage != 'make-new-child-account') {
+                navigator.pushNamed(
+                  "/kids-setup-page",
+                  arguments: {
+                    "family-name": familyName,
+                    "family-user-id": familyUserId,
+                    "came-from-parent-dashboard": true,
+                    "parent-id": parentId,
                   },
                 );
               }

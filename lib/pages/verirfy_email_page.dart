@@ -89,7 +89,7 @@ class _VerificationEmailPageState extends State<VerificationEmailPage> {
             return;
           }
 
-          // Step 2 - Add verified user to "Users" Collection.
+          // Step 2 - Email is indeed Verified - Add verified user to "Users" Collection.
           var myFirestoreAPI = FirestoreAPI();
           final args = myModalRoute.settings.arguments as Map<String, String>;
           var userId = user.uid;
