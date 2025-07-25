@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ParentLoginPage extends StatefulWidget {
-  const ParentLoginPage({super.key});
+  final String familyId;
+
+  const ParentLoginPage({super.key, required this.familyId});
 
   @override
   State<ParentLoginPage> createState() => _ParentLoginPageState();
@@ -55,6 +57,8 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
   }
 
   Future<void> _login() async {
+    debugPrint("parentLoginPage - attempt to login");
+
     // The Login Function
     final pincode = passwordController.text.trim();
     final cardDigits = cardController.text.trim();
@@ -84,13 +88,13 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
 
       // Step 3: Now for card digits verify if correct.
       final familyPaymentCollection = FirebaseFirestore.instance.collection(
-        "family_payment_info",
+        "familyPaymentInfo",
       );
       final familyPaymentSnapshot = await familyPaymentCollection
-          .where("user_id", isEqualTo: familyUserId)
+          .where("familyId", isEqualTo: familyUserId)
           .get();
       final familyPaymentDoc = familyPaymentSnapshot.docs.first;
-      var cardNumber = familyPaymentDoc["card_number"].toString();
+      var cardNumber = familyPaymentDoc["cardNumber"].toString();
 
       if (cardNumber.length >= 4) {
         if (cardNumber.endsWith(cardDigits)) {
@@ -108,7 +112,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
       _showSnackbar("Login successful!", isError: false);
 
       debugPrint(
-        "parentLoginPage - Parent Login Successful. Redirecting to Parent-Dashboard-Page",
+        "parentLoginPage - Parent Login Successful. Redirecting to Parent-Dashboard-Page $familyUserId",
       );
       navigator.pushReplacementNamed(
         '/parent-dashboard-page',
@@ -119,7 +123,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
         },
       );
     } catch (e) {
-      _showSnackbar("Error: ${e.toString()}");
+      _showSnackbar("Error checking pincode == password: ${e.toString()}");
     }
   }
 

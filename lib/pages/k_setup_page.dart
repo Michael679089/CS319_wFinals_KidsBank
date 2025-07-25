@@ -1,12 +1,20 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'login_page.dart';
 
 class KidsSetupPage extends StatefulWidget {
-  const KidsSetupPage({super.key});
+  const KidsSetupPage({
+    super.key,
+    required parentId,
+    required cameFromParentDashboard,
+  });
 
   @override
   State<KidsSetupPage> createState() => _KidsSetupPageState();
@@ -59,26 +67,29 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
       var lastName =
           "${parentDoc['lastName']?.toString().substring(0, 1).toUpperCase()}.";
       var newParentName = "${parentDoc['firstName']}, $lastName.";
-      var newParentAvatar = parentDoc['avatar'];
+      var newParentAvatar = parentDoc['avatarFilePath'];
+      var newFamilyUserId = familyUser.uid;
 
       if (parentDoc.exists) {
         setState(() {
           parentName = newParentName;
           parentAvatar = newParentAvatar;
-          familyUserId = familyUser.uid;
+          familyUserId = newFamilyUserId;
           parentId = newParentId;
         });
       }
     }
   }
 
-  Future<List<Map<String, dynamic>>> _loadKids() async {
-    final kidsSnapshot = await FirebaseFirestore.instance
-        .collection('kids')
-        .where('user_id', isEqualTo: familyUserId)
-        .get();
+  Future<List<KidModel>> _loadKids() async {
+    var myFirestoreService = FirestoreService();
+    var myAuthService = AuthService();
 
-    return kidsSnapshot.docs.map((doc) => doc.data()).toList();
+    var familyId = myAuthService.getCurrentUser()?.uid as String;
+
+    var kidsList = myFirestoreService.getKidsByFamilyUserId(familyId);
+
+    return kidsList;
   }
 
   void addKid() async {
@@ -89,6 +100,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
       arguments: {
         "parent-id": parentId,
         "came-from-parent-dashboard": _didUserCameFromParentDashboard,
+        "family-user-id": familyUserId,
       },
     );
     debugPrint(
@@ -230,7 +242,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                       border: Border.all(color: Colors.black, width: 2),
                     ),
                     padding: const EdgeInsets.all(16),
-                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                    child: FutureBuilder<List<KidModel>>(
                       future: _loadKids(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
@@ -240,7 +252,8 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                           );
                         }
 
-                        final kids = snapshot.data ?? [];
+                        final List<KidModel> kids =
+                            snapshot.data as List<KidModel> ?? [];
 
                         return ListView(
                           children: [
@@ -281,12 +294,26 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AccountSelectorPage(),
-                        ),
-                      );
+                      if (!_didUserCameFromParentDashboard) {
+                        navigator.pushReplacementNamed(
+                          "/account-selector-page",
+                          arguments: {"family-user-id": familyUserId},
+                        );
+                        debugPrint(
+                          "kidsSetupPage - user not from dashboard. user pressed continue. Redirected to account-selector-page",
+                        );
+                      } else {
+                        navigator.pushReplacementNamed(
+                          "/parent-dashboard-page",
+                          arguments: {
+                            "family-user-id": familyUserId,
+                            "parent-id": parentId,
+                          },
+                        );
+                        debugPrint(
+                          "kidsSetupPage - user from dashboard. user pressed continue. Redirected to parent-dashboard-page",
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4E88CF),
@@ -317,21 +344,40 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
     );
   }
 
-  Widget _buildKidTile(Map<String, dynamic> kid) {
+  Color randomizeColors() {
+    final Random random = Random();
+
+    // Hue: full range 0–360
+    final double hue = random.nextDouble() * 360;
+
+    // Saturation: 0.4–0.7 for mild colors
+    final double saturation = 0.4 + random.nextDouble() * 0.3;
+
+    // Lightness: 0.75–0.9 for pale colors
+    final double lightness = 0.75 + random.nextDouble() * 0.15;
+
+    final hslColor = HSLColor.fromAHSL(1.0, hue, saturation, lightness);
+    return hslColor.toColor();
+  }
+
+  Widget _buildKidTile(KidModel kid) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFF6C6C),
+        color: randomizeColors(),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.black, width: 2),
       ),
       child: Row(
         children: [
-          CircleAvatar(backgroundImage: AssetImage(kid['avatar']), radius: 26),
+          CircleAvatar(
+            backgroundImage: AssetImage(kid.avatarFilePath),
+            radius: 26,
+          ),
           const SizedBox(width: 12),
           Text(
-            kid['firstName'],
+            kid.firstName,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,

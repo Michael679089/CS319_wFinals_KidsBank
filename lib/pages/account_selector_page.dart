@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'package:wfinals_kidsbank/database/models/parent_model.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class AccountSelectorPage extends StatefulWidget {
-  const AccountSelectorPage({super.key});
+  final String familyUserId;
+
+  const AccountSelectorPage({super.key, required this.familyUserId});
 
   @override
   State<AccountSelectorPage> createState() => _AccountSelectorPageState();
@@ -15,7 +19,6 @@ class AccountSelectorPage extends StatefulWidget {
 class _AccountSelectorPageState extends State<AccountSelectorPage> {
   // Saved Credentials
   String familyName = "";
-  String familyUserId = "";
   List<ParentModel> parents = [];
   List<KidModel> kids = [];
   bool isLoading = true;
@@ -28,38 +31,23 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   OverlayEntry? overlayEntry;
 
   // My Services
-  final myFirestoreAPI = FirestoreAPI();
+  final myFirestoreService = FirestoreService();
   final myAuthService = AuthService();
 
   // FUNCTIONS
 
   Future<void> updateFamilyName() async {
-    final myModalRoute = ModalRoute.of(context);
-
-    if (myModalRoute == null) {
-      setState(() {
-        errorMessage = 'Navigation arguments not found';
-        isLoading = false;
-      });
-      return;
-    }
-
-    final args = myModalRoute.settings.arguments as Map<String, String>;
-    final newFamilyName = args["family-name"] as String;
-    final newUserId = args["family-user-id"] as String;
-
+    var myFamilyId = widget.familyUserId;
+    debugPrint("accountSelectorPage - fetching family name $myFamilyId");
+    var newFamilyName = await myFirestoreService.getFamilyName(myFamilyId);
     setState(() {
       familyName = newFamilyName;
-      familyUserId = newUserId;
     });
-
-    debugPrint(
-      "accountSelectorPage - Update family name success - $familyName + $familyUserId",
-    );
   }
 
   Future<void> fetchUsers() async {
     var navigator = Navigator.of(context);
+    var familyId = widget.familyUserId;
 
     try {
       final user = myAuthService.getCurrentUser();
@@ -71,33 +59,24 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         return;
       }
 
-      final parentList = await myFirestoreAPI.getParentsByFamilyUserId(
-        familyUserId,
+      var newParents = await myFirestoreService.getParentByFamilyUserId(
+        familyId,
       );
-      final kidList = await myFirestoreAPI.getKidsByFamilyUserId(familyUserId);
+      var newKids = await myFirestoreService.getKidsByFamilyUserId(familyId);
+
+      if (newParents.isEmpty) {
+        navigator.pushNamed("/parent-setup-page");
+        debugPrint(
+          "acountSelectorPage - no parents found - redirected to /parents-setup-page",
+        );
+        return;
+      }
 
       setState(() {
-        parents = parentList;
-        kids = kidList;
+        parents = newParents;
+        kids = newKids;
         isLoading = false;
       });
-
-      if (parentList.isEmpty) {
-        navigator.pushNamed(
-          '/parent-setup-page',
-          arguments: {
-            "family-name": familyName,
-            "family-user-id": familyUserId,
-          },
-        );
-        debugPrint(
-          "accountSelectorPage - No Parent found, Redirected to Parent-Setup-Page",
-        );
-      } else {
-        debugPrint(
-          "accountSelectorPage - Successfully fetched parents and kids",
-        );
-      }
     } catch (e) {
       setState(() {
         errorMessage = 'Failed to load users: $e';
@@ -112,7 +91,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       selectedKidId = null; // Deselecting Kid
       selectedName = "${parent.firstName} ${parent.lastName}";
       selectedRole = "parent";
-      selectedAvatar = parent.avatar;
+      selectedAvatar = parent.avatarFilePath;
     });
     debugPrint("accountSelectorPage - Selected parent = $parent --- $parentId");
   }
@@ -120,15 +99,16 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   void selectKid(KidModel kid, String kidId) {
     setState(() {
       selectedParentId = null; // Deselecting Parent
-      selectedKidId = kidId;
+      selectedKidId = kid.kidId;
       selectedName = kid.firstName;
       selectedRole = "kid";
-      selectedAvatar = kid.avatar;
+      selectedAvatar = kid.avatarFilePath;
     });
   }
 
   void login() {
     var navigator = Navigator.of(context);
+    var familyId = widget.familyUserId;
 
     debugPrint(
       "accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName",
@@ -147,6 +127,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     }
 
     if (selectedRole == 'parent') {
+      debugPrint(familyId);
       navigator.pushNamed(
         '/parent-login-page',
         arguments: {
@@ -154,7 +135,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           'name': selectedName,
           'avatar': selectedAvatar,
           'family-name': familyName,
-          'family-user-id': familyUserId,
+          'family-user-id': familyId,
         },
       );
       debugPrint(
@@ -170,10 +151,35 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           'kidName': selectedName,
           'avatarPath': selectedAvatar,
           'family-name': familyName,
-          'family-user-id': familyUserId,
+          'family-user-id': widget.familyUserId,
         },
       );
     }
+  }
+
+  // Helper method to show SnackBar, consistent with LoginPage
+  void logoutFromFamily() async {
+    var navigator = Navigator.of(context);
+
+    // Step 1: Log User out but don't redirect him yet.
+    var logoutResponse = await myAuthService.logoutAccount();
+
+    if (logoutResponse["status"] == "success") {
+      debugPrint("log out successful");
+
+      // Step 2: If log out successful removed shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      prefs.remove('savedEmail');
+      prefs.remove('savedPassword');
+      prefs.remove('keepLoggedIn');
+
+      // Step 3: Finally Redirect him
+      (context, "Logged out successfully!", isError: false);
+      navigator.pushReplacementNamed("/login-page");
+      return;
+    }
+
+    debugPrint("log out failed");
   }
 
   void addParent() async {
@@ -198,7 +204,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         return;
       }
 
-      final cardNumber = await myFirestoreAPI.getFamilyPaymentCardNumber(
+      final cardNumber = await myFirestoreService.getFamilyPaymentCardNumber(
         user.uid,
       );
       if (cardNumber == null) {
@@ -217,6 +223,8 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           : cardNumber;
 
       final TextEditingController controller = TextEditingController();
+
+      var familyId = widget.familyUserId;
 
       overlayEntry = OverlayEntry(
         builder: (context) => Positioned(
@@ -285,7 +293,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                               "/parent-setup-page",
                               arguments: {
                                 "family-name": familyName,
-                                "family-user-id": familyUserId,
+                                "family-user-id": familyId,
                               },
                             );
                             // Assuming parent-setup-page returns the new ParentModel
@@ -347,32 +355,12 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     }
   }
 
-  void mySequenceOne() async {
-    await updateFamilyName();
-    await fetchUsers();
-    debugPrint(
-      "accountSelectorPage - kids: ${kids.length} & parents: ${parents.length}",
-    );
-    debugPrint("accountSelectorPage - ...");
-    debugPrint("... Parent:");
-    for (var parent in parents) {
-      var myParentId = parent.parentId;
-      debugPrint(myParentId);
-      debugPrint("${parent.toMap()}");
-    }
-    debugPrint("... Kid:");
-    for (var kid in kids) {
-      debugPrint("${kid.toMap()}");
-    }
-  }
-
   // INITSTATE
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      mySequenceOne();
-    });
+    updateFamilyName();
+    fetchUsers();
   }
 
   Text get title => _buildText("Hi!", 56);
@@ -418,22 +406,20 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           margin: EdgeInsets.all(20),
           child: Column(
             children: [
-              Container(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Flexible(flex: 2, child: myColumn),
-                    Flexible(
-                      flex: 1,
-                      child: Image.asset(
-                        'assets/owl.png',
-                        height: 150,
-                        width: 240,
-                        alignment: Alignment.centerRight,
-                      ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Flexible(flex: 2, child: myColumn),
+                  Flexible(
+                    flex: 1,
+                    child: Image.asset(
+                      'assets/owl.png',
+                      height: 150,
+                      width: 240,
+                      alignment: Alignment.centerRight,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               Container(
                 decoration: BoxDecoration(
@@ -468,6 +454,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                       padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
                       child: ElevatedButton(
                         onPressed: login,
+                        style: Utilities().ourButtonStyle1(),
                         child: Text(
                           "Log in as $selectedName",
                           style: TextStyle(
@@ -478,6 +465,12 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                     ),
                   ],
                 ),
+              ),
+
+              ElevatedButton(
+                onPressed: logoutFromFamily,
+                style: Utilities().ourButtonStyle1(),
+                child: Text("Log out from Family"),
               ),
             ],
           ),
@@ -523,12 +516,15 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       );
     }
 
+    const double parentImageCircleSize = 30;
+
     return SizedBox(
       height: 120,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
+            // The Parents
             ...parents.asMap().entries.map((entry) {
               final parent = entry.value;
               final parentId = entry.key.toString();
@@ -560,9 +556,9 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                           ),
                         ),
                         child: CircleAvatar(
-                          backgroundImage: AssetImage(parent.avatar),
-                          radius: 40,
-                          child: parent.avatar.isEmpty
+                          backgroundImage: AssetImage(parent.avatarFilePath),
+                          radius: parentImageCircleSize,
+                          child: parent.avatarFilePath.isEmpty
                               ? const Text("Hi")
                               : null,
                         ),
@@ -608,7 +604,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                         ],
                       ),
                       child: CircleAvatar(
-                        radius: 40,
+                        radius: parentImageCircleSize,
                         backgroundColor: Colors.grey[300],
                         child: const Icon(
                           Icons.add,
@@ -654,11 +650,11 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       );
     }
     if (kids.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No kids found',
           style: TextStyle(
-            fontFamily: 'Fredoka',
+            fontFamily: GoogleFonts.fredoka().fontFamily,
             fontSize: 16,
             color: Colors.black,
           ),
@@ -667,67 +663,40 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     }
 
     return SizedBox(
-      height: 120,
+      height: 120, // Larger than _parentsDisplay (100)
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: [
-            ...kids.asMap().entries.map((entry) {
-              final kid = entry.value;
-              final kidId = entry.key.toString();
+          children: kids.asMap().entries.map((entry) {
+            final kid = entry.value;
+            final kidId = entry.key.toString();
 
-              return Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: GestureDetector(
-                  onTap: () => selectKid(kid, kidId),
-                  child: Column(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(
-                                (0.3 * 255).toInt(),
-                              ),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: selectedKidId == kidId
-                                ? Colors.blueAccent
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        child: CircleAvatar(
-                          backgroundImage: AssetImage(kid.avatar),
-                          radius: 40,
-                          child: kid.avatar.isEmpty ? const Text("Hi") : null,
-                        ),
+            return Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: GestureDetector(
+                onTap: () => selectKid(kid, kidId),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: AssetImage(kid.avatarFilePath),
+                      radius: 40, // Larger than _parentsDisplay (32)
+                      child: kid.avatarFilePath.isEmpty
+                          ? const Text("Hi")
+                          : null,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "${kid.firstName} ${kid.lastName}",
+                      style: TextStyle(
+                        fontSize: 16, // Larger than _parentsDisplay (14)
+                        fontFamily: GoogleFonts.fredoka().fontFamily,
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Text(
-                            kid.firstName,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: GoogleFonts.fredoka().fontFamily,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              );
-            }),
-          ],
+              ),
+            );
+          }).toList(),
         ),
       ),
     );

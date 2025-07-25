@@ -1,11 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'parent_drawer.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/models/kid_model.dart';
+import 'p_dashboard_drawer.dart';
 import 'package:flutter/services.dart';
 
 class ParentNotificationsPage extends StatefulWidget {
-  const ParentNotificationsPage({super.key});
+  final String familyUserId;
+
+  const ParentNotificationsPage({
+    super.key,
+    required this.familyUserId,
+    required parentId,
+  });
 
   @override
   State<ParentNotificationsPage> createState() =>
@@ -13,53 +21,61 @@ class ParentNotificationsPage extends StatefulWidget {
 }
 
 class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
+  // myservices
+  var myFirestoreService = FirestoreService();
+
   /// Fetch notifications stream with kid info
   Stream<List<Map<String, dynamic>>> getNotificationsStream() {
     return FirebaseFirestore.instance
         .collection('notifications')
-        .orderBy('timestamp', descending: true)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
+          debugPrint("parentDashNotifPage - getting notifications");
+
           List<Map<String, dynamic>> notifications = [];
 
           for (var doc in snapshot.docs) {
-            final data = doc.data();
-            final kidId = data['kid_id'];
+            final notificationData = doc.data();
+            final kidId = notificationData['kidId'];
 
-            // Fetch kid info from kids collection
-            final kidSnapshot = await FirebaseFirestore.instance
+            // Fetch corresponding kid info
+            final kidDoc = await FirebaseFirestore.instance
                 .collection('kids')
                 .doc(kidId)
                 .get();
 
-            String kidName = data['kid_name'] ?? 'Kid';
-            String avatarPath = 'assets/avatar1.png'; // Default avatar
+            if (!kidDoc.exists) continue;
 
-            if (kidSnapshot.exists) {
-              final kidData = kidSnapshot.data()!;
-              kidName = kidData['firstName'] ?? kidName;
-              avatarPath = kidData['avatar'] ?? avatarPath;
-            }
+            final kidData = kidDoc.data()!;
+            final kidName = kidData['firstName'] ?? "Unknown Kid";
+            final avatarPath = kidData['avatarFilePath'] ?? "";
 
+            // Combine kid info with notification info
             notifications.add({
               'id': doc.id,
-              'type': data['type'], // withdrawal OR chore_completed
+              'type': notificationData["type"],
+              'choreTitle': notificationData['choreTitle'] ?? '',
+              'choreDesc': notificationData['choreDesc'] ?? '',
+              'title': notificationData['title'] ?? '',
+              'amount': notificationData['amount'] ?? 0,
+              'status': notificationData['status'] ?? 'pending',
+              'message': notificationData['message'] ?? "",
+              'timestamp': notificationData['timestamp'],
               'kidId': kidId,
               'kidName': kidName,
-              'avatar': avatarPath,
-              'choreTitle': data['chore_title'], // for chore_completed
-              'choreDesc': data['description'], // for chore_completed
-              'title': data['title'], // for withdrawal
-              'amount': data['amount'], // for withdrawal
-              'status': data['status'] ?? 'pending',
-              'timestamp': data['timestamp'],
+              'kidAvatar': avatarPath,
             });
           }
+
+          debugPrint(
+            "parentDashNotifPage - returned notifications: \$notifications",
+          );
           return notifications;
         });
   }
 
-  // Saved credentials
+  // saved credentials
   String familyName = '';
   String familyUserId = '';
   String parentId = '';
@@ -321,7 +337,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                                 try {
                                   // 1. Update kid's balance
                                   final paymentDoc = FirebaseFirestore.instance
-                                      .collection('kids_payment_info')
+                                      .collection('kidPaymentInfo')
                                       .doc(kidId);
 
                                   final paymentSnapshot = await paymentDoc
@@ -339,9 +355,8 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                                       currentBalance + enteredAmount;
 
                                   await paymentDoc.set({
-                                    'usable_balance': newBalance,
-                                    'last_updated':
-                                        FieldValue.serverTimestamp(),
+                                    'amountLeft': newBalance,
+                                    'lastUpdated': FieldValue.serverTimestamp(),
                                   });
 
                                   // 2. Update notification & chore status
@@ -353,9 +368,9 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                                   final choreQuery = await FirebaseFirestore
                                       .instance
                                       .collection('chores')
-                                      .where('kid_id', isEqualTo: kidId)
+                                      .where('kidId', isEqualTo: kidId)
                                       .where(
-                                        'chore_title',
+                                        'choreTitle',
                                         isEqualTo: choreTitle,
                                       )
                                       .get();
@@ -370,9 +385,9 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                                   await FirebaseFirestore.instance
                                       .collection('kids_notifications')
                                       .add({
-                                        'kid_id': kidId,
-                                        'chore_title': choreTitle,
-                                        'amount': enteredAmount,
+                                        'kidId': kidId,
+                                        'choreTitle': choreTitle,
+                                        'amountMoney': enteredAmount,
                                         'message': message,
                                         'timestamp':
                                             FieldValue.serverTimestamp(),
@@ -542,6 +557,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                     final isChore = notif['type'] == 'chore_completed';
                     final isRewarded = notif['status'] == 'rewarded';
                     final timestamp = notif['timestamp']?.toDate();
+                    final avatarFilePath = notif["kidAvatar"];
 
                     return Container(
                       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -549,7 +565,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                       child: ListTile(
                         leading: CircleAvatar(
                           radius: 25,
-                          backgroundImage: AssetImage(notif['avatar']),
+                          backgroundImage: AssetImage(avatarFilePath),
                         ),
                         title: Text(
                           isChore

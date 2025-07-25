@@ -102,6 +102,7 @@ class ParentDrawer extends StatelessWidget {
                 navigator.pushReplacementNamed(
                   "/parent-dashboard-page",
                   arguments: {
+                    "parent-id": parentId,
                     "family-name": familyName,
                     "family-user-id": familyUserId,
                   },
@@ -116,11 +117,16 @@ class ParentDrawer extends StatelessWidget {
             onTap: () {
               if (selectedPage != 'notifications') {
                 navigator.pushReplacementNamed(
-                  "/parent-notification-page",
+                  "/parent-notifications-page",
                   arguments: {
                     "family-name": familyName,
                     "family-user-id": familyUserId,
+                    "parent-id": parentId,
                   },
+                );
+
+                debugPrint(
+                  "parentDashboardDrawer - redirected to notifications - check: $parentId",
                 );
               }
             },
@@ -134,6 +140,7 @@ class ParentDrawer extends StatelessWidget {
                 navigator.pushReplacementNamed(
                   "/parent-chores-page",
                   arguments: {
+                    "parent-id": parentId,
                     "family-name": familyName,
                     "family-user-id": familyUserId,
                   },

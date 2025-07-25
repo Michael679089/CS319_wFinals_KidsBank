@@ -2,10 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
-import 'package:wfinals_kidsbank/database/models/user_model.dart';
+import 'package:wfinals_kidsbank/database/models/family_model.dart';
 
 class AuthService {
-  final FirestoreAPI _firestoreAPI = FirestoreAPI();
+  final FirestoreService _firestoreAPI = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Stream for auth state changes
@@ -47,14 +47,15 @@ class AuthService {
 
   // Create Firebase Auth account and send verification email
   Future<Map<String, String>> createAccountToFirebaseAuth({
-    required UserModel myUserModel,
+    required FamilyModel myFamilyModel,
     required BuildContext context,
+    required bool isABrokenRegisterUser,
   }) async {
     debugPrint("createAccountToFirebaseAuth is called");
 
     final messenger = ScaffoldMessenger.of(context);
-    var email = myUserModel.email;
-    var password = myUserModel.password;
+    var email = myFamilyModel.email;
+    String password = myFamilyModel.password as String;
 
     // Step 1: Check if email exists in Firestore
     try {
@@ -127,6 +128,15 @@ class AuthService {
               // Verified account: prompt to log in
               debugPrint('Email is verified, please log in: $email');
               if (!context.mounted) {
+                debugPrint("isA: $isABrokenRegisterUser");
+                if (isABrokenRegisterUser) {
+                  return {
+                    'status': 'email-verified',
+                    'message':
+                        'Email is already verified. But user is a broken register. Please log in.',
+                  };
+                }
+
                 return {
                   'status': 'email-verified',
                   'message': 'Email is already verified. Please log in.',
@@ -211,6 +221,29 @@ class AuthService {
     } catch (e) {
       debugPrint("❌ Error signing out: $e");
       return {"status": "failed", "message": "signout ${e}"};
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String emailText) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: emailText.trim(),
+      );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'user-not-found':
+          errorMessage = 'No account found for this email';
+          break;
+        default:
+          errorMessage = 'Error sending password reset email: ${e.message}';
+      }
+      throw FirebaseAuthException(code: e.code, message: errorMessage);
+    } catch (e) {
+      throw Exception('Unexpected error sending password reset email: $e');
     }
   }
 }

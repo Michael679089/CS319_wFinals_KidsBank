@@ -1,14 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'kids_drawer.dart';
+import 'package:wfinals_kidsbank/database/models/chores_model.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsChoresPage extends StatefulWidget {
   final String kidId;
+  final dynamic familyUserId;
 
   const KidsChoresPage({
     super.key,
     required this.kidId,
+    required this.familyUserId,
   });
 
   @override
@@ -49,24 +52,24 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
     }
   }
 
-  Stream<List<Map<String, dynamic>>> getChoresStream() {
+  Stream<List<ChoreModel>> getChoresStream() {
     return FirebaseFirestore.instance
         .collection('chores')
-        .where('kid_id', isEqualTo: widget.kidId)
+        .where('KidId', isEqualTo: widget.kidId)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              return {
-                'id': doc.id,
-                'title': doc['chore_title'],
-                'description': doc['chore_desc'],
-                'reward': doc['reward_money'],
-                'status': doc['status'], // pending, completed, rewarded
-              };
-            }).toList());
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = {...doc.data(), 'choreId': doc.id};
+            return ChoreModel.fromMap(data);
+          }).toList(),
+        );
   }
 
   Future<void> handleChoreTap(
-      String choreId, String title, bool isLocked) async {
+    String choreId,
+    String title,
+    bool isLocked,
+  ) async {
     if (isLocked) return;
 
     bool confirmed = await showDialog(
@@ -83,15 +86,21 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text("Cancel",
-                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+            child: Text(
+              "Cancel",
+              style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: Text("Yes",
-                style: GoogleFonts.fredoka(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              "Yes",
+              style: GoogleFonts.fredoka(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -99,20 +108,22 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
 
     if (!confirmed) return;
 
-    await FirebaseFirestore.instance
-        .collection('chores')
-        .doc(choreId)
-        .update({'status': 'completed'});
+    await FirebaseFirestore.instance.collection('chores').doc(choreId).update({
+      'status': 'completed',
+    });
 
     await FirebaseFirestore.instance.collection('notifications').add({
       'type': 'chore_completed',
-      'kid_id': widget.kidId,
-      'kid_name': kidName,
-      'chore_title': title,
+      'KidId': widget.kidId,
+      'firstName': kidName,
+      'choreTitle': title,
       'timestamp': FieldValue.serverTimestamp(),
     });
 
-    showCustomSnackBar("✅ \"$title\" marked as completed!", Colors.green);
+    showCustomSnackBar(
+      "\u2714\uFE0F \"$title\" marked as completed!",
+      Colors.green,
+    );
   }
 
   void showCustomSnackBar(String message, Color bgColor) {
@@ -120,7 +131,9 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
       content: Text(
         message,
         style: GoogleFonts.fredoka(
-            color: Colors.white, fontWeight: FontWeight.bold),
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       backgroundColor: bgColor,
       behavior: SnackBarBehavior.floating,
@@ -163,7 +176,23 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {},
       child: Scaffold(
-        drawer: KidsDrawer(selectedPage: 'chores', kidId: widget.kidId),
+        bottomNavigationBar: NavigationBar(
+          onDestinationSelected: (int index) {
+            UtilitiesKidsDashboardNavigation.handleKidDashboardNavigationBottomBar(
+              index: index,
+              kidId: widget.kidId,
+              familyUserId: widget.familyUserId,
+              context: context,
+            );
+          },
+          selectedIndex: UtilitiesKidsDashboardNavigation.currentPageIndex,
+          backgroundColor: const Color.fromARGB(255, 253, 99, 39),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(color: Colors.yellow),
+          ),
+          indicatorColor: Colors.orange.shade200,
+          destinations: UtilitiesKidsDashboardNavigation.myDestinations,
+        ),
         backgroundColor: const Color(0xFFFFCA26),
         body: SafeArea(
           child: isLoading
@@ -172,10 +201,36 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      // ✅ Header Row: Avatar + Hamburger
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          Builder(
+                            builder: (context) {
+                              return GestureDetector(
+                                onTap: () {
+                                  Scaffold.of(context).openDrawer();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(0),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/hamburger_icon.png',
+                                      height: 50,
+                                      width: 50,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                           Row(
                             children: [
                               CircleAvatar(
@@ -193,48 +248,23 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                               ),
                             ],
                           ),
-                          Builder(
-                            builder: (context) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Scaffold.of(context).openDrawer();
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(0),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.black, width: 2),
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'assets/hamburger_icon.png',
-                                      height: 50, // fixed size
-                                      width: 50,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
                         ],
                       ),
                       const SizedBox(height: 20),
-
-                      // ✅ Chores List
                       Expanded(
-                        child: StreamBuilder<List<Map<String, dynamic>>>(
+                        child: StreamBuilder<List<ChoreModel>>(
                           stream: getChoresStream(),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
                               return const Center(
-                                  child: CircularProgressIndicator());
+                                child: CircularProgressIndicator(),
+                              );
                             }
                             if (!snapshot.hasData || snapshot.data!.isEmpty) {
                               return Center(
                                 child: Text(
-                                  "No chores assigned yet! 🎉",
+                                  "No chores assigned yet! \uD83C\uDF89",
                                   style: GoogleFonts.fredoka(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
@@ -248,21 +278,22 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                               itemCount: chores.length,
                               itemBuilder: (context, index) {
                                 final chore = chores[index];
-                                final status = chore['status'];
-                                final isLocked = status == 'completed' ||
-                                    status == 'rewarded';
+                                final isLocked =
+                                    chore.status == 'completed' ||
+                                    chore.status == 'rewarded';
 
                                 return GestureDetector(
                                   onTap: () => handleChoreTap(
-                                    chore['id'],
-                                    chore['title'],
+                                    chore.choreId as String,
+                                    chore.choreTitle,
                                     isLocked,
                                   ),
                                   child: Container(
-                                    margin:
-                                        const EdgeInsets.symmetric(vertical: 8),
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: getTileColor(status),
+                                      color: getTileColor(chore.status),
                                       borderRadius: BorderRadius.circular(15),
                                       border: Border.all(
                                         color: Colors.black,
@@ -272,11 +303,11 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                     child: ListTile(
                                       leading: Icon(
                                         Icons.task_alt,
-                                        color: getIconColor(status),
+                                        color: getIconColor(chore.status),
                                         size: 30,
                                       ),
                                       title: Text(
-                                        chore['title'],
+                                        chore.choreTitle,
                                         style: GoogleFonts.fredoka(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
@@ -287,39 +318,43 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            chore['description'],
+                                            chore.choreDesc,
                                             style: GoogleFonts.inter(
-                                                fontSize: 12),
+                                              fontSize: 12,
+                                            ),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            status == 'pending'
-                                                ? "🟠 Pending"
-                                                : status == 'completed'
-                                                    ? "🟢 Completed! Waiting for Parent"
-                                                    : "🔵 Rewarded",
+                                            chore.status == 'pending'
+                                                ? "\uD83D\uDFE0 Pending"
+                                                : chore.status == 'completed'
+                                                ? "\uD83D\uDFE2 Completed! Waiting for Parent"
+                                                : "\uD83D\uDD35 Rewarded",
                                             style: GoogleFonts.fredoka(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
-                                              color: getIconColor(status),
+                                              color: getIconColor(chore.status),
                                             ),
                                           ),
                                         ],
                                       ),
                                       trailing: Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 20, vertical: 5),
+                                          horizontal: 20,
+                                          vertical: 5,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                           border: Border.all(
                                             color: Colors.black,
                                             width: 2,
                                           ),
                                         ),
                                         child: Text(
-                                          "\$${chore['reward'].toStringAsFixed(2)}",
+                                          "\$${chore.rewardMoney.toStringAsFixed(2)}",
                                           style: GoogleFonts.fredoka(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w700,

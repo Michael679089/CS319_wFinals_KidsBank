@@ -1,7 +1,6 @@
 import 'dart:io'; // For exit(0)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/register_account_page.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -178,12 +177,9 @@ class WelcomePage extends StatelessWidget {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const RegisterAccountPage(),
-                              ),
+                            myNavigator.pushReplacementNamed(
+                              "/register-page",
+                              arguments: {"is-broken-register": false},
                             );
                           },
                           style: ElevatedButton.styleFrom(

@@ -2,11 +2,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wfinals_kidsbank/pages/parent_drawer.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/models/chores_model.dart';
+import 'package:wfinals_kidsbank/database/models/kid_model.dart';
+import 'package:wfinals_kidsbank/database/models/kid_payment_info.dart';
+import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
+import 'package:wfinals_kidsbank/pages/p_dashboard_drawer.dart';
 import 'package:flutter/services.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class ParentDashboard extends StatefulWidget {
-  const ParentDashboard({super.key});
+  final String familyUserId;
+
+  final String parentId;
+
+  const ParentDashboard({
+    super.key,
+    required this.familyUserId,
+    required this.parentId,
+  });
 
   @override
   State<ParentDashboard> createState() => _ParentDashboardState();
@@ -26,19 +40,18 @@ class _ParentDashboardState extends State<ParentDashboard> {
     const Color.fromARGB(255, 240, 217, 233),
   ];
 
-  // Saved credentials
-  String familyName = '';
-  String familyUserId = '';
-  String parentId = '';
+  FirestoreService myFirestoreService = FirestoreService();
+
+  String myFamilyName = "";
 
   // The INITSTATE Function
 
   @override
   void initState() {
     super.initState();
-    _loadKidsData();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadKidsData();
       _loadMyFamilyData();
     });
   }
@@ -46,81 +59,118 @@ class _ParentDashboardState extends State<ParentDashboard> {
   // Other Functions:
 
   void _loadMyFamilyData() async {
-    final myModalRoute = ModalRoute.of(context);
-    if (myModalRoute == null) {
-      return;
-    }
-    final args = myModalRoute.settings.arguments as Map<String, String?>;
-
-    var newFamilyUserId = args["family-user-id"] as String;
-
-    var familyCollection = FirebaseFirestore.instance.collection("users");
-    var familySnapshot = await familyCollection.doc(newFamilyUserId).get();
-    var newFamilyName = familySnapshot["family_name"];
+    myFamilyName = await myFirestoreService.getFamilyName(widget.familyUserId);
 
     setState(() {
-      familyName = newFamilyName;
-      familyUserId = newFamilyUserId;
-      parentId = args["parent-id"] as String;
+      myFamilyName = myFamilyName;
     });
   }
 
   Future<void> _loadKidsData() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('kids')
-        .where('user_id', isEqualTo: userId)
-        .get();
+    // In this function it looks like we need to get the name, the avatar path, and the available balance the user has.
+    debugPrint("parentDashboard - loading kids data");
+    var familyId = widget.familyUserId;
 
-    final List<Map<String, dynamic>> tempKids = [];
+    // Step 1: Get list of kid models
+    List<KidModel> listOfKidModel = await myFirestoreService
+        .getKidsByFamilyUserId(familyId);
+
+    List<Map<String, dynamic>> tempKidsData = [];
+
     double runningTotal = 0.0;
 
-    for (var doc in snapshot.docs) {
-      final kidId = doc.id;
-      final kidName = doc['firstName'] ?? '';
-      final avatar = doc['avatar'] ?? '';
+    // Step 2: Get the balance in each kid.
+    for (var kid in listOfKidModel) {
+      final kidId = kid.kidId;
 
-      // Get usable_balance
-      final balanceDoc = await FirebaseFirestore.instance
-          .collection('kids_payment_info')
-          .doc(kidId)
+      // 2 Get usableBalance
+      var kidPaymentInfoSnapshot = await FirebaseFirestore.instance
+          .collection('kidPaymentInfo')
+          .where("kidId", isEqualTo: kidId)
           .get();
+      KidsPaymentInfoModel balanceModel = KidsPaymentInfoModel.fromMap(
+        kidPaymentInfoSnapshot.docs.first.data(),
+      );
+      var usableBalance = int.parse(balanceModel.amountLeft as String);
+      debugPrint(
+        "parentDashboardPage - ${balanceModel.kidId} - ${balanceModel.amountLeft}",
+      );
 
-      final usableBalance = balanceDoc.exists
-          ? (balanceDoc.data()?['usable_balance'] ?? 0.0)
-          : 0.0;
-
-      // Get total withdrawals for this kid
-      final withdrawalsSnapshot = await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('kid_id', isEqualTo: kidId)
-          .where('type', isEqualTo: 'withdrawal')
-          .get();
+      // 2 Get total withdrawals for this kid
+      bool doesNotificationsExist = await myFirestoreService
+          .checkIfTableCollectionExist("notifications");
 
       double totalWithdrawn = 0.0;
-      for (var withdrawalDoc in withdrawalsSnapshot.docs) {
-        totalWithdrawn += (withdrawalDoc.data()['amount'] ?? 0.0);
+      if (doesNotificationsExist) {
+        final withdrawalsSnapshot = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('kidId', isEqualTo: kidId)
+            .where('type', isEqualTo: 'withdrawal')
+            .get();
+
+        for (var withdrawalDoc in withdrawalsSnapshot.docs) {
+          totalWithdrawn += (withdrawalDoc.data()['amount'] ?? 0.0);
+        }
       }
 
-      // Total deposited = usable_balance + total withdrawals
+      // 2 Total deposited = usable_balance + total withdrawals
       final totalDeposited = usableBalance + totalWithdrawn;
 
       runningTotal += totalDeposited;
 
-      tempKids.add({
-        'id': kidId,
-        'name': kidName,
-        'avatar': avatar,
-        'balance': usableBalance.toDouble(),
-        'totalDeposited': totalDeposited.toDouble(),
-        'totalWithdrawn': totalWithdrawn.toDouble(),
+      tempKidsData.add({
+        "id": kid.kidId,
+        "name": kid.firstName,
+        "avatar": kid.avatarFilePath,
+        "balance": usableBalance,
       });
     }
 
     setState(() {
-      kidsData = tempKids;
-      totalChildren = tempKids.length;
+      kidsData = tempKidsData;
+      totalChildren = tempKidsData.length;
       totalDepositedFunds = runningTotal;
     });
+  }
+
+  void _handleAddChoreSubmission(
+    String kidId,
+    TextEditingController titleController,
+    TextEditingController descriptionController,
+    double rewardMoney,
+    messenger,
+  ) async {
+    debugPrint("parentDashboardPage - called chore submission");
+    final String choreTitle = titleController.text.trim();
+    final String choreDescription = descriptionController.text.trim();
+
+    if (choreTitle.isEmpty || choreDescription.isEmpty || rewardMoney <= 0) {
+      Utilities.invokeTopSnackBar(
+        "Please fill in all fields and set a valid reward.",
+        context,
+      );
+      return;
+    }
+
+    ChoreModel newPendingChoreModel = ChoreModel(
+      kidId: kidId,
+      choreTitle: choreTitle,
+      choreDesc: choreDescription,
+      rewardMoney: rewardMoney,
+      status: "pending",
+    );
+    myFirestoreService.addChoreToChoresCollection(newPendingChoreModel);
+
+    // ignore: use_build_context_synchronously
+    Navigator.pop(context);
+
+    // ignore: use_build_context_synchronously
+    ScaffoldMessenger.of(this.context).showSnackBar(
+      const SnackBar(
+        content: Text("Chore created successfully!"),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void showChoresModal(
@@ -135,7 +185,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
       text: '1.00',
     );
 
-    double rewardAmount = 1.00;
+    double rewardMoney = 1.00;
 
     var messenger = ScaffoldMessenger.of(context);
 
@@ -238,10 +288,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
                               children: [
                                 InkWell(
                                   onTap: () {
-                                    if (rewardAmount > 1) {
+                                    if (rewardMoney > 1) {
                                       setModalState(() {
-                                        rewardAmount -= 1;
-                                        amountController.text = rewardAmount
+                                        rewardMoney -= 1;
+                                        amountController.text = rewardMoney
                                             .toStringAsFixed(2);
                                       });
                                     }
@@ -284,7 +334,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                     onChanged: (value) {
                                       final parsed = double.tryParse(value);
                                       if (parsed != null && parsed >= 0) {
-                                        rewardAmount = parsed;
+                                        rewardMoney = parsed;
                                       }
                                     },
                                   ),
@@ -293,8 +343,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                 InkWell(
                                   onTap: () {
                                     setModalState(() {
-                                      rewardAmount += 1;
-                                      amountController.text = rewardAmount
+                                      rewardMoney += 1;
+                                      amountController.text = rewardMoney
                                           .toStringAsFixed(2);
                                     });
                                   },
@@ -317,65 +367,15 @@ class _ParentDashboardState extends State<ParentDashboard> {
 
                             // Set Button
                             ElevatedButton(
-                              onPressed: () async {
-                                final String title = titleController.text
-                                    .trim();
-                                final String description = descriptionController
-                                    .text
-                                    .trim();
-
-                                if (title.isEmpty ||
-                                    description.isEmpty ||
-                                    rewardAmount <= 0) {
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Please fill in all fields and set a valid reward.",
-                                      ),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                await FirebaseFirestore.instance
-                                    .collection('chores')
-                                    .add({
-                                      'kid_id': kidId,
-                                      'chore_title': title,
-                                      'chore_desc': description,
-                                      'reward_money': rewardAmount,
-                                      'status': 'pending',
-                                      'timestamp': FieldValue.serverTimestamp(),
-                                    });
-
-                                // ignore: use_build_context_synchronously
-                                Navigator.pop(context);
-
-                                // ignore: use_build_context_synchronously
-                                ScaffoldMessenger.of(this.context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Chore created successfully!",
-                                    ),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF60C56F),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 100,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                  side: const BorderSide(
-                                    color: Colors.black,
-                                    width: 2,
-                                  ),
-                                ),
+                              onPressed: () => _handleAddChoreSubmission(
+                                kidId,
+                                titleController,
+                                descriptionController,
+                                rewardMoney,
+                                messenger,
                               ),
+
+                              style: Utilities().ourButtonStyle1(),
                               child: Text(
                                 "Set",
                                 style: GoogleFonts.fredoka(
@@ -598,7 +598,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                       try {
                                         final docRef = FirebaseFirestore
                                             .instance
-                                            .collection('kids_payment_info')
+                                            .collection('kidPaymentInfo')
                                             .doc(kidId);
 
                                         final docSnapshot = await docRef.get();
@@ -620,17 +620,23 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                               FieldValue.serverTimestamp(),
                                         });
 
+                                        debugPrint(
+                                          "parentDashboardPage - add deposit notification",
+                                        );
+
                                         // Push notification
-                                        await FirebaseFirestore.instance
-                                            .collection('kids_notifications')
-                                            .add({
-                                              'kid_id': kidId,
-                                              'type': 'deposit',
-                                              'amount': fundAmount,
-                                              'message': message,
-                                              'timestamp':
-                                                  FieldValue.serverTimestamp(),
-                                            });
+                                        NotificationsModel newNotification =
+                                            NotificationsModel(
+                                              familyId: widget.familyUserId,
+                                              kidId: kidId,
+                                              title: message,
+                                              message: message,
+                                              type: 'deposit',
+                                            );
+                                        await myFirestoreService
+                                            .addNotificationToNotificationCollections(
+                                              newNotification,
+                                            );
 
                                         navigator.pop();
                                         messenger.showSnackBar(
@@ -738,16 +744,18 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         });
 
                                         // Push notification
-                                        await FirebaseFirestore.instance
-                                            .collection('kids_notifications')
-                                            .add({
-                                              'kid_id': kidId,
-                                              'type': 'withdrawal',
-                                              'amount': fundAmount,
-                                              'message': message,
-                                              'timestamp':
-                                                  FieldValue.serverTimestamp(),
-                                            });
+                                        NotificationsModel
+                                        withdrawalNotification =
+                                            NotificationsModel(
+                                              familyId: widget.familyUserId,
+                                              kidId: kidId,
+                                              title: message,
+                                              type: 'withdrawal',
+                                            );
+                                        myFirestoreService
+                                            .addNotificationToNotificationCollections(
+                                              withdrawalNotification,
+                                            );
 
                                         navigator.pop();
                                         messenger.showSnackBar(
@@ -826,9 +834,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
       child: Scaffold(
         drawer: ParentDrawer(
           selectedPage: 'dashboard',
-          familyName: familyName,
-          familyUserId: familyUserId,
-          parentId: parentId,
+          familyName: myFamilyName,
+          familyUserId: widget.familyUserId,
+          parentId: widget.parentId,
         ),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(
@@ -959,7 +967,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Kids Info",
+                        "Kid's Info",
                         style: GoogleFonts.fredoka(
                           fontSize: 30,
                           fontWeight: FontWeight.bold,

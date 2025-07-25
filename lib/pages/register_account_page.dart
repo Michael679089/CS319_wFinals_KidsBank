@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
-import 'package:wfinals_kidsbank/database/models/user_model.dart';
+import 'package:wfinals_kidsbank/database/models/family_model.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 import 'login_page.dart';
 
 class RegisterAccountPage extends StatefulWidget {
-  const RegisterAccountPage({super.key});
+  final bool isBrokenRegister;
+
+  const RegisterAccountPage({super.key, required this.isBrokenRegister});
 
   @override
   State<RegisterAccountPage> createState() => _RegisterAccountPageState();
@@ -25,13 +28,16 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
 
   // My Services
   AuthService myAuthService = AuthService();
-  FirestoreAPI myFirestoreAPI = FirestoreAPI();
+  FirestoreService myFirestoreAPI = FirestoreService();
 
   // Form Variables
   bool _obscurePassword = true;
   static const bool _obscureCcv = false;
   bool _isLoginPressed = false;
   OverlayEntry? _overlayEntry;
+
+  String formTitleText = 'Email & Password Section';
+  double emailAndPasswordFontSize = 30;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -40,19 +46,6 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
   void _removeAllOverlays() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-  }
-
-  void _invokeTopSnackBar(String message, {bool isError = true}) {
-    final snackBar = SnackBar(
-      content: Text(message, style: GoogleFonts.fredoka(color: Colors.white)),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      duration: const Duration(seconds: 2),
-    );
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(snackBar);
   }
 
   void _askUserIfTheyAreChildOrParentOverlay(BuildContext context) {
@@ -65,8 +58,9 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
         children: [
           GestureDetector(
             onTap: () {
-              _invokeTopSnackBar(
+              Utilities.invokeTopSnackBar(
                 "WARNING: Can't remove overlay, please press a button to continue",
+                context,
               );
             },
             child: Container(color: Colors.black54),
@@ -88,8 +82,9 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                   ElevatedButton(
                     onPressed: () {
                       _removeAllOverlays();
-                      _invokeTopSnackBar(
+                      Utilities.invokeTopSnackBar(
                         "Sorry, your parent needs to register first",
+                        context,
                       );
                       debugPrint(
                         "registerAccPage.dart - User selected role child",
@@ -131,8 +126,9 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
     var ccv = _ccvController.value.text.trim();
 
     try {
-      UserModel myUserModel = UserModel(
-        userId: "",
+      String familyId = myAuthService.getCurrentUser()?.uid as String;
+      FamilyModel myUserModel = FamilyModel(
+        familyId: familyId,
         familyName: familyName,
         email: email,
         password: password,
@@ -141,8 +137,9 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
 
       var createAuthAccountResponse = await myAuthService
           .createAccountToFirebaseAuth(
-            myUserModel: myUserModel,
+            myFamilyModel: myUserModel,
             context: myContext,
+            isABrokenRegisterUser: widget.isBrokenRegister,
           );
 
       if (createAuthAccountResponse["status"] == "success") {
@@ -161,7 +158,10 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
           },
         );
       } else if (createAuthAccountResponse["status"] == "email-not-verified") {
-        _invokeTopSnackBar('Error: EMail registered but not verified');
+        Utilities.invokeTopSnackBar(
+          'Error: EMail registered but not verified',
+          context,
+        );
         debugPrint("registerAccPage - account isn't verified yet");
         myNavigator.pushReplacementNamed(
           "/verify-email-page",
@@ -175,13 +175,31 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
           },
         );
         debugPrint("registerAccPage - redirecting user to verify-email-page");
+      } else if (createAuthAccountResponse["status"] == "email-verified" &&
+          widget.isBrokenRegister) {
+        myNavigator.pushReplacementNamed(
+          "/verify-email-page",
+          arguments: {
+            'register-email': email,
+            "family-name": familyName,
+            "card-name": cardName,
+            "card-number": cardNumber,
+            "card-exp": exp,
+            "card-ccv": ccv,
+          },
+        );
+        debugPrint(
+          "registerAccPage - User with Broken Register - redirected to verify-email-page",
+        );
       } else {
-        _invokeTopSnackBar('Error: Registration failed');
+        if (!mounted) return;
+        Utilities.invokeTopSnackBar('Error: Registration failed', context);
       }
 
       debugPrint(createAuthAccountResponse.toString());
     } catch (e) {
-      _invokeTopSnackBar('Error: ${e.toString()}');
+      if (!mounted) return;
+      Utilities.invokeTopSnackBar('Error: ${e.toString()}', context);
     }
   }
 
@@ -277,6 +295,12 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
     _expController = TextEditingController();
     _ccvController = TextEditingController();
 
+    if (widget.isBrokenRegister) {
+      formTitleText =
+          "Broken Registered User detected. Please Register again (make sure email & pass are the same)";
+      emailAndPasswordFontSize = 20;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _askUserIfTheyAreChildOrParentOverlay(context);
     });
@@ -318,10 +342,10 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                       children: [
                         // Email & Password Section Header
                         Text(
-                          'Email & Password Section',
+                          formTitleText,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.fredoka(
-                            fontSize: 30,
+                            fontSize: emailAndPasswordFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
@@ -617,8 +641,10 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                 if (_formKey.currentState!.validate()) {
                                   _handleRegister(context);
                                 } else {
-                                  _invokeTopSnackBar(
+                                  if (!mounted) return;
+                                  Utilities.invokeTopSnackBar(
                                     'Please fill out all fields correctly!',
+                                    context,
                                   );
                                 }
                               },

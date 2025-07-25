@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
+import 'package:wfinals_kidsbank/database/models/kid_payment_info.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class CreateKidAccountPage extends StatefulWidget {
-  const CreateKidAccountPage({super.key});
+  final dynamic familyUserId;
+
+  final dynamic parentId;
+
+  const CreateKidAccountPage({
+    super.key,
+    required this.familyUserId,
+    required this.parentId,
+  });
 
   @override
   State<CreateKidAccountPage> createState() => _CreateKidAccountPageState();
@@ -20,6 +30,8 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
   final TextEditingController dateOfBirthController = TextEditingController();
   final TextEditingController phoneNumController = TextEditingController();
   final TextEditingController pincodeController = TextEditingController();
+
+  FirestoreService myFirestoreService = FirestoreService();
 
   // Saved Credentials
   String parentId = '';
@@ -167,58 +179,79 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
       return;
     }
 
+    final myAuthService = AuthService();
+    final user = myAuthService.getCurrentUser();
+    if (user == null) {
+      _showSnackbar('User not authenticated', isError: true);
+      return;
+    }
+
+    var kidId = "";
+
+    // Step 1: Adding kids to kids collection. Try-Catch
     try {
-      final myAuthService = AuthService();
-      final user = myAuthService.getCurrentUser();
-      if (user == null) {
-        _showSnackbar('User not authenticated', isError: true);
-        return;
-      }
-
-      var kidCollection = FirebaseFirestore.instance.collection("kids");
-      var kidId = kidCollection.doc().id;
-
       var firstName = firstNameController.text;
       var lastName = lastNameController.text;
       var dateOfBirth = dateOfBirthController.text; // year-month-day 2015-01-28
-      var dateParts = dateOfBirth.split('-');
-      var year = int.parse(dateParts[0]); // e.g., 2015
-      var month = int.parse(dateParts[1]); // e.g., 1
-      var day = int.parse(dateParts[2]); // e.g., 28
-      DateTime dateOfBirthParsed = DateTime(year, month, day);
       var phoneNumber = phoneNumController.text;
       var pincode = pincodeController.text;
       var avatar = selectedAvatar;
       var familyUserId = user.uid;
 
       KidModel newKidModel = KidModel(
-        id: kidId,
         firstName: firstName,
         lastName: lastName,
-        dateOfBirth: dateOfBirthParsed,
-        phone: phoneNumber,
+        dateOfBirth: dateOfBirth,
+        phoneNumber: phoneNumber,
         pincode: pincode,
-        avatar: avatar,
-        familyUserId: familyUserId,
+        avatarFilePath: avatar,
+        familyId: familyUserId,
       );
-      // Set the document with the specific kidId instead of adding a new one
-      await kidCollection.doc(kidId).set(newKidModel.toMap());
+      kidId = await myFirestoreService.addKidToKidsCollection(newKidModel);
 
-      _showSnackbar('Kid account created successfully!', isError: false);
-
+      Utilities.invokeTopSnackBar('Kid account created successfully!', context);
       debugPrint(
-        "createKidsAccountPage - succesfully created kid, redirecting to kids-setup-page",
-      );
-      navigator.pushReplacementNamed(
-        "/kids-setup-page",
-        arguments: {
-          "parent-id": parentId,
-          "came-from-parent-dashboard": _didUserCameFromParentDashboard,
-        },
+        "createKidsAccountPage - succesfully created kid, moving to creating kids_payment_info",
       );
     } catch (e) {
       _showSnackbar('Error saving data: $e', isError: true);
+      return;
     }
+
+    // Step 2: Let's now add the kids payment info for this child
+    try {
+      var phoneNumber = phoneNumController.text;
+      KidsPaymentInfoModel newKidPaymentInfoModel = KidsPaymentInfoModel(
+        kidId: kidId,
+        phoneNumber: phoneNumber,
+        amountLeft: "0",
+      );
+      myFirestoreService.addKidPaymentInfoToKidPaymentInfoCollection(
+        newKidPaymentInfoModel,
+      );
+      Utilities.invokeTopSnackBar(
+        'Kid Payment Info created successfully!',
+        context,
+      );
+      debugPrint(
+        "createKidsAccountPage - succesfully created kid payment info.",
+      );
+    } catch (e) {
+      debugPrint("$e");
+      return;
+    }
+
+    debugPrint(
+      "createKidsAccountPage - successfully creating a kid and a kidpaymentinfo",
+    );
+
+    navigator.pushReplacementNamed(
+      "/kids-setup-page",
+      arguments: {
+        "parent-id": parentId,
+        "came-from-parent-dashboard": _didUserCameFromParentDashboard,
+      },
+    );
   }
 
   @override
@@ -260,6 +293,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                 ],
               ),
               const SizedBox(height: 20),
+              // Title - Set up Kids Account
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Align(
@@ -305,19 +339,13 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                     const SizedBox(height: 20),
                     _buildLabel('Password'),
                     _buildField(pincodeController, obscure: true),
+
                     const SizedBox(height: 25),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4E88CF),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: const BorderSide(color: Colors.black, width: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
+                        style: Utilities().ourButtonStyle1(),
                         child: Text(
                           'Create Account',
                           style: TextStyle(

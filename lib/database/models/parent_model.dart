@@ -1,54 +1,60 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ParentModel {
-  final String avatar;
-  final String familyUserId;
-  final String parentId;
+  String? parentId;
+  final String familyId;
   final String firstName;
   final String lastName;
+  final String dateOfBirth;
   final String pincode;
-  final String birthdate;
-  final DateTime? createdAt;
+  final String avatarFilePath;
+  String? createdAt;
 
   // CONSTRUCTORS
-  const ParentModel({
-    required this.avatar,
-    required this.familyUserId,
-    required this.parentId,
+  ParentModel({
+    this.parentId,
+    required this.familyId,
     required this.firstName,
     required this.lastName,
+    required this.dateOfBirth,
     required this.pincode,
-    required this.birthdate,
+    required this.avatarFilePath,
     this.createdAt,
   });
 
   // FACTORY CONSTRUCTOR FOR FIRESTORE
+
+  // receiving from firestore
   factory ParentModel.fromMap(Map<String, dynamic> map) {
     return ParentModel(
-      avatar: map["avatar"] as String,
-      familyUserId: map['familyUserId'] as String,
       parentId: map["parentId"] as String,
-      firstName: map['firstName'] as String,
+      familyId: map['familyId'] as String,
+      firstName: map["firstName"] as String,
       lastName: map['lastName'] as String,
+      dateOfBirth: map['dateOfBirth'] ?? map['birthdate'] as String,
       pincode: map['pincode'] as String,
-      birthdate: map['birthdate'] as String,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
+      avatarFilePath: map["avatarFilePath"] as String,
+      createdAt: map['createdAt'] as String,
     );
   }
 
   // SERIALIZATION
+  // sending to firestore
   Map<String, dynamic> toMap() {
+    var tempCreatedAt = "";
+    if (createdAt == null) {
+      tempCreatedAt = FieldValue.serverTimestamp().toString();
+    }
+
     return {
-      'avatar': avatar,
-      'familyUserId': familyUserId,
       'parentId': parentId,
+      'familyId': familyId,
       'firstName': firstName,
       'lastName': lastName,
+      'dateOfBirth': dateOfBirth,
       'pincode': pincode,
-      'birthdate': birthdate,
-      'createdAt': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
+      'avatarFilePath': avatarFilePath,
+      'createdAt': tempCreatedAt,
     };
   }
 }

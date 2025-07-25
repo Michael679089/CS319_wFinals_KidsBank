@@ -1,30 +1,74 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'kids_dashboard.dart';
-import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 
 class KidsLoginPage extends StatefulWidget {
-  final String kidDocId;
-  final String kidName;
-  final String avatarPath;
-
-  const KidsLoginPage({
-    super.key,
-    required this.kidDocId,
-    required this.kidName,
-    required this.avatarPath,
-  });
+  const KidsLoginPage({super.key});
 
   @override
   State<KidsLoginPage> createState() => _KidsLoginPageState();
 }
 
 class _KidsLoginPageState extends State<KidsLoginPage> {
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController pincodeController = TextEditingController();
+
+  // Saved Credentials
+  String familyUserId = '';
+  String kidId = '';
+  String avatarFilePath = '';
+  String kidFirstName = '';
+
+  // My Services
+  var myAuthService = AuthService();
+  var myFirestoreService = FirestoreService();
+
+  //
+  // INITSTATE Function:
+  //
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  // Other Functions
+
+  void _loadData() async {
+    // Step 1: Get Family User UID;
+    var familyUser = myAuthService.getCurrentUser();
+    if (familyUser == null) return;
+    familyUserId = familyUser.uid;
+
+    // Step 2: Get the kids Docs;
+    final myModalRoute = ModalRoute.of(context);
+    if (myModalRoute == null) {
+      debugPrint("kidsSetupPage - ERROR: myModalRoute was null");
+      return;
+    }
+    final args = myModalRoute.settings.arguments as Map<String, dynamic>;
+    debugPrint("What's in the args?: ${args.toString()}");
+    var newKidId = args["kidDocId"] as String;
+    var newAvatarPath = args["avatarPath"] as String;
+    var newKidFirstName = await myFirestoreService.getKidFirstName(newKidId);
+
+    setState(() {
+      kidId = newKidId;
+      avatarFilePath = newAvatarPath;
+      kidFirstName = newKidFirstName;
+    });
+
+    debugPrint("kidsLoginPage - loadData success");
+  }
 
   @override
   Widget build(BuildContext context) {
+    var navigator = Navigator.of(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {},
@@ -53,14 +97,14 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                         ],
                       ),
                       child: CircleAvatar(
-                        backgroundImage: AssetImage(widget.avatarPath),
+                        backgroundImage: AssetImage(avatarFilePath),
                         radius: 70,
                         backgroundColor: const Color(0xFF4E88CF),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Hi ${widget.kidName}!",
+                      "Hi $kidFirstName!",
                       style: GoogleFonts.fredoka(
                         fontSize: 58.2,
                         fontWeight: FontWeight.bold,
@@ -68,9 +112,9 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildLabel("Please input your password"),
+                    _buildLabel("Please input your pincode"),
                     const SizedBox(height: 8),
-                    _buildPasswordField(passwordController),
+                    _buildPasswordField(pincodeController),
                     const SizedBox(height: 30),
                     Row(
                       children: [
@@ -99,13 +143,17 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
+
+                        // Back Button
                         ElevatedButton.icon(
-                          onPressed: () => Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AccountSelectorPage(),
-                            ),
-                          ),
+                          onPressed: () {
+                            debugPrint(
+                              "kidsLoginPage - going back to account Selector Page",
+                            );
+                            navigator.pushReplacementNamed(
+                              "/account-selector-page",
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(
@@ -142,9 +190,12 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
   }
 
   void _login() async {
-    final password = passwordController.text.trim();
+    var navigator = Navigator.of(context);
 
-    if (password.isEmpty) {
+    debugPrint("kidsLoginPage - Login called");
+    final pincode = pincodeController.text.trim();
+
+    if (pincode.isEmpty) {
       _showSnackbar("Password cannot be empty.");
       return;
     }
@@ -152,12 +203,27 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
     try {
       final doc = await FirebaseFirestore.instance
           .collection('kids')
-          .doc(widget.kidDocId)
+          .doc(kidId)
           .get();
 
-      if (!doc.exists || doc['password'] != password) {
-        _showSnackbar("Incorrect password.");
-        return;
+      // Just for legacy accounts I want them to use pincode later.
+      try {
+        if (doc["password"] != pincode) {
+          debugPrint("kidsLoginPage - incorrect pincode");
+          return;
+        }
+      } catch (e) {
+        debugPrint("kidsLoginPage - password doesn't exist. Try pincode");
+      }
+
+      try {
+        if (doc["pincode"] != pincode) {
+          debugPrint("kidsLoginPage - incorrect pincode");
+          return;
+        }
+      } catch (e) {
+        debugPrint("kidsLoginPage - pincode doesn't exist. error");
+        throw Error();
       }
 
       _showSnackbar("Login successful!", isError: false);
@@ -166,11 +232,12 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
       if (!mounted) return;
 
       //Navigate and pass kidId to KidsDashboard
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => KidsDashboard(kidId: widget.kidDocId),
-        ),
+      debugPrint(
+        "kidsLoginPage - login sucess, redirecting to kids-dashboard-page.",
+      );
+      navigator.pushReplacementNamed(
+        "/kids-dashboard-page",
+        arguments: {"kid-id": kidId, "family-user-id": familyUserId},
       );
     } catch (e) {
       _showSnackbar("Error: ${e.toString()}");

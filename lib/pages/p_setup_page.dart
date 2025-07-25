@@ -24,8 +24,10 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
   bool _isSubmitting = false;
 
   // My Services
-  FirestoreAPI myFirestoreAPI = FirestoreAPI();
+  FirestoreService myFirestoreAPI = FirestoreService();
   AuthService myAuthService = AuthService();
+
+  String? familyId = '';
 
   // FUNCTIONS
 
@@ -116,23 +118,34 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
         });
         return;
       }
-      final userId = user.uid;
+
+      familyId = myAuthService.getCurrentUser()?.uid;
+      String myFamilyId = familyId as String;
 
       final newParent = ParentModel(
-        avatar: selectedAvatar,
+        avatarFilePath: selectedAvatar,
         parentId: "",
-        familyUserId: userId,
+        familyId: myFamilyId,
         firstName: firstName,
         lastName: lastName,
         pincode: pincode,
-        birthdate: birthdate,
+        dateOfBirth: birthdate,
       );
 
-      await myFirestoreAPI.addParentToParentCollection(newParent);
+      var parentId = await myFirestoreAPI.addParentToParentCollection(
+        newParent,
+      );
       _showSnackbar('Parent added successfully', isError: false);
 
       if (context.mounted) {
-        navigator.pushNamed('/kids-setup-page');
+        navigator.pushNamed(
+          '/kids-setup-page',
+          arguments: {
+            "family-user-id": myFamilyId,
+            "parent-id": parentId,
+            "came-from-parent-dashboard": false,
+          },
+        );
       }
     } catch (e) {
       _showSnackbar('Failed to add parent: $e', isError: true);

@@ -1,14 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'kids_drawer.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsNotificationsPage extends StatefulWidget {
   final String kidId;
 
+  final dynamic familyUserId;
+
   const KidsNotificationsPage({
     super.key,
     required this.kidId,
+    required this.familyUserId,
   });
 
   @override
@@ -56,21 +59,21 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) {
-            final data = doc.data();
-            return {
-              'kidId': data['kid_id'],
-              'type': data['type'] ?? '',
-              'choreTitle': data['chore_title'] ?? '',
-              'amount': (data['amount'] ?? 0).toDouble(),
-              'message': data['message'] ?? '',
-              'timestamp': data['timestamp'],
-            };
-          })
-          .where((notif) => notif['kidId'] == widget.kidId)
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) {
+                final data = doc.data();
+                return {
+                  'kidId': data['kid_id'],
+                  'type': data['type'] ?? '',
+                  'choreTitle': data['chore_title'] ?? '',
+                  'amount': (data['amount'] ?? 0).toDouble(),
+                  'message': data['message'] ?? '',
+                  'timestamp': data['timestamp'],
+                };
+              })
+              .where((notif) => notif['kidId'] == widget.kidId)
+              .toList();
+        });
   }
 
   @override
@@ -79,7 +82,22 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {},
       child: Scaffold(
-        drawer: KidsDrawer(selectedPage: 'notifications', kidId: widget.kidId),
+        bottomNavigationBar: NavigationBar(
+          onDestinationSelected: (int index) {
+            UtilitiesKidsDashboardNavigation.handleKidDashboardNavigationBottomBar(
+              index: index,
+              kidId: widget.kidId,
+              familyUserId: widget.familyUserId,
+              context: context,
+            );
+          },
+          selectedIndex: UtilitiesKidsDashboardNavigation.currentPageIndex,
+          backgroundColor: const Color.fromARGB(255, 253, 99, 39),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(color: Colors.white),
+          ),
+          destinations: UtilitiesKidsDashboardNavigation.myDestinations,
+        ),
         backgroundColor: const Color(0xFFFFCA26),
         body: SafeArea(
           child: isLoading
@@ -92,6 +110,32 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          Builder(
+                            builder: (context) {
+                              return GestureDetector(
+                                onTap: () {
+                                  Scaffold.of(context).openDrawer();
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/hamburger_icon.png',
+                                      height: 50,
+                                      width: 50,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                           Row(
                             children: [
                               CircleAvatar(
@@ -110,29 +154,6 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                               ),
                             ],
                           ),
-                          Builder(
-                            builder: (context) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Scaffold.of(context).openDrawer();
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.black, width: 2),
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'assets/hamburger_icon.png',
-                                      height: 50,
-                                      width: 50,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -142,8 +163,11 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                         child: StreamBuilder<List<Map<String, dynamic>>>(
                           stream: getKidsNotificationsStream(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator());
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
                             }
 
                             if (snapshot.hasError) {
@@ -213,11 +237,16 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                 }
 
                                 return Container(
-                                  margin: const EdgeInsets.symmetric(vertical: 8),
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(color: Colors.black, width: 2),
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 2,
+                                    ),
                                   ),
                                   child: ListTile(
                                     leading: CircleAvatar(
@@ -227,10 +256,10 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                         type == 'reward'
                                             ? "🎁"
                                             : type == 'deposit'
-                                                ? "💵"
-                                                : type == 'withdraw'
-                                                    ? "🏧"
-                                                    : "🔔",
+                                            ? "💵"
+                                            : type == 'withdraw'
+                                            ? "🏧"
+                                            : "🔔",
                                         style: const TextStyle(fontSize: 20),
                                       ),
                                     ),
@@ -243,7 +272,8 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                       ),
                                     ),
                                     subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           subtitle,
@@ -260,9 +290,12 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                               color: Colors.grey[700],
                                             ),
                                           ),
-                                        if ((notif['message'] as String).isNotEmpty)
+                                        if ((notif['message'] as String)
+                                            .isNotEmpty)
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 4),
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
                                             child: Text(
                                               "💌 ${notif['message']}",
                                               style: GoogleFonts.inter(

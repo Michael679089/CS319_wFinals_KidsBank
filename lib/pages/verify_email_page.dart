@@ -2,11 +2,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
-import 'package:wfinals_kidsbank/database/models/user_model.dart';
+import 'package:wfinals_kidsbank/database/models/family_model.dart';
+import 'package:wfinals_kidsbank/database/models/family_payment_info_model.dart';
 
 class VerificationEmailPage extends StatefulWidget {
-  const VerificationEmailPage({super.key});
+  final String familyName;
+  final String cardName;
+  final String cardNumber;
+  final String exp;
+  final String ccv;
+
+  const VerificationEmailPage({
+    super.key,
+    required this.familyName,
+    required this.cardName,
+    required this.cardNumber,
+    required this.exp,
+    required this.ccv,
+  });
 
   @override
   State<VerificationEmailPage> createState() => _VerificationEmailPageState();
@@ -14,6 +29,8 @@ class VerificationEmailPage extends StatefulWidget {
 
 class _VerificationEmailPageState extends State<VerificationEmailPage> {
   bool _isLoading = false; // Track loading state for async operations
+
+  AuthService myAuthService = AuthService();
 
   // Functions:
   Future<void> _sendVerificationEmail() async {
@@ -68,13 +85,13 @@ class _VerificationEmailPageState extends State<VerificationEmailPage> {
   }
 
   Future<void> _checkVerificationStatus(BuildContext myContext) async {
+    debugPrint("verifyEmailPage - verifying if email is true");
     setState(() {
       _isLoading = true;
     });
     var navigator = Navigator.of(myContext);
     var myModalRoute = ModalRoute.of(myContext);
     var myMessenger = ScaffoldMessenger.of(myContext);
-
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -90,44 +107,46 @@ class _VerificationEmailPageState extends State<VerificationEmailPage> {
           }
 
           // Step 2 - Email is indeed Verified - Add verified user to "Users" Collection.
-          var myFirestoreAPI = FirestoreAPI();
+          var myFirestoreAPI = FirestoreService();
           final args = myModalRoute.settings.arguments as Map<String, String>;
-          var userId = user.uid;
-          UserModel newUser = UserModel(
-            userId: userId,
-            familyName: args["family-name"] as String,
+          var currentUserId = user.uid;
+          FamilyModel newUser = FamilyModel(
+            familyId: currentUserId,
+            familyName: widget.familyName,
             email: user.email as String,
-            password: "",
-            createdAt: FieldValue.serverTimestamp().toString(),
+            createdAt: "",
           );
-          await myFirestoreAPI.addAuthUserToUserCollection(newUser);
+          await myFirestoreAPI.addAuthUserToFamilyCollection(newUser);
 
           // Step 2.1 - Add verified user's credit card information to "family-payment-info"
           var cardName = args["card-name"] as String;
           var cardNumber = args['card-number'] as String;
-          var cardExp = args['card-exp'] as String;
-          var cardCcv = args['card-ccv'] as String;
+          var exp = args['card-exp'] as String;
+          var ccv = args['card-ccv'] as String;
 
           if (cardName.isEmpty ||
               cardNumber.isEmpty ||
-              cardExp.isEmpty ||
-              cardCcv.isEmpty) {
+              exp.isEmpty ||
+              ccv.isEmpty) {
             debugPrint("verifyEmailPage - card info missing");
           } else if (cardName.isNotEmpty ||
               cardNumber.isNotEmpty ||
-              cardExp.isNotEmpty ||
-              cardCcv.isNotEmpty) {
-            myFirestoreAPI.addCardPaymentInfo(
-              userId,
-              cardName,
-              cardNumber,
-              cardExp,
-              cardCcv,
+              exp.isNotEmpty ||
+              ccv.isNotEmpty) {
+            FamilyPaymentInfoModel newPaymentInfoModel = FamilyPaymentInfoModel(
+              familyId: currentUserId,
+              cardName: cardName,
+              cardNumber: cardNumber,
+              ccv: ccv,
+              exp: exp,
             );
+
+            myFirestoreAPI.addCardPaymentInfo(newPaymentInfoModel);
             debugPrint("verifyEmailPage - added payment Card Info");
           }
 
           // Step 3 - Navigate route to Login
+
           navigator.pushNamedAndRemoveUntil(
             '/login-page',
             (route) => false, // Clear navigation stack
