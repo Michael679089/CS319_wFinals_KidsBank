@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsNotificationsPage extends StatefulWidget {
@@ -53,7 +54,8 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
   }
 
   /// Fetch notifications and filter for this kid
-  Stream<List<Map<String, dynamic>>> getKidsNotificationsStream() {
+  /// Updated function:
+  Stream<List<NotificationsModel>> getKidsNotificationsStream(String kidId) {
     return FirebaseFirestore.instance
         .collection('kids_notifications')
         .orderBy('timestamp', descending: true)
@@ -62,16 +64,17 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
           return snapshot.docs
               .map((doc) {
                 final data = doc.data();
-                return {
-                  'kidId': data['kid_id'],
-                  'type': data['type'] ?? '',
-                  'choreTitle': data['chore_title'] ?? '',
-                  'amount': (data['amount'] ?? 0).toDouble(),
-                  'message': data['message'] ?? '',
-                  'timestamp': data['timestamp'],
-                };
+                try {
+                  final notification = NotificationsModel.fromMap(data);
+                  if (notification.kidId == kidId) {
+                    return notification;
+                  }
+                } catch (e) {
+                  debugPrint('Error parsing notification: $e');
+                }
+                return null;
               })
-              .where((notif) => notif['kidId'] == widget.kidId)
+              .whereType<NotificationsModel>()
               .toList();
         });
   }
@@ -160,8 +163,8 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
 
                       // ✅ Notifications List
                       Expanded(
-                        child: StreamBuilder<List<Map<String, dynamic>>>(
-                          stream: getKidsNotificationsStream(),
+                        child: StreamBuilder<List<NotificationsModel>>(
+                          stream: getKidsNotificationsStream(widget.kidId),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
@@ -173,7 +176,7 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                             if (snapshot.hasError) {
                               return Center(
                                 child: Text(
-                                  "⚠️ Error: ${snapshot.error}",
+                                  "⚠️ Error: \${snapshot.error}",
                                   style: GoogleFonts.fredoka(
                                     fontSize: 18,
                                     color: Colors.red,
@@ -204,36 +207,27 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                               itemCount: notifications.length,
                               itemBuilder: (context, index) {
                                 final notif = notifications[index];
-                                final rawTimestamp = notif['timestamp'];
-                                DateTime? timestamp;
-
-                                if (rawTimestamp is Timestamp) {
-                                  timestamp = rawTimestamp.toDate();
-                                } else if (rawTimestamp is DateTime) {
-                                  timestamp = rawTimestamp;
-                                }
-
-                                final type = notif['type'];
+                                final timestamp = notif.createdAt;
+                                final type = notif.type;
 
                                 String title = "";
                                 String subtitle = "";
 
-                                // Set title and subtitle based on type
                                 if (type == 'reward') {
                                   title = "🎉 You received a reward!";
                                   subtitle =
-                                      "\"${notif['choreTitle']}\" | +\$${notif['amount'].toStringAsFixed(2)}";
+                                      "${notif.title} \$${notif.amount?.toString}";
                                 } else if (type == 'deposit') {
                                   title = "💰 Money deposited!";
                                   subtitle =
-                                      "+\$${notif['amount'].toStringAsFixed(2)} to your balance.";
+                                      "+\$${notif.amount.toString()} to your balance.";
                                 } else if (type == 'withdrawal') {
                                   title = "🏧 Withdrawal made";
                                   subtitle =
-                                      "-\$${notif['amount'].toStringAsFixed(2)} from your balance.";
+                                      "-\$${notif.amount.toString()} from your balance.";
                                 } else {
                                   title = "🔔 Notification";
-                                  subtitle = notif['message'];
+                                  subtitle = notif.message as String;
                                 }
 
                                 return Container(
@@ -257,7 +251,7 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                             ? "🎁"
                                             : type == 'deposit'
                                             ? "💵"
-                                            : type == 'withdraw'
+                                            : type == 'withdrawal'
                                             ? "🏧"
                                             : "🔔",
                                         style: const TextStyle(fontSize: 20),
@@ -284,20 +278,19 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                         ),
                                         if (timestamp != null)
                                           Text(
-                                            "${timestamp.month}/${timestamp.day} ${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}",
+                                            "\${timestamp.month}/\${timestamp.day} \${timestamp.hour}:\${timestamp.minute.toString().padLeft(2, '0')}",
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
                                               color: Colors.grey[700],
                                             ),
                                           ),
-                                        if ((notif['message'] as String)
-                                            .isNotEmpty)
+                                        if (notif.message!.isNotEmpty)
                                           Padding(
                                             padding: const EdgeInsets.only(
                                               top: 4,
                                             ),
                                             child: Text(
-                                              "💌 ${notif['message']}",
+                                              "💌 \${notif.message}",
                                               style: GoogleFonts.inter(
                                                 fontSize: 13,
                                                 fontStyle: FontStyle.italic,

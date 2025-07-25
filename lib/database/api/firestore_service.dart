@@ -397,9 +397,25 @@ class FirestoreService {
     }
   }
 
-  void addChores() async {}
+  Future<List<ChoreModel>> getAllChoresByKidId(String kidId) async {
+    List<ChoreModel> myList = [];
 
-  void addNotification() async {}
+    final allDocs = await db
+        .collection('chores')
+        .where("KidId", isEqualTo: kidId)
+        .get();
+
+    for (var doc in allDocs.docs) {
+      try {
+        final fullData = {...doc.data(), 'choreId': doc.id};
+        myList.add(ChoreModel.fromMap(fullData));
+      } catch (e) {
+        debugPrint(e.toString());
+      }
+    }
+
+    return myList;
+  }
 
   Future<String?> getFamilyPaymentCardNumber(String userId) async {
     final snapshot = await FirebaseFirestore.instance
@@ -576,25 +592,5 @@ class FirestoreService {
     }
 
     debugPrint("🔁 Finished. Updated $updatedCount documents.");
-  }
-
-  Future<List<ChoreModel>> getAllChoresByKidId(String kidId) async {
-    List<ChoreModel> myList = [];
-
-    final allDocs = await db
-        .collection('chores')
-        .where("KidId", isEqualTo: kidId)
-        .get();
-
-    for (var doc in allDocs.docs) {
-      try {
-        final fullData = {...doc.data(), 'choreId': doc.id};
-        myList.add(ChoreModel.fromMap(fullData));
-      } catch (e) {
-        debugPrint(e.toString());
-      }
-    }
-
-    return myList;
   }
 }

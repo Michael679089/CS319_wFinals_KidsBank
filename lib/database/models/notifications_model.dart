@@ -3,12 +3,14 @@ class NotificationsModel {
   final String familyId;
   final String kidId;
   final String title;
+  String? amount;
   final String? message;
   final String type;
   final String? createdAt;
 
   NotificationsModel({
     this.notificationId,
+    this.amount,
     required this.familyId,
     required this.kidId,
     required this.title,
@@ -22,6 +24,7 @@ class NotificationsModel {
     return NotificationsModel(
       notificationId: map["notificationId"] as String,
       familyId: map['familyId'] as String,
+      amount: map["amount"] as String,
       kidId: map["kidId"] as String,
       title: map["title"] as String,
       message: map['message'] as String,
@@ -35,6 +38,7 @@ class NotificationsModel {
     return {
       'notificationId': notificationId,
       'familyId': familyId,
+      'amount': amount,
       'kidId': kidId,
       'title': title,
       'message': message ?? "",
