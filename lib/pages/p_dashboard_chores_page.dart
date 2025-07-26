@@ -43,7 +43,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
     if (mounted) {
       setState(() {
         kids = loadedKids;
-        selectedKidId = loadedKids.isNotEmpty ? loadedKids.first.kidId : null;
+        selectedKidId = loadedKids.isNotEmpty ? loadedKids.first.kid_id : null;
         familyName = famName;
         isLoadingKids = false;
       });
@@ -146,7 +146,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                           return GestureDetector(
                             onTap: () {
                               setState(() {
-                                selectedKidId = kid.kidId;
+                                selectedKidId = kid.kid_id;
                               });
                             },
                             child: Container(
@@ -155,7 +155,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: selectedKidId == kid.kidId
+                                  color: selectedKidId == kid.kid_id
                                       ? Colors.black
                                       : Colors.transparent,
                                   width: 3,
@@ -163,7 +163,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                               ),
                               child: CircleAvatar(
                                 radius: 30,
-                                backgroundImage: AssetImage(kid.avatarFilePath),
+                                backgroundImage: AssetImage(kid.avatar_file_path),
                               ),
                             ),
                           );
@@ -275,7 +275,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              chore.choreTitle,
+                                              chore.chore_title,
                                               style: GoogleFonts.fredoka(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 20,
@@ -283,7 +283,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              chore.choreDesc,
+                                              chore.chore_description,
                                               style: GoogleFonts.fredoka(
                                                 fontSize: 15,
                                               ),
@@ -297,7 +297,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                                             CrossAxisAlignment.end,
                                         children: [
                                           Text(
-                                            "\$${chore.rewardMoney.toStringAsFixed(2)}",
+                                            "\$${chore.reward_money.toStringAsFixed(2)}",
                                             style: GoogleFonts.fredoka(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,

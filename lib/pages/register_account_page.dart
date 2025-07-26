@@ -128,11 +128,11 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
     try {
       String familyId = myAuthService.getCurrentUser()?.uid as String;
       FamilyModel myUserModel = FamilyModel(
-        familyId: familyId,
-        familyName: familyName,
+        family_id: familyId,
+        family_name: familyName,
         email: email,
         password: password,
-        createdAt: "",
+        created_at: DateTime.now(),
       );
 
       var createAuthAccountResponse = await myAuthService

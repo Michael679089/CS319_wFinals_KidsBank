@@ -87,11 +87,11 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
 
   void selectParent(ParentModel parent, String parentId) {
     setState(() {
-      selectedParentId = parent.parentId;
+      selectedParentId = parent.parent_id;
       selectedKidId = null; // Deselecting Kid
-      selectedName = "${parent.firstName} ${parent.lastName}";
+      selectedName = "${parent.first_name} ${parent.last_name}";
       selectedRole = "parent";
-      selectedAvatar = parent.avatarFilePath;
+      selectedAvatar = parent.avatar_file_path;
     });
     debugPrint("accountSelectorPage - Selected parent = $parent --- $parentId");
   }
@@ -99,10 +99,10 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   void selectKid(KidModel kid, String kidId) {
     setState(() {
       selectedParentId = null; // Deselecting Parent
-      selectedKidId = kid.kidId;
-      selectedName = kid.firstName;
+      selectedKidId = kid.kid_id;
+      selectedName = kid.first_name;
       selectedRole = "kid";
-      selectedAvatar = kid.avatarFilePath;
+      selectedAvatar = kid.avatar_file_path;
     });
   }
 
@@ -302,7 +302,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                                 parents = [...parents, result];
                               });
                               debugPrint(
-                                "accountSelectorPage - New parent added: ${result.firstName}",
+                                "accountSelectorPage - New parent added: ${result.first_name}",
                               );
                             }
                             debugPrint(
@@ -556,9 +556,9 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                           ),
                         ),
                         child: CircleAvatar(
-                          backgroundImage: AssetImage(parent.avatarFilePath),
+                          backgroundImage: AssetImage(parent.avatar_file_path),
                           radius: parentImageCircleSize,
-                          child: parent.avatarFilePath.isEmpty
+                          child: parent.avatar_file_path.isEmpty
                               ? const Text("Hi")
                               : null,
                         ),
@@ -567,7 +567,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                       Row(
                         children: [
                           Text(
-                            "${parent.firstName} ${parent.lastName}",
+                            "${parent.first_name} ${parent.last_name}",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -678,15 +678,15 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                 child: Column(
                   children: [
                     CircleAvatar(
-                      backgroundImage: AssetImage(kid.avatarFilePath),
+                      backgroundImage: AssetImage(kid.avatar_file_path),
                       radius: 40, // Larger than _parentsDisplay (32)
-                      child: kid.avatarFilePath.isEmpty
+                      child: kid.avatar_file_path.isEmpty
                           ? const Text("Hi")
                           : null,
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      "${kid.firstName} ${kid.lastName}",
+                      "${kid.first_name} ${kid.last_name}",
                       style: TextStyle(
                         fontSize: 16, // Larger than _parentsDisplay (14)
                         fontFamily: GoogleFonts.fredoka().fontFamily,

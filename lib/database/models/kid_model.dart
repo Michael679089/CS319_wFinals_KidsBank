@@ -1,26 +1,28 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class KidModel {
-  String? kidId;
-  final String familyId;
-  final String firstName;
-  final String lastName;
-  final String dateOfBirth; // ✔ now strictly a string
-  final String phoneNumber;
-  final String pincode;
-  final String avatarFilePath;
-  String? createdAt;
+  String kid_id;
+  String family_id;
+  String first_name;
+  String last_name;
+  DateTime date_of_birth; // ✔ now strictly a string
+  String phone_number;
+  String pincode;
+  String avatar_file_path;
+  DateTime created_at;
 
   KidModel({
-    this.kidId,
-    required this.familyId,
-    required this.firstName,
-    required this.lastName,
-    required this.dateOfBirth,
-    required this.phoneNumber,
+    required this.kid_id,
+    required this.family_id,
+    required this.first_name,
+    required this.last_name,
+    required this.date_of_birth,
+    required this.phone_number,
     required this.pincode,
-    required this.avatarFilePath,
-    this.createdAt,
+    required this.avatar_file_path,
+    required this.created_at,
   });
 
   // Class Functions:
@@ -28,35 +30,30 @@ class KidModel {
   // receiving data from firestore function:
   factory KidModel.fromMap(Map<String, dynamic> map) {
     return KidModel(
-      kidId: map['kidId'],
-      familyId: map['familyId'],
-      firstName: map['firstName'],
-      lastName: map['lastName'],
-      dateOfBirth: map["dateOfBirth"],
-      phoneNumber: map['phoneNumber'],
+      kid_id: map['kid_id'],
+      family_id: map['family_id'],
+      first_name: map['first_name'],
+      last_name: map['last_name'],
+      date_of_birth: (map["date_of_birth"] as Timestamp).toDate(),
+      phone_number: map['phone_number'],
       pincode: map['pincode'],
-      avatarFilePath: map['avatarFilePath'],
-      createdAt: map["createdAt"],
+      avatar_file_path: map['avatar_file_path'],
+      created_at: (map["created_at"] as Timestamp).toDate(),
     );
   }
 
   // sending data to firestore function:
   Map<String, dynamic> toMap() {
-    var tempCreatedAt = createdAt;
-    if (createdAt == null) {
-      tempCreatedAt = FieldValue.serverTimestamp().toString();
-    }
-
     return {
-      'kidId': kidId,
-      'familyId': familyId,
-      'firstName': firstName,
-      'lastName': lastName,
-      'dateOfBirth': dateOfBirth, // ✅ stored as String
-      'phoneNumber': phoneNumber,
+      'kid_id': kid_id,
+      'family_id': family_id,
+      'first_name': first_name,
+      'last_name': last_name,
+      'date_of_birth': date_of_birth, // ✅ stored as String
+      'phone_number': phone_number,
       'pincode': pincode,
-      'avatarFilePath': avatarFilePath,
-      'createdAt': tempCreatedAt,
+      'avatar_file_path': avatar_file_path,
+      'created_at': created_at,
     };
   }
 }

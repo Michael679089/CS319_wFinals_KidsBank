@@ -306,11 +306,14 @@ class _KidsDashboardState extends State<KidsDashboard> {
 
                                   NotificationsModel withdrawalKidNotification =
                                       NotificationsModel(
-                                        familyId: widget.familyUserId,
-                                        kidId: widget.kidId,
-                                        title: title,
-                                        message: desc,
-                                        type: 'withdrawal',
+                                        family_id: widget.familyUserId,
+                                        kid_id: widget.kidId,
+                                        notification_title: title,
+                                        notification_message: desc,
+                                        type: 'withdrawal', 
+                                        notification_id: '', 
+                                        notification_amount: 0, 
+                                        created_at: DateTime.now(), 
                                       );
                                   FirestoreService myFirestoreservice =
                                       FirestoreService();

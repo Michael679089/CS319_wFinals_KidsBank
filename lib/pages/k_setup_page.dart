@@ -372,12 +372,12 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundImage: AssetImage(kid.avatarFilePath),
+            backgroundImage: AssetImage(kid.avatar_file_path),
             radius: 26,
           ),
           const SizedBox(width: 12),
           Text(
-            kid.firstName,
+            kid.first_name,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,

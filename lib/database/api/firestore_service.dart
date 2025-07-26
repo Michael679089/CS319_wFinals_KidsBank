@@ -46,7 +46,7 @@ class FirestoreService {
       }
 
       debugPrint(
-        "FirestoreAPI - Successfully added family: ${family.familyName} (ID: $theDocumentId)",
+        "FirestoreAPI - Successfully added family: ${family.family_name} (ID: $theDocumentId)",
       );
 
       return theDocumentId;
@@ -205,7 +205,7 @@ class FirestoreService {
       }
 
       debugPrint(
-        "FirestoreAPI - Successfully added parent: ${parent.firstName} ${parent.lastName} (ID: $theDocumentId)",
+        "FirestoreAPI - Successfully added parent: ${parent.first_name} ${parent.last_name} (ID: $theDocumentId)",
       );
       return theDocumentId;
     } catch (e) {
@@ -223,7 +223,7 @@ class FirestoreService {
       // Create a new ParentModel with the generated ID
       final theDocumentId = collection.doc().id;
       // Add initial document with server timestamp
-      notification.notificationId = theDocumentId;
+      notification.notification_id = theDocumentId;
       await collection.doc(theDocumentId).set({
         ...notification.toMap(),
         'createdAt': FieldValue.serverTimestamp(),
@@ -244,7 +244,7 @@ class FirestoreService {
       }
 
       debugPrint(
-        "FirestoreAPI - Successfully added notification: ${notification.title} ${notification.message} (ID: $theDocumentId)",
+        "FirestoreAPI - Successfully added notification: ${notification.notification_title} ${notification.notification_message} (ID: $theDocumentId)",
       );
       return theDocumentId;
     } catch (e) {
@@ -334,7 +334,7 @@ class FirestoreService {
 
     // Create a new ParentModel with the generated ID
     final theDocumentId = collection.doc().id;
-    myPamentInfoModel.familyPaymentInfoId = theDocumentId;
+    myPamentInfoModel.family_payment_info_id = theDocumentId;
     collection.doc(theDocumentId).set(myPamentInfoModel.toMap());
   }
 

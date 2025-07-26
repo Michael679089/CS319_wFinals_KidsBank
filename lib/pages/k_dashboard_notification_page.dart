@@ -66,7 +66,7 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                 final data = doc.data();
                 try {
                   final notification = NotificationsModel.fromMap(data);
-                  if (notification.kidId == kidId) {
+                  if (notification.kid_id == kidId) {
                     return notification;
                   }
                 } catch (e) {
@@ -207,7 +207,7 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                               itemCount: notifications.length,
                               itemBuilder: (context, index) {
                                 final notif = notifications[index];
-                                final timestamp = notif.createdAt;
+                                final timestamp = notif.created_at;
                                 final type = notif.type;
 
                                 String title = "";
@@ -216,18 +216,18 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                 if (type == 'reward') {
                                   title = "🎉 You received a reward!";
                                   subtitle =
-                                      "${notif.title} \$${notif.amount?.toString}";
+                                      "${notif.notification_title} \$${notif.notification_amount?.toString}";
                                 } else if (type == 'deposit') {
                                   title = "💰 Money deposited!";
                                   subtitle =
-                                      "+\$${notif.amount.toString()} to your balance.";
+                                      "+\$${notif.notification_amount.toString()} to your balance.";
                                 } else if (type == 'withdrawal') {
                                   title = "🏧 Withdrawal made";
                                   subtitle =
-                                      "-\$${notif.amount.toString()} from your balance.";
+                                      "-\$${notif.notification_amount.toString()} from your balance.";
                                 } else {
                                   title = "🔔 Notification";
-                                  subtitle = notif.message as String;
+                                  subtitle = notif.notification_message;
                                 }
 
                                 return Container(
@@ -276,15 +276,14 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                             color: Colors.black87,
                                           ),
                                         ),
-                                        if (timestamp != null)
-                                          Text(
-                                            "\${timestamp.month}/\${timestamp.day} \${timestamp.hour}:\${timestamp.minute.toString().padLeft(2, '0')}",
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                              color: Colors.grey[700],
-                                            ),
+                                        Text(
+                                          "\${timestamp.month}/\${timestamp.day} \${timestamp.hour}:\${timestamp.minute.toString().padLeft(2, '0')}",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: Colors.grey[700],
                                           ),
-                                        if (notif.message!.isNotEmpty)
+                                        ),
+                                        if (notif.notification_message.isNotEmpty)
                                           Padding(
                                             padding: const EdgeInsets.only(
                                               top: 4,

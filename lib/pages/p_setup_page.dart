@@ -76,7 +76,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
 
     final firstName = firstNameController.text.trim();
     final lastName = lastNameController.text.trim();
-    final birthdate = dateOfBirthController.text.trim();
+    final birthdate = DateTime.parse(dateOfBirthController.text.trim());
     final pincode = pincodeController.text.trim();
 
     // Validate inputs
@@ -94,7 +94,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       });
       return;
     }
-    if (birthdate.isEmpty) {
+    if (birthdate == null) {
       _showSnackbar('Date of birth is required', isError: true);
       setState(() {
         _isSubmitting = false;
@@ -123,13 +123,14 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       String myFamilyId = familyId as String;
 
       final newParent = ParentModel(
-        avatarFilePath: selectedAvatar,
-        parentId: "",
-        familyId: myFamilyId,
-        firstName: firstName,
-        lastName: lastName,
+        avatar_file_path: selectedAvatar,
+        parent_id: "",
+        family_id: myFamilyId,
+        first_name: firstName,
+        last_name: lastName,
         pincode: pincode,
-        dateOfBirth: birthdate,
+        date_of_birth: birthdate, 
+        created_at: DateTime.now(),
       );
 
       var parentId = await myFirestoreAPI.addParentToParentCollection(

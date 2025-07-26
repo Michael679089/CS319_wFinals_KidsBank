@@ -284,8 +284,8 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
 
                                 return GestureDetector(
                                   onTap: () => handleChoreTap(
-                                    chore.choreId as String,
-                                    chore.choreTitle,
+                                    chore.chore_id as String,
+                                    chore.chore_title,
                                     isLocked,
                                   ),
                                   child: Container(
@@ -307,7 +307,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                         size: 30,
                                       ),
                                       title: Text(
-                                        chore.choreTitle,
+                                        chore.chore_title,
                                         style: GoogleFonts.fredoka(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
@@ -318,7 +318,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            chore.choreDesc,
+                                            chore.chore_description,
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
                                             ),
@@ -354,7 +354,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                           ),
                                         ),
                                         child: Text(
-                                          "\$${chore.rewardMoney.toStringAsFixed(2)}",
+                                          "\$${chore.reward_money.toStringAsFixed(2)}",
                                           style: GoogleFonts.fredoka(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w700,

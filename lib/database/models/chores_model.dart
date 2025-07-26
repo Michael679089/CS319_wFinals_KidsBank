@@ -1,23 +1,24 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 
 class ChoreModel {
-  String? choreId;
-  final String kidId;
-  final String choreTitle;
-  final String choreDesc;
-  final double rewardMoney;
-  final String status;
-  final String? timestamp;
+  String chore_id;
+  String kid_id;
+  String chore_title;
+  String chore_description;
+  double reward_money;
+  String status;
+  DateTime timestamp;
 
   ChoreModel({
-    this.choreId,
-    required this.kidId,
-    required this.choreTitle,
-    required this.choreDesc,
-    required this.rewardMoney,
-    required this.status,
-    this.timestamp,
+    required this.chore_id,
+    required this.kid_id,
+    required this.chore_title,
+    required this.chore_description,
+    required this.reward_money,
+    required this.status, 
+    required this.timestamp,
   });
 
   // receiving data from firestore:
@@ -25,33 +26,27 @@ class ChoreModel {
   // Add null safety, debug context, and Firestore field consistency.
 
   factory ChoreModel.fromMap(Map<String, dynamic> map) {
-    try {
-      return ChoreModel(
-        choreId: map["choreId"] ?? "(missing choreId)",
-        kidId: map["kidId"] ?? map["KidId"] ?? "(missing kidId)",
-        choreTitle: map["choreTitle"] ?? "(missing choreTitle)",
-        choreDesc: map["choreDesc"] ?? "(missing choreDesc)",
-        rewardMoney: (map["rewardMoney"] ?? 0).toDouble(),
-        status: map["status"] ?? "(missing status)",
-        timestamp: map["timestamp"] ?? "",
-      );
-    } catch (e) {
-      debugPrint("Error in fromMap: $e");
-      debugPrint("Map content: $map");
-      rethrow;
-    }
+    return ChoreModel(
+      chore_id: map["chore_id"],
+      kid_id: map["kid_id"],
+      chore_title: map["chore_title"],
+      chore_description: map["chore_description"],
+      reward_money: map["reward_money"],
+      status: map["status"],
+      timestamp: (map["timestamp"] as Timestamp).toDate(),
+    );
   }
 
   // sending data to firestore:
   Map<String, dynamic> toMap() {
     return {
-      'choreId': choreId,
-      'KidId': kidId,
-      'choreTitle': choreTitle,
-      'choreDesc': choreDesc,
-      'rewardMoney': rewardMoney,
+      'chore_id': chore_id,
+      'kid_id': kid_id,
+      'chore_title': chore_title,
+      'chore_description': chore_description,
+      'reward_money': reward_money,
       'status': status,
-      'timestamp': timestamp ?? "",
+      'timestamp': timestamp,
     };
   }
 }

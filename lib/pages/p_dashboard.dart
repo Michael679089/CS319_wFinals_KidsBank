@@ -81,7 +81,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
 
     // Step 2: Get the balance in each kid.
     for (var kid in listOfKidModel) {
-      final kidId = kid.kidId;
+      final kidId = kid.kid_id;
 
       // 2 Get usableBalance
       var kidPaymentInfoSnapshot = await FirebaseFirestore.instance
@@ -91,9 +91,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
       KidsPaymentInfoModel balanceModel = KidsPaymentInfoModel.fromMap(
         kidPaymentInfoSnapshot.docs.first.data(),
       );
-      var usableBalance = int.parse(balanceModel.amountLeft as String);
+      var usableBalance = int.parse(balanceModel.total_amount as String);
       debugPrint(
-        "parentDashboardPage - ${balanceModel.kidId} - ${balanceModel.amountLeft}",
+        "parentDashboardPage - ${balanceModel.kid_id} - ${balanceModel.total_amount}",
       );
 
       // 2 Get total withdrawals for this kid
@@ -119,9 +119,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
       runningTotal += totalDeposited;
 
       tempKidsData.add({
-        "id": kid.kidId,
-        "name": kid.firstName,
-        "avatar": kid.avatarFilePath,
+        "id": kid.kid_id,
+        "name": kid.first_name,
+        "avatar": kid.avatar_file_path,
         "balance": usableBalance,
       });
     }
@@ -153,11 +153,12 @@ class _ParentDashboardState extends State<ParentDashboard> {
     }
 
     ChoreModel newPendingChoreModel = ChoreModel(
-      kidId: kidId,
-      choreTitle: choreTitle,
-      choreDesc: choreDescription,
-      rewardMoney: rewardMoney,
-      status: "pending",
+      kid_id: kidId,
+      chore_title: choreTitle,
+      chore_description: choreDescription,
+      reward_money: rewardMoney,
+      status: "pending", timestamp: DateTime.now(), 
+      chore_id: '',
     );
     myFirestoreService.addChoreToChoresCollection(newPendingChoreModel);
 
@@ -627,11 +628,13 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         // Push notification
                                         NotificationsModel newNotification =
                                             NotificationsModel(
-                                              familyId: widget.familyUserId,
-                                              kidId: kidId,
-                                              title: message,
-                                              message: message,
-                                              type: 'deposit',
+                                              family_id: widget.familyUserId,
+                                              kid_id: kidId,
+                                              notification_title: message,
+                                              notification_message: message,
+                                              type: 'deposit', notification_id: '', 
+                                              notification_amount: 0, 
+                                              created_at: DateTime.now(),
                                             );
                                         await myFirestoreService
                                             .addNotificationToNotificationCollections(
@@ -747,10 +750,15 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         NotificationsModel
                                         withdrawalNotification =
                                             NotificationsModel(
-                                              familyId: widget.familyUserId,
-                                              kidId: kidId,
-                                              title: message,
-                                              type: 'withdrawal',
+                                              family_id: widget.familyUserId,
+                                              kid_id: kidId,
+                                              notification_title: "",
+                                              notification_message: message,
+                                              
+                                              type: 'withdrawal', 
+                                              notification_id: '', 
+                                              notification_amount: 0, 
+                                              created_at: DateTime.now(),
                                             );
                                         myFirestoreService
                                             .addNotificationToNotificationCollections(

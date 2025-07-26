@@ -192,20 +192,20 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
     try {
       var firstName = firstNameController.text;
       var lastName = lastNameController.text;
-      var dateOfBirth = dateOfBirthController.text; // year-month-day 2015-01-28
+      var dateOfBirth = DateTime.parse(dateOfBirthController.text); // year-month-day 2015-01-28
       var phoneNumber = phoneNumController.text;
       var pincode = pincodeController.text;
       var avatar = selectedAvatar;
       var familyUserId = user.uid;
 
       KidModel newKidModel = KidModel(
-        firstName: firstName,
-        lastName: lastName,
-        dateOfBirth: dateOfBirth,
-        phoneNumber: phoneNumber,
+        first_name: firstName,
+        last_name: lastName,
+        date_of_birth: dateOfBirth,
+        phone_number: phoneNumber,
         pincode: pincode,
-        avatarFilePath: avatar,
-        familyId: familyUserId,
+        avatar_file_path: avatar,
+        family_id: familyUserId, kid_id: '', created_at: DateTime.now(),
       );
       kidId = await myFirestoreService.addKidToKidsCollection(newKidModel);
 
@@ -222,9 +222,9 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
     try {
       var phoneNumber = phoneNumController.text;
       KidsPaymentInfoModel newKidPaymentInfoModel = KidsPaymentInfoModel(
-        kidId: kidId,
-        phoneNumber: phoneNumber,
-        amountLeft: "0",
+        kid_id: kidId,
+        phone_number: phoneNumber,
+        total_amount: "0", kid_payment_info_id: '', last_updated: DateTime.now(),  created_at: DateTime.now(),
       );
       myFirestoreService.addKidPaymentInfoToKidPaymentInfoCollection(
         newKidPaymentInfoModel,

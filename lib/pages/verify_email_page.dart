@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -111,34 +110,36 @@ class _VerificationEmailPageState extends State<VerificationEmailPage> {
           final args = myModalRoute.settings.arguments as Map<String, String>;
           var currentUserId = user.uid;
           FamilyModel newUser = FamilyModel(
-            familyId: currentUserId,
-            familyName: widget.familyName,
+            family_id: currentUserId,
+            family_name: widget.familyName,
             email: user.email as String,
-            createdAt: "",
+            created_at: DateTime.now(), password: '',
           );
           await myFirestoreAPI.addAuthUserToFamilyCollection(newUser);
 
           // Step 2.1 - Add verified user's credit card information to "family-payment-info"
           var cardName = args["card-name"] as String;
           var cardNumber = args['card-number'] as String;
-          var exp = args['card-exp'] as String;
+          var exp = args['card-exp'] as DateTime;
           var ccv = args['card-ccv'] as String;
 
           if (cardName.isEmpty ||
               cardNumber.isEmpty ||
-              exp.isEmpty ||
+              exp != null ||
               ccv.isEmpty) {
             debugPrint("verifyEmailPage - card info missing");
           } else if (cardName.isNotEmpty ||
               cardNumber.isNotEmpty ||
-              exp.isNotEmpty ||
+              exp != null ||
               ccv.isNotEmpty) {
             FamilyPaymentInfoModel newPaymentInfoModel = FamilyPaymentInfoModel(
-              familyId: currentUserId,
-              cardName: cardName,
-              cardNumber: cardNumber,
+              family_id: currentUserId,
+              card_name: cardName,
+              card_number: cardNumber,
               ccv: ccv,
-              exp: exp,
+              exp: exp, 
+              family_payment_info_id: '', 
+              total_amount: 0,
             );
 
             myFirestoreAPI.addCardPaymentInfo(newPaymentInfoModel);
