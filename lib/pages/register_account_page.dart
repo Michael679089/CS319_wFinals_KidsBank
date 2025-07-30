@@ -27,7 +27,7 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _expController = TextEditingController();
   final TextEditingController _ccvController = TextEditingController();
-  final bool is_register_debug_prefiled = true;
+  final bool is_register_debug_prefiled = false;
 
   // My Services
   FirestoreService myFirestoreAPI = FirestoreService();

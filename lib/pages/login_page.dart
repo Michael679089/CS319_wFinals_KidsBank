@@ -160,6 +160,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _tryAutoLogin() async {
+    setState(() {
+      _isLoadingIndicatorActive = true;
+    });
+
     debugPrint("loginPage.dart - Trying Auto Login START");
 
     NavigatorState navigator = Navigator.of(context);
@@ -167,9 +171,9 @@ class _LoginPageState extends State<LoginPage> {
     // Step 1: Get the keepLoggedIn shared Preferences
     try {
       final prefs = await SharedPreferences.getInstance();
-      var test_keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
+      keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
 
-      if (test_keepLoggedIn) {
+      if (keepLoggedIn) {
         var doesFamilyCollectionExist = await FirestoreService.doesFirestoreCollectionExist("family");
 
         if (doesFamilyCollectionExist) {
@@ -182,6 +186,7 @@ class _LoginPageState extends State<LoginPage> {
 
             if (user.emailVerified) {
               navigator.pushNamed("/account-selector-page", arguments: {"user-id": user_Id});
+              return;
             } else {
               debugPrint("loginPage - email not verified");
             }
@@ -206,12 +211,27 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       debugPrint("ERROR: during auto login $e");
+    } finally {
+      setState(() {
+        _isLoadingIndicatorActive = false;
+      });
     }
 
     debugPrint("loginPage.dart - Trying Auto Login END");
   }
 
+  void _updateKeepLoggedInValue(bool val) async {
+    debugPrint("loginPage - updated keepLoggedIn to $val");
+    setState(() {
+      keepLoggedIn = val;
+    });
+  }
+
   Future<void> _handleLogin() async {
+    setState(() {
+      _isLoadingIndicatorActive = true;
+    });
+
     var navigator = Navigator.of(context);
     debugPrint("loginPage.dart - _handleLogin is called");
 
@@ -223,6 +243,9 @@ class _LoginPageState extends State<LoginPage> {
     if (loginResponse["status"] == "success") {
       var user = AuthService.getCurrentUser();
       var user_id = user?.uid;
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setBool('keepLoggedIn', keepLoggedIn);
+
       debugPrint("LoginPage - successful login");
       navigator.pushReplacementNamed("/account-selector-page", arguments: {"user-id": user_id});
     } else if (loginResponse["status"] == "unverified") {
@@ -233,6 +256,10 @@ class _LoginPageState extends State<LoginPage> {
       debugPrint("loginPage - an error occurred during login");
       Utility_TopSnackBar.show(message: "ERROR: Logging In", context: context, isError: false);
     }
+
+    setState(() {
+      _isLoadingIndicatorActive = false;
+    });
   }
 
   // The DISPOSE
@@ -289,115 +316,123 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     navigator = Navigator.of(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFCA26),
-      body: Stack(
-        children: [
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Title Section
-                  Text(
-                    'KidsBank',
-                    style: GoogleFonts.fredoka(fontSize: 50, fontWeight: FontWeight.bold, color: Colors.black),
-                  ),
-                  const SizedBox(height: 30),
-                  // Input Section
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black, width: 3),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        navigator?.pushNamed("/welcome-page");
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFCA26),
+        body: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Title Section
+                    Text(
+                      'KidsBank',
+                      style: GoogleFonts.fredoka(fontSize: 50, fontWeight: FontWeight.bold, color: Colors.black),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('E-Mail', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        _buildInputField(_emailController),
-                        const SizedBox(height: 16),
-                        Text('Password', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        _buildInputField(_passwordController, isPassword: true),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isForgotPasswordPressed = true),
-                            onTapUp: _isLoadingIndicatorActive
-                                ? null
-                                : (_) {
-                                    setState(() => _isForgotPasswordPressed = false);
-                                    _handleForgotPassword();
-                                  },
-                            onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isForgotPasswordPressed = false),
-                            child: Text(
-                              'Forgot Password?',
-                              style: GoogleFonts.fredoka(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: _isForgotPasswordPressed ? const Color(0xFF4E88CF) : Colors.black,
+                    const SizedBox(height: 30),
+                    // Input Section
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.black, width: 3),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('E-Mail', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          _buildInputField(_emailController),
+                          const SizedBox(height: 16),
+                          Text('Password', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          _buildInputField(_passwordController, isPassword: true),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isForgotPasswordPressed = true),
+                              onTapUp: _isLoadingIndicatorActive
+                                  ? null
+                                  : (_) {
+                                      setState(() => _isForgotPasswordPressed = false);
+                                      _handleForgotPassword();
+                                    },
+                              onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isForgotPasswordPressed = false),
+                              child: Text(
+                                'Forgot Password?',
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isForgotPasswordPressed ? const Color(0xFF4E88CF) : Colors.black,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(width: double.infinity, child: _buildLoginButton()),
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: keepLoggedIn,
-                              onChanged: _isLoadingIndicatorActive
-                                  ? null
-                                  : (val) {
-                                      setState(() => keepLoggedIn = val ?? false);
-                                    },
-                            ),
-                            Text('Keep us logged in', style: GoogleFonts.fredoka(fontSize: 16)),
-                          ],
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                          SizedBox(width: double.infinity, child: _buildLoginButton()),
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: keepLoggedIn,
+                                onChanged: _isLoadingIndicatorActive
+                                    ? null
+                                    : (val) {
+                                        setState(() {
+                                          _updateKeepLoggedInValue(val ?? false);
+                                        });
+                                      },
+                              ),
+                              Text('Keep us logged in', style: GoogleFonts.fredoka(fontSize: 16)),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                  // Register Button
-                  Text('Need an account?', style: GoogleFonts.inter()),
-                  GestureDetector(
-                    onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isSignUpPressed = true),
-                    onTapUp: _isLoadingIndicatorActive
-                        ? null
-                        : (_) {
-                            setState(() => _isSignUpPressed = false);
-                            navigator?.pushNamed(
-                              "/register-page",
-                              arguments: {
-                                "email-text-value": _emailController.text.trim(),
-                                "password-text-value": _passwordController.text.trim(),
-                                "is-broken-register": false,
-                              },
-                            );
-                          },
-                    onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isSignUpPressed = false),
-                    child: Text(
-                      'Sign up',
-                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 18, color: _isSignUpPressed ? const Color(0xFF4E88CF) : Colors.black),
+                    // Register Button
+                    Text('Need an account?', style: GoogleFonts.inter()),
+                    GestureDetector(
+                      onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isSignUpPressed = true),
+                      onTapUp: _isLoadingIndicatorActive
+                          ? null
+                          : (_) {
+                              setState(() => _isSignUpPressed = false);
+                              navigator?.pushNamed(
+                                "/register-page",
+                                arguments: {
+                                  "email-text-value": _emailController.text.trim(),
+                                  "password-text-value": _passwordController.text.trim(),
+                                  "is-broken-register": false,
+                                },
+                              );
+                            },
+                      onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isSignUpPressed = false),
+                      child: Text(
+                        'Sign up',
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 18, color: _isSignUpPressed ? const Color(0xFF4E88CF) : Colors.black),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          if (_isLoadingIndicatorActive)
-            Container(
-              color: Colors.black.withAlpha(150),
-              child: const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4e88cf)))),
-            ),
-        ],
+            if (_isLoadingIndicatorActive)
+              Container(
+                color: Colors.black.withAlpha(150),
+                child: const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4e88cf)))),
+              ),
+          ],
+        ),
       ),
     );
   }

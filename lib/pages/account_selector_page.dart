@@ -144,11 +144,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     fetchUsers();
   }
 
-  Text get title => _buildText("Hi!", 56);
-  Text get subTitle => _buildText("Who is using?", 28.8);
-  Text get parentsLabelText => _buildText("Parents", 20);
-  Text get kidsLabelText => _buildText("Kids", 20);
-
   Text _buildText(String text, double size) {
     return Text(
       text,
@@ -156,11 +151,33 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     );
   }
 
+  Text get title => _buildText("Hi!", 56);
+  Text get subTitle => _buildText("Who is using?", 28.8);
+  Text get parentsLabelText => _buildText("Parents", 20);
+  Text get kidsLabelText => _buildText("Kids", 20);
+
   // BUILD FUNCTION
 
   @override
   Widget build(BuildContext context) {
-    Column myColumn = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, subTitle]);
+    Row TitleDisplay = Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Flexible(
+          flex: 2,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, subTitle]),
+        ),
+        Flexible(flex: 1, child: Image.asset('assets/owl.png', height: 150, width: 240, alignment: Alignment.centerRight)),
+      ],
+    );
+
+    Positioned myOwl = Positioned(
+      child: Container(color: Colors.red, child: Image.asset('assets/owl.png', height: 150, width: 240)),
+    );
+
+    ///
+    ///
+    ///
 
     return PopScope(
       canPop: false,
@@ -174,13 +191,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           margin: EdgeInsets.all(20),
           child: Column(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Flexible(flex: 2, child: myColumn),
-                  Flexible(flex: 1, child: Image.asset('assets/owl.png', height: 150, width: 240, alignment: Alignment.centerRight)),
-                ],
-              ),
+              TitleDisplay,
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -222,8 +233,4 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       ),
     );
   }
-
-  Positioned myOwl = Positioned(
-    child: Container(color: Colors.red, child: Image.asset('assets/owl.png', height: 150, width: 240)),
-  );
 }
