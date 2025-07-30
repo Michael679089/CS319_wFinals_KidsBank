@@ -15,24 +15,71 @@ class Utilities {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
+}
 
-  // functions:
+class Utility_TopSnackBar {
+  static OverlayEntry? _overlayEntry;
 
-  static void invokeTopSnackBar(
-    String message,
-    BuildContext context, {
-    bool isError = true,
+  Utility_TopSnackBar(String s, BuildContext context);
+
+  static void show({
+    required BuildContext context,
+    required String message,
+    bool isError = false,
+    Duration duration = const Duration(seconds: 3),
   }) {
-    final snackBar = SnackBar(
-      content: Text(message, style: GoogleFonts.fredoka(color: Colors.white)),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      duration: const Duration(seconds: 2),
+    // Remove any existing snackbar before showing a new one
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+
+    final color = isError ? Colors.red : Colors.green;
+    final overlay = Overlay.of(context);
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).viewInsets.top + 40,
+        left: 20,
+        right: 20,
+        child: Material(
+          elevation: 6,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isError ? Icons.error_outline : Icons.check_circle,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      fontFamily: GoogleFonts.fredoka().fontFamily,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(snackBar);
+
+    overlay.insert(_overlayEntry!);
+
+    Future.delayed(duration, () {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    });
   }
 }
 

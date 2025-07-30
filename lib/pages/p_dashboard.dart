@@ -5,20 +5,20 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/chores_model.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
-import 'package:wfinals_kidsbank/database/models/kid_payment_info.dart';
+import 'package:wfinals_kidsbank/database/models/kid_payment_info_model.dart';
 import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
 import 'package:wfinals_kidsbank/pages/p_dashboard_drawer.dart';
 import 'package:flutter/services.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class ParentDashboard extends StatefulWidget {
-  final String familyUserId;
+  final String user_id;
 
   final String parentId;
 
   const ParentDashboard({
     super.key,
-    required this.familyUserId,
+    required this.user_id,
     required this.parentId,
   });
 
@@ -29,7 +29,7 @@ class ParentDashboard extends StatefulWidget {
 double totalDepositedFunds = 0.0;
 
 class _ParentDashboardState extends State<ParentDashboard> {
-  List<Map<String, dynamic>> kidsData = [];
+  List<Map<String, dynamic>> Kids_Data = [];
   int totalChildren = 0;
   String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
   final List<Color> tileColors = [
@@ -59,7 +59,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
   // Other Functions:
 
   void _loadMyFamilyData() async {
-    myFamilyName = await myFirestoreService.getFamilyName(widget.familyUserId);
+    myFamilyName = await FirestoreService.fetch_family_name(widget.user_id);
 
     setState(() {
       myFamilyName = myFamilyName;
@@ -69,65 +69,65 @@ class _ParentDashboardState extends State<ParentDashboard> {
   Future<void> _loadKidsData() async {
     // In this function it looks like we need to get the name, the avatar path, and the available balance the user has.
     debugPrint("parentDashboard - loading kids data");
-    var familyId = widget.familyUserId;
+    var familyId = widget.user_id;
 
     // Step 1: Get list of kid models
-    List<KidModel> listOfKidModel = await myFirestoreService
-        .getKidsByFamilyUserId(familyId);
+    List<KidModel> KidsList =
+        await FirestoreService.fetch_all_kids_by_family_id(familyId);
 
     List<Map<String, dynamic>> tempKidsData = [];
 
     double runningTotal = 0.0;
 
     // Step 2: Get the balance in each kid.
-    for (var kid in listOfKidModel) {
-      final kidId = kid.kid_id;
+    List<Map<String, String>> KidsListOfBalance = [];
 
-      // 2 Get usableBalance
-      var kidPaymentInfoSnapshot = await FirebaseFirestore.instance
+    for (var kid in KidsList) {
+      // Step 1: Listing the things I need to fill
+      var kid_name = kid.first_name;
+      final kid_id = kid.id;
+
+      // Step 2: Get the total_amount_left of kid
+      double total_amount_left = 0.0;
+      final querySnapshot = await FirebaseFirestore.instance
           .collection('kidPaymentInfo')
-          .where("kidId", isEqualTo: kidId)
+          .where("kidId", isEqualTo: kid_id)
           .get();
-      KidsPaymentInfoModel balanceModel = KidsPaymentInfoModel.fromMap(
-        kidPaymentInfoSnapshot.docs.first.data(),
+      final kidBalanceDoc = querySnapshot.docs.first;
+      KidsPaymentInfoModel kidBalanceInfo = KidsPaymentInfoModel.fromFirestore(
+        kidBalanceDoc,
+        null,
       );
-      var usableBalance = int.parse(balanceModel.total_amount as String);
+
+      total_amount_left = kidBalanceInfo.total_amount_left;
       debugPrint(
-        "parentDashboardPage - ${balanceModel.kid_id} - ${balanceModel.total_amount}",
+        "parentDashboardPage - ${kid_name} - ${kidBalanceInfo.total_amount_left}",
       );
 
-      // 2 Get total withdrawals for this kid
-      bool doesNotificationsExist = await myFirestoreService
-          .checkIfTableCollectionExist("notifications");
+      // Step 3: Get the total_withdraw of kid
+      double total_withdrawn = 0.0;
+      final withdrawalsSnapshot = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('kidId', isEqualTo: kid_id)
+          .where('type', isEqualTo: 'withdrawal')
+          .get();
 
-      double totalWithdrawn = 0.0;
-      if (doesNotificationsExist) {
-        final withdrawalsSnapshot = await FirebaseFirestore.instance
-            .collection('notifications')
-            .where('kidId', isEqualTo: kidId)
-            .where('type', isEqualTo: 'withdrawal')
-            .get();
-
-        for (var withdrawalDoc in withdrawalsSnapshot.docs) {
-          totalWithdrawn += (withdrawalDoc.data()['amount'] ?? 0.0);
-        }
+      for (var withdrawalDoc in withdrawalsSnapshot.docs) {
+        total_withdrawn += (withdrawalDoc.data()['amount'] ?? 0.0);
       }
 
-      // 2 Total deposited = usable_balance + total withdrawals
-      final totalDeposited = usableBalance + totalWithdrawn;
-
-      runningTotal += totalDeposited;
+      final total = total_amount_left + total_withdrawn;
 
       tempKidsData.add({
-        "id": kid.kid_id,
-        "name": kid.first_name,
+        "kid_id": kid.id,
         "avatar": kid.avatar_file_path,
-        "balance": usableBalance,
+        "total_amount_left": kidBalanceInfo.total_amount_left,
+        "total_withdrawn": total_withdrawn,
       });
     }
 
     setState(() {
-      kidsData = tempKidsData;
+      Kids_Data = tempKidsData;
       totalChildren = tempKidsData.length;
       totalDepositedFunds = runningTotal;
     });
@@ -140,38 +140,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
     double rewardMoney,
     messenger,
   ) async {
-    debugPrint("parentDashboardPage - called chore submission");
-    final String choreTitle = titleController.text.trim();
-    final String choreDescription = descriptionController.text.trim();
-
-    if (choreTitle.isEmpty || choreDescription.isEmpty || rewardMoney <= 0) {
-      Utilities.invokeTopSnackBar(
-        "Please fill in all fields and set a valid reward.",
-        context,
-      );
-      return;
-    }
-
-    ChoreModel newPendingChoreModel = ChoreModel(
-      kid_id: kidId,
-      chore_title: choreTitle,
-      chore_description: choreDescription,
-      reward_money: rewardMoney,
-      status: "pending", timestamp: DateTime.now(), 
-      chore_id: '',
-    );
-    myFirestoreService.addChoreToChoresCollection(newPendingChoreModel);
-
-    // ignore: use_build_context_synchronously
-    Navigator.pop(context);
-
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(this.context).showSnackBar(
-      const SnackBar(
-        content: Text("Chore created successfully!"),
-        backgroundColor: Colors.green,
-      ),
-    );
+    debugPrint("hi");
   }
 
   void showChoresModal(
@@ -626,20 +595,18 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         );
 
                                         // Push notification
-                                        NotificationsModel newNotification =
-                                            NotificationsModel(
-                                              family_id: widget.familyUserId,
+                                        NotificationModel newNotification =
+                                            NotificationModel(
+                                              family_id: widget.user_id,
                                               kid_id: kidId,
                                               notification_title: message,
                                               notification_message: message,
-                                              type: 'deposit', notification_id: '', 
-                                              notification_amount: 0, 
+                                              type: 'deposit',
                                               created_at: DateTime.now(),
                                             );
-                                        await myFirestoreService
-                                            .addNotificationToNotificationCollections(
-                                              newNotification,
-                                            );
+                                        await FirestoreService.createNotification(
+                                          newNotification,
+                                        );
 
                                         navigator.pop();
                                         messenger.showSnackBar(
@@ -747,23 +714,20 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                         });
 
                                         // Push notification
-                                        NotificationsModel
+                                        NotificationModel
                                         withdrawalNotification =
-                                            NotificationsModel(
-                                              family_id: widget.familyUserId,
+                                            NotificationModel(
+                                              family_id: widget.user_id,
                                               kid_id: kidId,
                                               notification_title: "",
                                               notification_message: message,
-                                              
-                                              type: 'withdrawal', 
-                                              notification_id: '', 
-                                              notification_amount: 0, 
+
+                                              type: 'withdrawal',
                                               created_at: DateTime.now(),
                                             );
-                                        myFirestoreService
-                                            .addNotificationToNotificationCollections(
-                                              withdrawalNotification,
-                                            );
+                                        FirestoreService.createNotification(
+                                          withdrawalNotification,
+                                        );
 
                                         navigator.pop();
                                         messenger.showSnackBar(
@@ -843,7 +807,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
         drawer: ParentDrawer(
           selectedPage: 'dashboard',
           familyName: myFamilyName,
-          familyUserId: widget.familyUserId,
+          familyUserId: widget.user_id,
           parentId: widget.parentId,
         ),
         backgroundColor: const Color(0xFFFFCA26),
@@ -985,9 +949,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       const SizedBox(height: 12),
                       Expanded(
                         child: ListView.builder(
-                          itemCount: kidsData.length,
+                          itemCount: Kids_Data.length,
                           itemBuilder: (context, index) {
-                            final kid = kidsData[index];
+                            final kid = Kids_Data[index];
                             final kidId = kid['id'];
                             final kidName = kid['name'];
                             final kidAvatar = kid['avatar'];

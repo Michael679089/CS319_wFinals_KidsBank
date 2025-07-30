@@ -1,6 +1,7 @@
 import 'dart:io'; // For exit(0)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -8,6 +9,8 @@ class WelcomePage extends StatelessWidget {
   // FUNCTIONS:
 
   Future<bool> _showExitConfirmation(BuildContext context) async {
+    var navigator = Navigator.of(context);
+
     return await showDialog<bool>(
           context: context,
           barrierDismissible: false,
@@ -25,7 +28,7 @@ class WelcomePage extends StatelessWidget {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
+                onPressed: () => navigator.pop(false),
                 child: Text(
                   'Cancel',
                   style: GoogleFonts.fredoka(color: Colors.grey[700]),
@@ -33,9 +36,9 @@ class WelcomePage extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(true);
+                  navigator.pop(true);
                   Future.delayed(const Duration(milliseconds: 100), () {
-                    exit(0); // exits the app
+                    exit(0); // user exits the app
                   });
                 },
                 child: Text(
@@ -49,12 +52,32 @@ class WelcomePage extends StatelessWidget {
         false;
   }
 
+  void _goToRegisterPage(BuildContext context) async {
+    var myNavigator = Navigator.of(context);
+
+    try {
+      AuthService.logoutAccount();
+      debugPrint("welcomePage - user successfully logged out");
+    } catch (e) {
+      debugPrint("welcomePage - there's no logged in user. Continuing");
+    }
+
+    myNavigator.pushNamed(
+      "/register-page",
+      arguments: {"is-broken-register": false},
+    );
+  }
+
+  void _goToLoginPage(BuildContext context) async {
+    var myNavigator = Navigator.of(context);
+
+    myNavigator.pushNamed("/login-page");
+  }
+
   // BUILD Function:
 
   @override
   Widget build(BuildContext context) {
-    var myNavigator = Navigator.of(context);
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -109,21 +132,22 @@ class WelcomePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 95),
-                  Transform.translate(
-                    offset: const Offset(8, -21),
-                    child: Align(
-                      alignment: Alignment.bottomRight,
-                      child: Image.asset(
-                        'assets/dots.png',
-                        width: 140,
-                        height: 159,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
                 ],
               ),
 
+              // Dots image positioned absolutely
+              Positioned(
+                right: 8,
+                bottom: -21,
+                child: ClipRect(
+                  child: Image.asset(
+                    'assets/dots.png',
+                    width: 140,
+                    height: 159,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
               // Overlapping Button Container
               Positioned(
                 bottom: 160,
@@ -147,7 +171,7 @@ class WelcomePage extends StatelessWidget {
                             debugPrint(
                               "welcomepage.dart - Log In has been pressed",
                             );
-                            myNavigator.pushNamed("/login-page");
+                            _goToLoginPage(context);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4e88cf),
@@ -177,10 +201,7 @@ class WelcomePage extends StatelessWidget {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            myNavigator.pushReplacementNamed(
-                              "/register-page",
-                              arguments: {"is-broken-register": false},
-                            );
+                            _goToRegisterPage(context);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,

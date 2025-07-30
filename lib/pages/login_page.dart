@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,35 +23,24 @@ class _LoginPageState extends State<LoginPage> {
   OverlayEntry? _overlayEntry;
 
   // My Services
-  AuthService myAuthService = AuthService();
   FirestoreService myFirestoreService = FirestoreService();
   NavigatorState? navigator;
 
-  // Saved Credentials
-  String? savedEmail = "";
-  String? savedPassword = "";
-  bool _keepLoggedIn = false;
+  // Shared Preferences Values
+  String savedEmail = '';
+  String savedPassword = '';
+  bool keepLoggedIn = false;
+
+  // INITSTATE - runs before build, runs only once
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryAutoLogin();
+    });
+  }
 
   // FUNCTIONS:
-
-  void _invokeTopSnackBar(String message, {bool isError = true}) {
-    final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: GoogleFonts.fredoka(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      duration: const Duration(seconds: 2),
-    );
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(snackBar);
-  }
 
   void _removeAllOverlays() {
     _overlayEntry?.remove();
@@ -68,11 +58,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         title: Text(
           "Reset Password",
-          style: GoogleFonts.fredoka(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
           textAlign: TextAlign.center,
         ),
         content: Column(
@@ -96,10 +82,7 @@ class _LoginPageState extends State<LoginPage> {
                   hintStyle: GoogleFonts.fredoka(color: Colors.grey),
                   filled: true,
                   fillColor: const Color(0xFFAEDDFF),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -111,11 +94,7 @@ class _LoginPageState extends State<LoginPage> {
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               "Cancel",
-              style: GoogleFonts.fredoka(
-                fontSize: 18,
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
+              style: GoogleFonts.fredoka(fontSize: 18, color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ),
           ElevatedButton(
@@ -124,22 +103,16 @@ class _LoginPageState extends State<LoginPage> {
                 : () async {
                     final email = _resetEmailController.text.trim();
                     if (email.isEmpty) {
-                      _invokeTopSnackBar(
-                        "Please enter an email address",
-                        isError: true,
-                      );
+                      Utility_TopSnackBar.show(message: "Please enter an email address", context: context, isError: false);
                       return;
                     }
                     setState(() {
                       _isLoadingIndicatorActive = true;
                     });
                     try {
-                      await myAuthService.sendPasswordResetEmail(email);
+                      await AuthService.sendPasswordResetEmail(email);
                       Navigator.pop(ctx, true); // Close dialog on success
-                      _invokeTopSnackBar(
-                        "Password reset email sent successfully!",
-                        isError: false,
-                      );
+                      Utility_TopSnackBar.show(message: "Password reset email sent successfully!", context: context, isError: false);
                     } on FirebaseAuthException catch (e) {
                       String errorMessage;
                       switch (e.code) {
@@ -150,16 +123,13 @@ class _LoginPageState extends State<LoginPage> {
                           errorMessage = "No account found for this email";
                           break;
                         default:
-                          errorMessage =
-                              "Error sending password reset email: ${e.message}";
+                          errorMessage = "Error sending password reset email: ${e.message}";
                       }
-                      _invokeTopSnackBar(errorMessage, isError: true);
+                      Utility_TopSnackBar.show(message: errorMessage, context: context, isError: true);
                       debugPrint("loginPage.dart - Forgot Password error: $e");
                     } catch (e) {
-                      _invokeTopSnackBar("Unexpected error: $e", isError: true);
-                      debugPrint(
-                        "loginPage.dart - Unexpected Forgot Password error: $e",
-                      );
+                      Utility_TopSnackBar.show(message: "Unexpected error: $e", context: context, isError: true);
+                      debugPrint("loginPage.dart - Unexpected Forgot Password error: $e");
                     } finally {
                       setState(() {
                         _isLoadingIndicatorActive = false;
@@ -175,11 +145,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: Text(
               "Send",
-              style: GoogleFonts.fredoka(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+              style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
             ),
           ),
         ],
@@ -194,179 +160,78 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _tryAutoLogin() async {
-    debugPrint("loginPage.dart - Trying Auto Login");
+    debugPrint("loginPage.dart - Trying Auto Login START");
 
     NavigatorState navigator = Navigator.of(context);
 
-    // Step 1: Try login using Shared Preferences
+    // Step 1: Get the keepLoggedIn shared Preferences
     try {
       final prefs = await SharedPreferences.getInstance();
-      savedEmail = prefs.getString('savedEmail');
-      savedPassword = prefs.getString('savedPassword');
-      _keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
+      var test_keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
 
-      if (_keepLoggedIn && savedEmail != null && savedPassword != null) {
-        var savedEmailAsString = savedEmail as String;
-        var savedPasswordAsString = savedPassword as String;
-        myAuthService.loginAccountWithEmailAndPass(
-          savedEmailAsString,
-          savedPasswordAsString,
-        );
+      if (test_keepLoggedIn) {
+        var doesFamilyCollectionExist = await FirestoreService.doesFirestoreCollectionExist("family");
 
-        var user = myAuthService.getCurrentUser();
-        if (user == null) return;
-        var userId = user.uid;
-        var familyName = await myFirestoreService.fetchFamilyNameOfUserID(
-          user.uid,
-        );
+        if (doesFamilyCollectionExist) {
+          var user = AuthService.getCurrentUser();
 
-        navigator.pushNamed(
-          "/account-selector-page",
-          arguments: {"family-name": familyName, "family-user-id": userId},
-        );
-        debugPrint(
-          "loginPage.dart - Auto Login successful (via Shared Preferences) - redirected to account-selector-page",
-        );
-        return;
-      } else {
-        debugPrint(
-          "loginPage.dart - SharedPreferences Failed - $savedEmail - $savedPassword",
-        );
-      }
-    } catch (e) {
-      debugPrint("ERROR: loginPage.dart - SharedPreferences error: $e");
-    }
+          var is_user_authenticated = (user != null);
 
-    // Alt Step 1: If Shared Preferences is false, try AuthCurrentUser
-    try {
-      var user = myAuthService.getCurrentUser();
-      debugPrint("loginPage.dart - Trying to get currentUser");
-      debugPrint("loginPage.dart - Result: ${user?.email}");
+          if (is_user_authenticated) {
+            var user_Id = user.uid;
 
-      if (user != null) {
-        debugPrint("loginPage.dart - currentUser Found! -> ${user.email}");
-
-        // Step 2: Check if user is verified
-        if (user.emailVerified) {
-          setState(() {
-            _isLoadingIndicatorActive = true;
-          });
-
-          if (!await myFirestoreService.checkIfTableCollectionExist("family")) {
-            debugPrint(
-              "loginPage - ERROR: users collection doesn't exist. - Possibly user quit after verification - redirecting to /register-page",
-            );
-            navigator.pushReplacementNamed(
-              "/register-page",
-              arguments: {"is-broken-register": true},
-            );
-            return;
+            if (user.emailVerified) {
+              navigator.pushNamed("/account-selector-page", arguments: {"user-id": user_Id});
+            } else {
+              debugPrint("loginPage - email not verified");
+            }
+          } else {
+            debugPrint("loginPage - no users logged in");
           }
-
-          var familyName = await myFirestoreService.fetchFamilyNameOfUserID(
-            user.uid,
-          );
-          var userId = user.uid;
-          setState(() {
-            _isLoadingIndicatorActive = false;
-          });
-
-          navigator.pushNamed(
-            "/account-selector-page",
-            arguments: {"family-name": familyName, "family-user-id": userId},
-          );
-          debugPrint(
-            "loginPage.dart - Auto Login successful (via Auth.CurrentUser) - redirected to account-selector-page",
-          );
-        } else {
-          navigator.pushNamed(
-            "/verify-email-page",
-            arguments: {"register-email": user.email.toString()},
-          );
-          debugPrint(
-            "loginPage.dart - Oops account still not verified - Redirected to verify-email-page",
-          );
         }
+        debugPrint("loginPage - redirect to registerPage ");
+        navigator.pushNamed("/register-page", arguments: {"is-broken-register": true});
       } else {
-        debugPrint("loginPage.dart - no currentUser found, User can login");
+        debugPrint("loginPage - keepLoggedIn is false");
+
+        // Step 2 - send authenticated-unverified users to register page
+        var user = AuthService.getCurrentUser();
+        var is_user_authenticated_before_register = (user != null);
+        if (is_user_authenticated_before_register && user.emailVerified == false) {
+          debugPrint("loginPage - redirect user due to user being authenticated but not verified");
+          navigator.pushNamed("/register-page", arguments: {"is-broken-register": true});
+        } else {
+          debugPrint("loginPage - user is already verified");
+        }
       }
     } catch (e) {
-      debugPrint("ERROR: loginPage.dart - failed getting currentUser: $e");
+      debugPrint("ERROR: during auto login $e");
     }
+
+    debugPrint("loginPage.dart - Trying Auto Login END");
   }
 
   Future<void> _handleLogin() async {
-    debugPrint("loginPage.dart - handleLogin is called");
+    var navigator = Navigator.of(context);
+    debugPrint("loginPage.dart - _handleLogin is called");
 
-    // Step 1: Checking fields
-    if (_passwordController.text.isEmpty || _emailController.text.isEmpty) {
-      _invokeTopSnackBar("Please enter both email and password", isError: true);
-      return;
-    }
+    var email = _emailController.text;
+    var password = _passwordController.text;
 
-    setState(() {
-      _isLoadingIndicatorActive = true;
-    });
+    var loginResponse = await AuthService.loginAccount(email, password);
 
-    // Step 2: Try login account details
-    try {
-      await myAuthService.loginAccountWithEmailAndPass(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-
-      // Step 3: Check if user wants to save their login details in Shared Preferences
-      if (_keepLoggedIn) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('savedEmail', _emailController.text.trim());
-        await prefs.setString('savedPassword', _passwordController.text.trim());
-        await prefs.setBool('keepLoggedIn', _keepLoggedIn);
-        debugPrint(
-          "loginPage.dart - Saved to SharedPreferences: ${prefs.getString('savedEmail')} | ${prefs.getString('savedPassword')} | keepLoggedIn: ${prefs.getBool('keepLoggedIn')}",
-        );
-      }
-
-      var user = myAuthService.getCurrentUser();
-      if (user != null) {
-        if (user.emailVerified) {
-          var familyName = await myFirestoreService.fetchFamilyNameOfUserID(
-            user.uid,
-          );
-          navigator?.pushNamed(
-            "/account-selector-page",
-            arguments: {"family-name": familyName, "family-user-id": user.uid},
-          );
-        } else {
-          navigator?.pushNamed(
-            "/verify-email-page",
-            arguments: {"register-email": _emailController.text.trim()},
-          );
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case 'user-not-found':
-          errorMessage = "No account found for this email";
-          break;
-        case 'wrong-password':
-          errorMessage = "Incorrect password";
-          break;
-        case 'invalid-email':
-          errorMessage = "Invalid email address";
-          break;
-        default:
-          errorMessage = "Login failed: ${e.message}";
-      }
-      _invokeTopSnackBar(errorMessage, isError: true);
-      debugPrint("ERROR: loginPage.dart - Login error: $e");
-    } catch (e) {
-      _invokeTopSnackBar("Unexpected error: $e", isError: true);
-      debugPrint("ERROR: loginPage.dart - Unexpected login error: $e");
-    } finally {
-      setState(() {
-        _isLoadingIndicatorActive = false;
-      });
+    if (loginResponse["status"] == "success") {
+      var user = AuthService.getCurrentUser();
+      var user_id = user?.uid;
+      debugPrint("LoginPage - successful login");
+      navigator.pushReplacementNamed("/account-selector-page", arguments: {"user-id": user_id});
+    } else if (loginResponse["status"] == "unverified") {
+      debugPrint("loginPage - user is found unverified. Sending user to register page");
+      navigator.pushNamed("/register-page", arguments: {"is-broken-register": true});
+      Utility_TopSnackBar.show(message: "ERROR: user is found unverified. Sending user to register page", context: context, isError: false);
+    } else {
+      debugPrint("loginPage - an error occurred during login");
+      Utility_TopSnackBar.show(message: "ERROR: Logging In", context: context, isError: false);
     }
   }
 
@@ -379,20 +244,8 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // INITSTATE - runs before build, runs only once
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _tryAutoLogin();
-    });
-  }
-
   // Custom widget variables
-  Widget _buildInputField(
-    TextEditingController controller, {
-    bool isPassword = false,
-  }) {
+  Widget _buildInputField(TextEditingController controller, {bool isPassword = false}) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.black, width: 3),
@@ -404,10 +257,7 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           filled: true,
           fillColor: const Color(0xFFAEDDFF),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide.none,
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
         ),
       ),
     );
@@ -424,18 +274,12 @@ class _LoginPageState extends State<LoginPage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4e88cf),
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
         ),
         child: Text(
           'Log In',
-          style: GoogleFonts.fredoka(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+          style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
         ),
       ),
     );
@@ -458,11 +302,7 @@ class _LoginPageState extends State<LoginPage> {
                   // Title Section
                   Text(
                     'KidsBank',
-                    style: GoogleFonts.fredoka(
-                      fontSize: 50,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                    style: GoogleFonts.fredoka(fontSize: 50, fontWeight: FontWeight.bold, color: Colors.black),
                   ),
                   const SizedBox(height: 30),
                   // Input Section
@@ -476,92 +316,59 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'E-Mail',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Text('E-Mail', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         _buildInputField(_emailController),
                         const SizedBox(height: 16),
-                        Text(
-                          'Password',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Text('Password', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         _buildInputField(_passwordController, isPassword: true),
                         const SizedBox(height: 8),
                         Align(
                           alignment: Alignment.centerRight,
                           child: GestureDetector(
-                            onTapDown: _isLoadingIndicatorActive
-                                ? null
-                                : (_) => setState(
-                                    () => _isForgotPasswordPressed = true,
-                                  ),
+                            onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isForgotPasswordPressed = true),
                             onTapUp: _isLoadingIndicatorActive
                                 ? null
                                 : (_) {
-                                    setState(
-                                      () => _isForgotPasswordPressed = false,
-                                    );
+                                    setState(() => _isForgotPasswordPressed = false);
                                     _handleForgotPassword();
                                   },
-                            onTapCancel: _isLoadingIndicatorActive
-                                ? null
-                                : () => setState(
-                                    () => _isForgotPasswordPressed = false,
-                                  ),
+                            onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isForgotPasswordPressed = false),
                             child: Text(
                               'Forgot Password?',
                               style: GoogleFonts.fredoka(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: _isForgotPasswordPressed
-                                    ? const Color(0xFF4E88CF)
-                                    : Colors.black,
+                                color: _isForgotPasswordPressed ? const Color(0xFF4E88CF) : Colors.black,
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _buildLoginButton(),
-                        ),
+                        SizedBox(width: double.infinity, child: _buildLoginButton()),
                         Row(
                           children: [
                             Checkbox(
-                              value: _keepLoggedIn,
+                              value: keepLoggedIn,
                               onChanged: _isLoadingIndicatorActive
                                   ? null
                                   : (val) {
-                                      setState(
-                                        () => _keepLoggedIn = val ?? false,
-                                      );
+                                      setState(() => keepLoggedIn = val ?? false);
                                     },
                             ),
-                            Text(
-                              'Keep us logged in',
-                              style: GoogleFonts.fredoka(fontSize: 16),
-                            ),
+                            Text('Keep us logged in', style: GoogleFonts.fredoka(fontSize: 16)),
                           ],
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // Register Section
+
+                  // Register Button
                   Text('Need an account?', style: GoogleFonts.inter()),
                   GestureDetector(
-                    onTapDown: _isLoadingIndicatorActive
-                        ? null
-                        : (_) => setState(() => _isSignUpPressed = true),
+                    onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isSignUpPressed = true),
                     onTapUp: _isLoadingIndicatorActive
                         ? null
                         : (_) {
@@ -569,25 +376,16 @@ class _LoginPageState extends State<LoginPage> {
                             navigator?.pushNamed(
                               "/register-page",
                               arguments: {
-                                "email-text-value": _emailController.text
-                                    .trim(),
-                                "password-text-value": _passwordController.text
-                                    .trim(),
+                                "email-text-value": _emailController.text.trim(),
+                                "password-text-value": _passwordController.text.trim(),
+                                "is-broken-register": false,
                               },
                             );
                           },
-                    onTapCancel: _isLoadingIndicatorActive
-                        ? null
-                        : () => setState(() => _isSignUpPressed = false),
+                    onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isSignUpPressed = false),
                     child: Text(
                       'Sign up',
-                      style: GoogleFonts.fredoka(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: _isSignUpPressed
-                            ? const Color(0xFF4E88CF)
-                            : Colors.black,
-                      ),
+                      style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 18, color: _isSignUpPressed ? const Color(0xFF4E88CF) : Colors.black),
                     ),
                   ),
                 ],
@@ -597,11 +395,7 @@ class _LoginPageState extends State<LoginPage> {
           if (_isLoadingIndicatorActive)
             Container(
               color: Colors.black.withAlpha(150),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4e88cf)),
-                ),
-              ),
+              child: const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4e88cf)))),
             ),
         ],
       ),

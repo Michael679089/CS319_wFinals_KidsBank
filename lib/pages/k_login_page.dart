@@ -15,7 +15,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
   final TextEditingController pincodeController = TextEditingController();
 
   // Saved Credentials
-  String familyUserId = '';
+  String user_id = '';
   String kidId = '';
   String avatarFilePath = '';
   String kidFirstName = '';
@@ -40,21 +40,26 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
 
   void _loadData() async {
     // Step 1: Get Family User UID;
-    var familyUser = myAuthService.getCurrentUser();
-    if (familyUser == null) return;
-    familyUserId = familyUser.uid;
+    var user = AuthService.getCurrentUser();
+    if (user == null) return;
+    user_id = user.uid;
 
     // Step 2: Get the kids Docs;
-    final myModalRoute = ModalRoute.of(context);
-    if (myModalRoute == null) {
-      debugPrint("kidsSetupPage - ERROR: myModalRoute was null");
-      return;
+    var family_object = await FirestoreService.readFamily(user_id);
+    var newKidId = "";
+    var newAvatarPath = "";
+    var newKidFirstName = "";
+    if (family_object != null) {
+      if (family_object.id != null) {
+        var family_id = family_object.id as String;
+        var kid_object = await FirestoreService.readKid(family_id);
+
+        if (kid_object != null) {
+          newAvatarPath = kid_object.avatar_file_path;
+          newKidFirstName = kid_object.first_name;
+        }
+      }
     }
-    final args = myModalRoute.settings.arguments as Map<String, dynamic>;
-    debugPrint("What's in the args?: ${args.toString()}");
-    var newKidId = args["kidDocId"] as String;
-    var newAvatarPath = args["avatarPath"] as String;
-    var newKidFirstName = await myFirestoreService.getKidFirstName(newKidId);
 
     setState(() {
       kidId = newKidId;
@@ -237,7 +242,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
       );
       navigator.pushReplacementNamed(
         "/kids-dashboard-page",
-        arguments: {"kid-id": kidId, "family-user-id": familyUserId},
+        arguments: {"kid-id": kidId, "family-user-id": user_id},
       );
     } catch (e) {
       _showSnackbar("Error: ${e.toString()}");

@@ -110,7 +110,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
     }
 
     try {
-      final user = myAuthService.getCurrentUser();
+      final user = AuthService.getCurrentUser();
       if (user == null) {
         _showSnackbar('User not authenticated', isError: true);
         setState(() {
@@ -119,23 +119,20 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
         return;
       }
 
-      familyId = myAuthService.getCurrentUser()?.uid;
+      familyId = AuthService.getCurrentUser()?.uid;
       String myFamilyId = familyId as String;
 
       final newParent = ParentModel(
         avatar_file_path: selectedAvatar,
-        parent_id: "",
         family_id: myFamilyId,
         first_name: firstName,
         last_name: lastName,
         pincode: pincode,
-        date_of_birth: birthdate, 
+        date_of_birth: birthdate,
         created_at: DateTime.now(),
       );
 
-      var parentId = await myFirestoreAPI.addParentToParentCollection(
-        newParent,
-      );
+      var parentId = await FirestoreService.createParent(newParent);
       _showSnackbar('Parent added successfully', isError: false);
 
       if (context.mounted) {

@@ -5,12 +5,12 @@ import 'package:wfinals_kidsbank/database/models/chores_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsChoresPage extends StatefulWidget {
-  final String kidId;
+  final String kid_id;
   final dynamic familyUserId;
 
   const KidsChoresPage({
     super.key,
-    required this.kidId,
+    required this.kid_id,
     required this.familyUserId,
   });
 
@@ -33,7 +33,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
     try {
       final kidSnapshot = await FirebaseFirestore.instance
           .collection('kids')
-          .doc(widget.kidId)
+          .doc(widget.kid_id)
           .get();
 
       if (kidSnapshot.exists) {
@@ -52,17 +52,33 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
     }
   }
 
-  Stream<List<ChoreModel>> getChoresStream() {
+  Stream<List<ChoreModel>> getChoresStream(String kidId) {
     return FirebaseFirestore.instance
         .collection('chores')
-        .where('KidId', isEqualTo: widget.kidId)
+        .where('kid_id', isEqualTo: kidId) // Consistent field name casing
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = {...doc.data(), 'choreId': doc.id};
-            return ChoreModel.fromMap(data);
-          }).toList(),
-        );
+        .handleError((error) {
+          debugPrint('Error fetching chores: $error');
+          return const Stream<
+            List<ChoreModel>
+          >.empty(); // Return empty stream on error
+        })
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) {
+                try {
+                  return ChoreModel.fromFirestore(
+                    doc, // Pass the DocumentSnapshot directly
+                    null, // Or provide SnapshotOptions if needed
+                  );
+                } catch (e) {
+                  debugPrint('Error parsing chore ${doc.id}: $e');
+                  return null;
+                }
+              })
+              .whereType<ChoreModel>()
+              .toList(); // Filter out null values
+        });
   }
 
   Future<void> handleChoreTap(
@@ -114,7 +130,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
 
     await FirebaseFirestore.instance.collection('notifications').add({
       'type': 'chore_completed',
-      'KidId': widget.kidId,
+      'KidId': widget.kid_id,
       'firstName': kidName,
       'choreTitle': title,
       'timestamp': FieldValue.serverTimestamp(),
@@ -180,7 +196,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
           onDestinationSelected: (int index) {
             UtilitiesKidsDashboardNavigation.handleKidDashboardNavigationBottomBar(
               index: index,
-              kidId: widget.kidId,
+              kidId: widget.kid_id,
               familyUserId: widget.familyUserId,
               context: context,
             );
@@ -253,7 +269,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                       const SizedBox(height: 20),
                       Expanded(
                         child: StreamBuilder<List<ChoreModel>>(
-                          stream: getChoresStream(),
+                          stream: getChoresStream(widget.kid_id),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
@@ -284,7 +300,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
 
                                 return GestureDetector(
                                   onTap: () => handleChoreTap(
-                                    chore.chore_id as String,
+                                    chore.id as String,
                                     chore.chore_title,
                                     isLocked,
                                   ),

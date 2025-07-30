@@ -10,10 +10,13 @@ import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'login_page.dart';
 
 class KidsSetupPage extends StatefulWidget {
+  final bool cameFromParentDashboard;
+  final String parentId;
+
   const KidsSetupPage({
     super.key,
-    required parentId,
-    required cameFromParentDashboard,
+    required this.cameFromParentDashboard,
+    required this.parentId,
   });
 
   @override
@@ -82,14 +85,18 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
   }
 
   Future<List<KidModel>> _loadKids() async {
-    var myFirestoreService = FirestoreService();
-    var myAuthService = AuthService();
+    var user = AuthService.getCurrentUser();
+    if (user != null) {
+      var user_id = user.uid;
+      var family_object = await FirestoreService.readFamily(user_id);
+      var family_id = family_object?.id;
 
-    var familyId = myAuthService.getCurrentUser()?.uid as String;
+      var kidsList = FirestoreService.fetch_all_kids_by_family_id(family_id!);
 
-    var kidsList = myFirestoreService.getKidsByFamilyUserId(familyId);
-
-    return kidsList;
+      return kidsList;
+    } else {
+      return [];
+    }
   }
 
   void addKid() async {
@@ -253,7 +260,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                         }
 
                         final List<KidModel> kids =
-                            snapshot.data as List<KidModel> ?? [];
+                            snapshot.data as List<KidModel>;
 
                         return ListView(
                           children: [

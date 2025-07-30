@@ -6,12 +6,12 @@ import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'p_dashboard_drawer.dart';
 
 class ParentChoresPage extends StatefulWidget {
-  final String familyUserId;
+  final String user_id;
   final String parentId;
 
   const ParentChoresPage({
     super.key,
-    required this.familyUserId,
+    required this.user_id,
     required this.parentId,
   });
 
@@ -35,16 +35,19 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
   }
 
   Future<void> loadKids() async {
-    final loadedKids = await myFirestoreService.getKidsByFamilyUserId(
-      widget.familyUserId,
+    var family_object = await FirestoreService.readFamily(widget.user_id);
+    var family_id = family_object?.id;
+
+    final loadedKids = await FirestoreService.fetch_all_kids_by_family_id(
+      family_id!,
     );
-    final famName = await myFirestoreService.getFamilyName(widget.familyUserId);
+    final family_name = family_object?.family_name;
 
     if (mounted) {
       setState(() {
         kids = loadedKids;
-        selectedKidId = loadedKids.isNotEmpty ? loadedKids.first.kid_id : null;
-        familyName = famName;
+        selectedKidId = loadedKids.isNotEmpty ? loadedKids.first.id : null;
+        familyName = family_name!;
         isLoadingKids = false;
       });
     }
@@ -53,7 +56,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
   Future<List<ChoreModel>> fetchChores() async {
     if (selectedKidId == null) return [];
     debugPrint("Calling getAllChores");
-    List<ChoreModel> chores = await myFirestoreService.getAllChoresByKidId(
+    List<ChoreModel> chores = await FirestoreService.fetch_all_chores_by_kid_id(
       selectedKidId as String,
     );
 
@@ -91,7 +94,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
         drawer: ParentDrawer(
           selectedPage: 'chores',
           familyName: familyName,
-          familyUserId: widget.familyUserId,
+          familyUserId: widget.user_id,
           parentId: widget.parentId,
         ),
         backgroundColor: const Color(0xFFFFCA26),
@@ -146,7 +149,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                           return GestureDetector(
                             onTap: () {
                               setState(() {
-                                selectedKidId = kid.kid_id;
+                                selectedKidId = kid.id;
                               });
                             },
                             child: Container(
@@ -155,7 +158,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: selectedKidId == kid.kid_id
+                                  color: selectedKidId == kid.id
                                       ? Colors.black
                                       : Colors.transparent,
                                   width: 3,
@@ -163,7 +166,9 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
                               ),
                               child: CircleAvatar(
                                 radius: 30,
-                                backgroundImage: AssetImage(kid.avatar_file_path),
+                                backgroundImage: AssetImage(
+                                  kid.avatar_file_path,
+                                ),
                               ),
                             ),
                           );

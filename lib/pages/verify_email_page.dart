@@ -5,22 +5,13 @@ import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/family_model.dart';
 import 'package:wfinals_kidsbank/database/models/family_payment_info_model.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class VerificationEmailPage extends StatefulWidget {
-  final String familyName;
-  final String cardName;
-  final String cardNumber;
-  final String exp;
-  final String ccv;
+  final FamilyModel newFamilyModel;
+  final FamilyPaymentInfoModel newFamilyPaymentInfoModel;
 
-  const VerificationEmailPage({
-    super.key,
-    required this.familyName,
-    required this.cardName,
-    required this.cardNumber,
-    required this.exp,
-    required this.ccv,
-  });
+  const VerificationEmailPage({super.key, required this.newFamilyModel, required this.newFamilyPaymentInfoModel});
 
   @override
   State<VerificationEmailPage> createState() => _VerificationEmailPageState();
@@ -29,372 +20,184 @@ class VerificationEmailPage extends StatefulWidget {
 class _VerificationEmailPageState extends State<VerificationEmailPage> {
   bool _isLoading = false; // Track loading state for async operations
 
-  AuthService myAuthService = AuthService();
-
   // Functions:
-  Future<void> _sendVerificationEmail() async {
+  Future<void> _handleSendVerificationEmailBTN() async {
+    var sendingEmailSucces = await AuthService.sendEmailVerification();
+
+    if (sendingEmailSucces) {
+      Utility_TopSnackBar.show(message: "Email Verification is sent", context: context);
+    } else {
+      Utility_TopSnackBar.show(message: "Error sending email", context: context, isError: true);
+    }
+  }
+
+  Future<void> _handleCheckVerificationStatus() async {
+    var navigator = Navigator.of(context);
     setState(() {
       _isLoading = true;
     });
-    var myMessenger = ScaffoldMessenger.of(context);
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null && !user.emailVerified) {
-        await user.sendEmailVerification();
-        myMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Verification email sent. Please check your inbox.',
-              style: GoogleFonts.fredoka(color: Colors.white),
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+
+    User? user = AuthService.getCurrentUser();
+    if (user != null) {
+      await user.reload();
+      if (user.emailVerified) {
+        Utility_TopSnackBar.show(message: "Great, user email is verified, adding the Family & Payment Info to Firestore", context: context);
+        FirestoreService.createFamily(widget.newFamilyModel);
+        FirestoreService.createFamilyPaymentInfo(widget.newFamilyPaymentInfoModel);
+
+        debugPrint("verifyEmailPage - email verification complete, user will be redirected to login page");
+        navigator.pushReplacementNamed("/login-page");
       } else {
-        myMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'No user signed in or email already verified.',
-              style: GoogleFonts.fredoka(color: Colors.white),
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        Utility_TopSnackBar.show(message: "Oops, email not yet verified, please try again", context: context, isError: true);
       }
-    } catch (e) {
-      myMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to send verification email: $e',
-            style: GoogleFonts.fredoka(color: Colors.white),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    } else {
+      debugPrint("user is null");
     }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
-  Future<void> _checkVerificationStatus(BuildContext myContext) async {
-    debugPrint("verifyEmailPage - verifying if email is true");
-    setState(() {
-      _isLoading = true;
-    });
-    var navigator = Navigator.of(myContext);
-    var myModalRoute = ModalRoute.of(myContext);
-    var myMessenger = ScaffoldMessenger.of(myContext);
+  Future<void> _handleReturnToRegisterFunction() async {
+    var navigator = Navigator.of(context);
+
+    // Step 1: Sign user out.
+    AuthService.logoutAccount();
+
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await user.reload();
-
-        // Step 1: Check if email is verified
-        if (user.emailVerified) {
-          if (myModalRoute == null) {
-            debugPrint(
-              "verifyEmailPage.dart - myModalRoute is false - please try again",
-            );
-            return;
-          }
-
-          // Step 2 - Email is indeed Verified - Add verified user to "Users" Collection.
-          var myFirestoreAPI = FirestoreService();
-          final args = myModalRoute.settings.arguments as Map<String, String>;
-          var currentUserId = user.uid;
-          FamilyModel newUser = FamilyModel(
-            family_id: currentUserId,
-            family_name: widget.familyName,
-            email: user.email as String,
-            created_at: DateTime.now(), password: '',
-          );
-          await myFirestoreAPI.addAuthUserToFamilyCollection(newUser);
-
-          // Step 2.1 - Add verified user's credit card information to "family-payment-info"
-          var cardName = args["card-name"] as String;
-          var cardNumber = args['card-number'] as String;
-          var exp = args['card-exp'] as DateTime;
-          var ccv = args['card-ccv'] as String;
-
-          if (cardName.isEmpty ||
-              cardNumber.isEmpty ||
-              exp != null ||
-              ccv.isEmpty) {
-            debugPrint("verifyEmailPage - card info missing");
-          } else if (cardName.isNotEmpty ||
-              cardNumber.isNotEmpty ||
-              exp != null ||
-              ccv.isNotEmpty) {
-            FamilyPaymentInfoModel newPaymentInfoModel = FamilyPaymentInfoModel(
-              family_id: currentUserId,
-              card_name: cardName,
-              card_number: cardNumber,
-              ccv: ccv,
-              exp: exp, 
-              family_payment_info_id: '', 
-              total_amount: 0,
-            );
-
-            myFirestoreAPI.addCardPaymentInfo(newPaymentInfoModel);
-            debugPrint("verifyEmailPage - added payment Card Info");
-          }
-
-          // Step 3 - Navigate route to Login
-
-          navigator.pushNamedAndRemoveUntil(
-            '/login-page',
-            (route) => false, // Clear navigation stack
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Email not yet verified. Please check your inbox.',
-                style: GoogleFonts.fredoka(color: Colors.white),
-              ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
+      if (mounted) {
+        navigator.pop();
+      } else {
+        return;
       }
     } catch (e) {
-      if (!mounted) return;
-      myMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error checking verification status: $e',
-            style: GoogleFonts.fredoka(color: Colors.white),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _logoutAndReturnToRegister() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      await FirebaseAuth.instance.signOut();
-      if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/register-page',
-        (route) => false, // Clear navigation stack
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error logging out: $e',
-            style: GoogleFonts.fredoka(color: Colors.white),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      return;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, String>;
-    var email = args['register-email'];
-
-    if (email == null) {
-      Navigator.pop(context);
-      return const Scaffold();
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFCA26),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'KidsBank',
-                  style: GoogleFonts.fredoka(
-                    fontSize: 50,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) async {
+        debugPrint("verifyEmailPage - user went back");
+        debugPrint("verifyEmailPage - user log out");
+        _handleReturnToRegisterFunction();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFCA26),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'KidsBank',
+                    style: GoogleFonts.fredoka(fontSize: 50, fontWeight: FontWeight.bold, color: Colors.black),
                   ),
-                ),
-                const SizedBox(height: 30),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.black, width: 3),
+                  const SizedBox(height: 30),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.black, width: 3),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Please verify your email address to continue.',
+                          style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.newFamilyModel.email,
+                          style: GoogleFonts.fredoka(fontSize: 18, color: Colors.black),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'A verification email has been sent to your inbox. '
+                          'Click the link in the email to verify your account.',
+                          style: GoogleFonts.fredoka(fontSize: 16, color: Colors.black),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        _isLoading
+                            ? const CircularProgressIndicator()
+                            : Column(
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.black, width: 3),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: _handleSendVerificationEmailBTN,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF4e88cf),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        'Resend Verification Email',
+                                        style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.black, width: 3),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: () => _handleCheckVerificationStatus(),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF4e88cf),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        elevation: 0,
+                                      ),
+                                      child: Text(
+                                        'I’ve Verified My Email',
+                                        style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Go back to Register Button
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.black, width: 3),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: ElevatedButton.icon(
+                                      onPressed: _handleReturnToRegisterFunction,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.black,
+                                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      ),
+                                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                                      label: Text(
+                                        'Back to Register',
+                                        style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Please verify your email address to continue.',
-                        style: GoogleFonts.fredoka(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        email,
-                        style: GoogleFonts.fredoka(
-                          fontSize: 18,
-                          color: Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'A verification email has been sent to your inbox. '
-                        'Click the link in the email to verify your account.',
-                        style: GoogleFonts.fredoka(
-                          fontSize: 16,
-                          color: Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      _isLoading
-                          ? const CircularProgressIndicator()
-                          : Column(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 3,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _sendVerificationEmail,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF4e88cf),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                    child: Text(
-                                      'Resend Verification Email',
-                                      style: GoogleFonts.fredoka(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 3,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () =>
-                                        _checkVerificationStatus(context),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF4e88cf),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                    child: Text(
-                                      'I’ve Verified My Email',
-                                      style: GoogleFonts.fredoka(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Go back to Register Button
-                                Container(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 3,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: ElevatedButton.icon(
-                                    onPressed: _logoutAndReturnToRegister,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 30,
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.arrow_back,
-                                      color: Colors.white,
-                                    ),
-                                    label: Text(
-                                      'Back to Register',
-                                      style: GoogleFonts.fredoka(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/models/chores_model.dart';
 import 'package:wfinals_kidsbank/database/models/family_payment_info_model.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
-import 'package:wfinals_kidsbank/database/models/kid_payment_info.dart';
+import 'package:wfinals_kidsbank/database/models/kid_payment_info_model.dart';
 import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
 import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 
@@ -12,585 +13,393 @@ import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 import 'package:wfinals_kidsbank/database/models/family_model.dart';
 
 class FirestoreService {
-  final FirebaseFirestore db = FirebaseFirestore.instance;
+  static final FirebaseFirestore db = FirebaseFirestore.instance;
 
-  // Adding Items to Firestore:
+  // CRUD OPERATIONS FOR EACH MODEL
+  //
+  ///
+  // FAMILY | crud for family model
+  ///
 
-  // adding family model
+  static Future<String> createFamily(FamilyModel family) async {
+    debugPrint("family.add called!");
 
-  Future<String> addAuthUserToFamilyCollection(FamilyModel family) async {
-    debugPrint("addAuthUserToFamilyCollection called!");
-
+    // Step 1: Query
     try {
       final collection = db.collection('family');
-      final theDocumentId = collection.doc().id;
+      final family_id = collection.doc().id;
 
-      // Add initial document with server timestamp
-      await collection.doc(theDocumentId).set({
-        ...family.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
+      // Step 2: Add the server timestamp & id
+      await collection.doc(family_id).set({
+        ...family.toFirestore(),
+        'id': family_id,
+        'created_at': FieldValue.serverTimestamp(),
       });
 
-      // Fetch the document to get the resolved timestamp
-      final snapshot = await collection.doc(theDocumentId).get();
-
-      final Timestamp? serverTimestamp = snapshot.data()?['createdAt'];
-      if (serverTimestamp != null) {
-        final DateTime serverTime = serverTimestamp.toDate();
-        final String formatted = DateFormat(
-          'yyyy-MM-dd HH:mm:ss',
-        ).format(serverTime);
-
-        // Update with the string version of the timestamp
-        await collection.doc(theDocumentId).update({'createdAt': formatted});
-      }
-
       debugPrint(
-        "FirestoreAPI - Successfully added family: ${family.family_name} (ID: $theDocumentId)",
+        "family.add - added family to family collection [$family_id, ${family.family_name}]",
       );
-
-      return theDocumentId;
+      return family_id;
     } catch (e) {
       throw Exception('ERROR: Adding family to "family" collection: $e');
     }
   }
 
-  Future<String> addKidPaymentInfoToKidPaymentInfoCollection(
-    KidsPaymentInfoModel kidPaymentInfo,
+  static Future<FamilyModel?> readFamily(String user_id) async {
+    debugPrint("family.read called!");
+    try {
+      final query = db
+          .collection('family')
+          .where('user_id', isEqualTo: user_id)
+          .limit(1)
+          .withConverter<FamilyModel>(
+            fromFirestore: FamilyModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
+
+      final snapshot = await query.get();
+      final data = snapshot.docs.first.data();
+      return data; // Returns null if empty
+    } catch (e) {
+      debugPrint('family.read: Error reading family: $e');
+      return null;
+    }
+  }
+
+  static void updateFamily(FamilyModel new_family) async {
+    var target_user_id = new_family.user_id;
+
+    var query = await db
+        .collection("family")
+        .where("user_id", isEqualTo: target_user_id)
+        .get();
+    var doesDocRefExists = query.docs.isNotEmpty;
+
+    if (doesDocRefExists) {
+      var docRef = query.docs.first;
+      var family_collection = db.collection("family");
+      var targetDocRef = family_collection.doc(docRef.id);
+
+      await targetDocRef.update(new_family.toFirestore());
+    } else {
+      ("family.update - no family document found for user_id: $target_user_id");
+    }
+  }
+
+  static void deleteFamily(String user_id_of_family) async {
+    var query = await db
+        .collection("family")
+        .where("user_id", isEqualTo: user_id_of_family)
+        .get();
+    var doesDocRefExists = query.docs.isNotEmpty;
+
+    if (doesDocRefExists) {
+      var docRef = query.docs.first;
+      var family_collection = db.collection("family");
+      var targetDocRef = family_collection.doc(docRef.id);
+
+      targetDocRef.delete();
+      debugPrint("family.delete - successfully deleted: $user_id_of_family");
+    }
+
+    debugPrint("family.delete - couldn't delete: $user_id_of_family");
+  }
+
+  ///
+  // FAMILY CARD INFO | crud for family_payment_info_model
+  ///
+
+  static Future<String> createFamilyPaymentInfo(
+    FamilyPaymentInfoModel family_payment_info,
   ) async {
-    debugPrint("adding kidPaymentInfo called!");
-
+    // Step 1: Query
     try {
-      final collection = db.collection('kidPaymentInfo');
-      final theDocumentId = collection.doc().id;
+      final collection = db.collection('family_payment_info');
+      final family_payment_info_id = collection.doc().id;
 
-      // Add initial document with server timestamp
-      await collection.doc(theDocumentId).set({
-        ...kidPaymentInfo.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastUpdated': FieldValue.serverTimestamp(),
-        'kidPaymentInfoId': theDocumentId,
+      // Step 2: Add the server timestamp & id
+      await collection.doc(family_payment_info_id).set({
+        ...family_payment_info.toFirestore(),
+        'id': family_payment_info_id,
+        'created_at': FieldValue.serverTimestamp(),
       });
 
-      // Fetch the document to get the resolved timestamp
-      final snapshot = await collection.doc(theDocumentId).get();
-
-      List<String> targets = ["createdAt", "lastUpdated"];
-
-      for (var target in targets) {
-        final Timestamp? serverTimestamp = snapshot.data()?[target];
-        if (serverTimestamp != null) {
-          final DateTime serverTime = serverTimestamp.toDate();
-          final String formatted = DateFormat(
-            'yyyy-MM-dd HH:mm:ss',
-          ).format(serverTime);
-
-          // Update with the string version of the timestamp
-          await collection.doc(theDocumentId).update({target: formatted});
-        }
-      }
-
       debugPrint(
-        "FirestoreAPI - Successfully added kid payment information: (kidPaymentInfoId: $theDocumentId)",
+        "family.add - added family to family collection [$family_payment_info_id, ${family_payment_info.card_name}]",
       );
-
-      return theDocumentId;
+      return family_payment_info_id;
     } catch (e) {
       throw Exception('ERROR: Adding family to "family" collection: $e');
     }
   }
 
-  Future<String> addChoreToChoresCollection(ChoreModel chore) async {
-    debugPrint("adding addChoreToChoresCollection called!");
+  ///
+  /// PARENT MODEL | CRUD
+  ///
 
+  static Future<String> createParent(ParentModel parent_model) async {
     try {
-      final collection = db.collection('chores');
-      final theDocumentId = collection.doc().id;
+      // Step 1: Query for a new Parent
+      final collection = db.collection('parent');
+      final parent_id = collection.doc().id;
 
-      // Add initial document with server timestamp
-      await collection.doc(theDocumentId).set({
-        ...chore.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'choreId': theDocumentId,
+      // Step 2: Get the link of the current family id
+      final user_id = AuthService.getCurrentUser()?.uid;
+      FamilyModel myFamily = readFamily(user_id!) as FamilyModel;
+
+      // Step 3: Add the server timestamp & link family id
+      await collection.doc(parent_id).set({
+        ...parent_model.toFirestore(),
+        'family_id': myFamily.id,
+        'created_at': FieldValue.serverTimestamp(),
       });
 
-      // Fetch the document to get the resolved timestamp
-      final snapshot = await collection.doc(theDocumentId).get();
-
-      final Timestamp? serverTimestamp = snapshot.data()?['createdAt'];
-      if (serverTimestamp != null) {
-        final DateTime serverTime = serverTimestamp.toDate();
-        final String formatted = DateFormat(
-          'yyyy-MM-dd HH:mm:ss',
-        ).format(serverTime);
-
-        // Update with the string version of the timestamp
-        await collection.doc(theDocumentId).update({'createdAt': formatted});
-      }
-
       debugPrint(
-        "FirestoreAPI - Successfully added kid chore information: (choreId: $theDocumentId)",
+        "family.add - added family to parent collection [${myFamily.id}, ${myFamily.family_name}]",
       );
-
-      return theDocumentId;
+      return parent_id;
     } catch (e) {
-      throw Exception('ERROR: Adding family to "chore" collection: $e');
+      throw Exception('ERROR: Adding parent to "parent" collection: $e');
     }
   }
 
-  Future<String> addKidToKidsCollection(KidModel kid) async {
-    debugPrint("adding addKidToKidsCollection called!");
-
+  static Future<ParentModel?> readParent(String family_id) async {
+    debugPrint("family.read called!");
     try {
-      final collection = db.collection('kids');
-      final theDocumentId = collection.doc().id;
+      final query = db
+          .collection('family')
+          .where('user_id', isEqualTo: family_id)
+          .limit(1)
+          .withConverter<ParentModel>(
+            fromFirestore: ParentModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
 
-      // Add initial document with server timestamp
-      await collection.doc(theDocumentId).set({
-        ...kid.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'kidId': theDocumentId,
-      });
-
-      // Fetch the document to get the resolved timestamp
-      final snapshot = await collection.doc(theDocumentId).get();
-
-      final Timestamp? serverTimestamp = snapshot.data()?['createdAt'];
-      if (serverTimestamp != null) {
-        final DateTime serverTime = serverTimestamp.toDate();
-        final String formatted = DateFormat(
-          'yyyy-MM-dd HH:mm:ss',
-        ).format(serverTime);
-
-        // Update with the string version of the timestamp
-        await collection.doc(theDocumentId).update({'createdAt': formatted});
-      }
-
-      debugPrint(
-        "FirestoreAPI - Successfully added kid payment information: (kidId: $theDocumentId)",
-      );
-
-      return theDocumentId;
+      final snapshot = await query.get();
+      final parent_model = snapshot.docs.first.data();
+      return parent_model; // Returns null if empty
     } catch (e) {
-      throw Exception('ERROR: Adding family to "family" collection: $e');
+      debugPrint('family.read: Error reading family: $e');
+      return null;
     }
   }
 
-  // adding parent model
-  Future<String> addParentToParentCollection(ParentModel parent) async {
+  ///
+  /// KID MODEL | CRUD
+  ///
+
+  static Future<KidModel?> readKid(String family_id) async {
     try {
-      debugPrint("Adding Parent");
-      final collection = db.collection('parents');
-
-      // Create a new ParentModel with the generated ID
-      final theDocumentId = collection.doc().id;
-      // Add initial document with server timestamp
-      await collection.doc(theDocumentId).set({
-        ...parent.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Fetch the document to get the resolved timestamp
-      final snapshot = await collection.doc(theDocumentId).get();
-
-      final Timestamp? serverTimestamp = snapshot.data()?['createdAt'];
-      if (serverTimestamp != null) {
-        final DateTime serverTime = serverTimestamp.toDate();
-        final String formatted = DateFormat(
-          'yyyy-MM-dd HH:mm:ss',
-        ).format(serverTime);
-
-        // Update with the string version of the timestamp
-        await collection.doc(theDocumentId).update({'createdAt': formatted});
-      }
-
-      debugPrint(
-        "FirestoreAPI - Successfully added parent: ${parent.first_name} ${parent.last_name} (ID: $theDocumentId)",
-      );
-      return theDocumentId;
+      final query = db
+          .collection('kids')
+          .where('family_id', isEqualTo: family_id)
+          .limit(1)
+          .withConverter<KidModel>(
+            fromFirestore: KidModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
+      final snapshot = await query.get();
+      final kid_model = snapshot.docs.first.data();
+      return kid_model; // Returns null if empty
     } catch (e) {
-      throw Exception('ERROR: Adding parent to "parent" Collection: $e');
+      debugPrint('family.read: Error reading family: $e');
+      return null;
     }
   }
 
-  Future<String> addNotificationToNotificationCollections(
-    NotificationsModel notification,
+  static Future<String?> createKid(KidModel kid_model) async {
+    try {
+      // Step 1: Query for a new kid
+      final collection = db.collection('parent');
+      final kid_id = collection.doc().id;
+
+      // Step 2: Get the link of the current family id
+      final user_id = AuthService.getCurrentUser()?.uid;
+      FamilyModel myFamily = readFamily(user_id!) as FamilyModel;
+
+      // Step 3: Add the server timestamp & link family id
+      await collection.doc(kid_id).set({
+        ...kid_model.toFirestore(),
+        'family_id': myFamily.id,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint(
+        "family.add - added family to notification collection [${myFamily.id}, ${myFamily.family_name}]",
+      );
+      return kid_id;
+    } catch (e) {
+      throw Exception('ERROR: Adding kids to "kids" collection: $e');
+    }
+  }
+
+  ///
+  // NOTIFICATION MODEL | CRUD
+  ///
+
+  static Future<String> createNotification(
+    NotificationModel notification_model,
   ) async {
     try {
-      debugPrint("Adding Notification");
-      final collection = db.collection('notifications');
+      // Step 1: Query for a new Collection
+      final collection = db.collection('collection');
+      final notification_id = collection.doc().id;
 
-      // Create a new ParentModel with the generated ID
-      final theDocumentId = collection.doc().id;
-      // Add initial document with server timestamp
-      notification.notification_id = theDocumentId;
-      await collection.doc(theDocumentId).set({
-        ...notification.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
+      // Step 2: Get the link of the current family id
+      final user_id = AuthService.getCurrentUser()?.uid;
+      FamilyModel myFamily = readFamily(user_id!) as FamilyModel;
+      var family_id = myFamily.id;
+
+      // Step 3: Add the server timestamp & link family id
+      await collection.doc(notification_id).set({
+        ...notification_model.toFirestore(),
+        'family_id': family_id,
+        'created_at': FieldValue.serverTimestamp(),
       });
 
-      // Fetch the document to get the resolved timestamp
-      final snapshot = await collection.doc(theDocumentId).get();
-
-      final Timestamp? serverTimestamp = snapshot.data()?['createdAt'];
-      if (serverTimestamp != null) {
-        final DateTime serverTime = serverTimestamp.toDate();
-        final String formatted = DateFormat(
-          'yyyy-MM-dd HH:mm:ss',
-        ).format(serverTime);
-
-        // Update with the string version of the timestamp
-        await collection.doc(theDocumentId).update({'createdAt': formatted});
-      }
-
       debugPrint(
-        "FirestoreAPI - Successfully added notification: ${notification.notification_title} ${notification.notification_message} (ID: $theDocumentId)",
+        "family.add - added family to notification collection [${notification_model.id}]",
       );
-      return theDocumentId;
+      return notification_id;
     } catch (e) {
-      throw Exception('ERROR: Adding parent to "parent" Collection: $e');
+      throw Exception('ERROR: Adding family to "notification" collection: $e');
     }
   }
 
-  Future<bool> checkIfTableCollectionExist(String collectionName) async {
-    final db = FirebaseFirestore.instance;
+  ///
+  /// KID PAYMENT INFO MODEL | CRUD
+  ///
 
+  static Future<String> createKidPaymentInfo(
+    KidsPaymentInfoModel kid_payment_info,
+  ) async {
     try {
-      final snapshot = await db.collection(collectionName).limit(1).get();
+      // Step 1: Query for a new Collection
+      final collection = db.collection('collection');
+      final notification_id = collection.doc().id;
 
-      if (snapshot.docs.isNotEmpty) {
-        debugPrint(
-          "✅ Collection '$collectionName' exists (has at least one document).",
-        );
-        return true;
-      } else {
-        debugPrint(
-          "⚠️ Collection '$collectionName' does NOT exist or is empty.",
-        );
-        return false;
-      }
+      // Step 2: Get the link of the current family id
+      final user_id = AuthService.getCurrentUser()?.uid;
+      FamilyModel myFamily = readFamily(user_id!) as FamilyModel;
+
+      // Step 3: Add the server timestamp & link family id
+      await collection.doc(notification_id).set({
+        ...kid_payment_info.toFirestore(),
+        'family_id': myFamily.id,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint(
+        "family.add - added family to notification collection [${kid_payment_info.id}]",
+      );
+      return notification_id;
     } catch (e) {
-      debugPrint("❌ Error checking collection '$collectionName': $e");
+      throw Exception('ERROR: Adding family to "notification" collection: $e');
+    }
+  }
+
+  ////////////////////////
+  ////////////////////////
+  ////////////////////////
+  ////////////////////////
+
+  static Future<bool> doesFirestoreCollectionExist(
+    String target_collection,
+  ) async {
+    try {
+      final collectionRef = db.collection(target_collection);
+      final snapshot = await collectionRef.limit(1).get();
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
       return false;
     }
   }
 
-  Future<String> fetchFamilyNameOfUserID(String userId) async {
-    var familyName = '';
-
-    try {
-      // Step 1: Get Selected Doc
-      final selectedDocument = db.collection("collection").doc(userId);
-
-      // Step 2: Get document snapshot
-      final docSnapShot = await selectedDocument.get();
-
-      if (docSnapShot.exists) {
-        familyName = docSnapShot.data()?["familyName"] as String? ?? '';
-      }
-    } catch (e) {
-      debugPrint('Error fetching family name: $e');
-    }
-
-    return familyName;
-  }
-
-  Future<bool> isThereMoreThanOneParentInThisAccount(String familyId) async {
-    var parentsList = db.collection("parents");
-
-    // Query for documents where userId matches and count them
-    final querySnapshot = await parentsList
-        .where('familyId', isEqualTo: familyId)
-        .get();
-
-    // Return true if more than one document is found
-    return querySnapshot.docs.isNotEmpty;
-  }
-
-  Future<bool> doesEmailExist(String email) async {
-    final querySnapshot = await db
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .get();
-    return querySnapshot.docs.isNotEmpty;
-  }
-
-  Future<void> addUserToFirestore({
-    required String uid,
-    required String email,
-    required String familyName,
-  }) async {
-    await db.collection('users').doc(uid).set({
-      'email': email,
-      'familyName': familyName,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> addCardPaymentInfo(
-    FamilyPaymentInfoModel myPamentInfoModel,
+  static Future<bool> does_family_account_exist_in_firestore(
+    String family_email,
   ) async {
-    final collection = db.collection('familyPaymentInfo');
+    var query = await db
+        .collection("family")
+        .where("email", isEqualTo: family_email)
+        .get();
 
-    // Create a new ParentModel with the generated ID
-    final theDocumentId = collection.doc().id;
-    myPamentInfoModel.family_payment_info_id = theDocumentId;
-    collection.doc(theDocumentId).set(myPamentInfoModel.toMap());
+    var doesFamilyAccountExist = query.docs.isNotEmpty;
+
+    if (doesFamilyAccountExist) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
-  Future<List<ParentModel>> getParentByFamilyUserId(String familyId) async {
-    List<ParentModel> myList = [];
+  static Future<String> fetch_family_name(String user_id) async {
+    var family_name = "";
+
+    try {
+      var family_collection = db.collection("family");
+      var query = await family_collection
+          .where("user_id", isEqualTo: user_id)
+          .get();
+      var docRef = query.docs.first;
+
+      family_name = docRef["family_name"];
+    } catch (e) {
+      debugPrint("ERROR: Connection failed");
+    }
+
+    return family_name;
+  }
+
+  static Future<List<KidModel>> fetch_all_kids_by_family_id(
+    String family_id,
+  ) async {
+    List<KidModel> kids_list = [];
 
     try {
       final querySnapshot = await db
-          .collection('parents')
-          .where('familyId', isEqualTo: familyId)
+          .collection("kids")
+          .where("family_id", isEqualTo: family_id)
           .get();
 
-      if (querySnapshot.docs.isEmpty) {
-        debugPrint(
-          "FirestoreAPI - getParentFromFamilyUserId: No parents found for familyId: $familyId",
-        );
-        return [];
-      }
-
-      for (var doc in querySnapshot.docs) {
-        debugPrint(doc.data().toString());
-        myList.add(ParentModel.fromMap({...doc.data(), 'parentId': doc.id}));
-      }
-
-      return myList;
+      // Convert each document to a KidModel and add to list
+      kids_list = querySnapshot.docs.map((doc) {
+        return KidModel.fromFirestore(doc, null); // Pass the document snapshot
+      }).toList();
     } catch (e) {
-      debugPrint(
-        "FirestoreAPI - Error fetching parents for familyUserId $familyId: $e",
-      );
-      throw Exception('Failed to fetch parents: $e');
+      debugPrint("ERROR: Connection error (fetching kids): $e");
     }
+
+    return kids_list;
   }
 
-  // fetching a list of KidModel by familyuserid...
-  Future<List<KidModel>> getKidsByFamilyUserId(String familyId) async {
-    List<KidModel> myList = [];
+  static Future<String?> fetch_family_id(String user_id) async {
+    final user_id = AuthService.getCurrentUser()?.uid;
+    FamilyModel myFamily = await readFamily(user_id!) as FamilyModel;
+    var family_id = myFamily.id;
+    return family_id;
+  }
+
+  static Future<List<ChoreModel>> fetch_all_chores_by_kid_id(
+    String selected_kid_id,
+  ) async {
+    List<ChoreModel> chores_list = [];
     try {
-      final querySnapshot = await db
-          .collection('kids')
-          .where('familyId', isEqualTo: familyId)
+      final chores = db.collection("chores");
+      final choresSnapshot = await chores
+          .where("kid_id", isEqualTo: selected_kid_id)
           .get();
 
-      if (querySnapshot.docs.isEmpty) {
-        debugPrint(
-          "FirestoreAPI - getKidsByFamilyUserId: No Kids found for familyId: $familyId",
-        );
-        return [];
-      }
-
-      for (var doc in querySnapshot.docs) {
-        myList.add(KidModel.fromMap({...doc.data(), 'kidId': doc.id}));
-      }
-
-      return myList;
+      // Convert each document to a KidModel and add to list
+      chores_list = choresSnapshot.docs.map((doc) {
+        return ChoreModel.fromFirestore(
+          doc,
+          null,
+        ); // Pass the document snapshot
+      }).toList();
     } catch (e) {
-      debugPrint(
-        "FirestoreAPI - Error fetching parents for familyUserId $familyId: $e",
-      );
-      throw Exception('Failed to fetch parents: $e');
-    }
-  }
-
-  Future<List<ChoreModel>> getAllChoresByKidId(String kidId) async {
-    List<ChoreModel> myList = [];
-
-    final allDocs = await db
-        .collection('chores')
-        .where("KidId", isEqualTo: kidId)
-        .get();
-
-    for (var doc in allDocs.docs) {
-      try {
-        final fullData = {...doc.data(), 'choreId': doc.id};
-        myList.add(ChoreModel.fromMap(fullData));
-      } catch (e) {
-        debugPrint(e.toString());
-      }
+      debugPrint("ERROR: Connection error (fetching kids): $e");
     }
 
-    return myList;
-  }
-
-  Future<String?> getFamilyPaymentCardNumber(String userId) async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('family_payment_info')
-        .where('user_id', isEqualTo: userId)
-        .get();
-    if (snapshot.docs.isEmpty) return null;
-    return snapshot.docs.first.data()['card_number'] as String?;
-  }
-
-  Future<String> getFamilyName(String familyId) async {
-    var familyName = '';
-
-    try {
-      var familyCollection = db.collection("family");
-      var familyCollectionSnapshot = await familyCollection
-          .where("familyId", isEqualTo: familyId)
-          .get();
-      var familyDoc = familyCollectionSnapshot.docs.first;
-      familyName = familyDoc["familyName"];
-      return familyName;
-    } catch (e) {
-      debugPrint("$e");
-      throw Error;
-    }
-  }
-
-  Future<String> getKidFirstName(String kidDocId) async {
-    var kidFirstName = '';
-
-    var kidCollection = db.collection("kids");
-    var kidDoc = await kidCollection.doc(kidDocId).get();
-
-    if (kidDoc["firstName"] != null) {
-      kidFirstName = kidDoc["firstName"];
-    }
-
-    return kidFirstName;
-  }
-
-  Future<void> fixAllNullOrEmptydateOfBirthPropertyInFirestore() async {
-    final brokenDocIDs = <String>{};
-    final kidsCollection = FirebaseFirestore.instance.collection("kids");
-
-    final querySnapshot = await kidsCollection.get();
-
-    debugPrint(
-      "migrateKidsCollection: Fetched ${querySnapshot.docs.length} documents",
-    );
-
-    final now = DateTime.now().toIso8601String(); // Save as ISO 8601 String
-
-    for (final doc in querySnapshot.docs) {
-      final data = doc.data();
-
-      final dob = data['dateOfBirth'] ?? data['date_of_birth'];
-
-      // Check if dob is null, empty string, or blank
-      final isMissingDOB =
-          dob == null ||
-          (dob is String && dob.trim().isEmpty) ||
-          (dob is Timestamp && dob.toDate().toIso8601String().trim().isEmpty);
-
-      if (isMissingDOB) {
-        try {
-          await kidsCollection.doc(doc.id).update({'dateOfBirth': now});
-          debugPrint("Updated doc ${doc.id} with dateOfBirth: $now");
-          brokenDocIDs.add(doc.id);
-        } catch (e) {
-          debugPrint("Failed to update ${doc.id}: $e");
-        }
-      }
-    }
-
-    debugPrint("Fixed ${brokenDocIDs.length} documents.");
-  }
-
-  // HELPER AND MIGRATION CODES:
-
-  Future<void> fixAllNullOrEmptyIdFieldsInKidsCollection() async {
-    final kidsCollection = FirebaseFirestore.instance.collection("kids");
-    final querySnapshot = await kidsCollection.get();
-
-    debugPrint("Fetched ${querySnapshot.docs.length} documents.");
-
-    int fixedCount = 0;
-
-    for (final doc in querySnapshot.docs) {
-      final data = doc.data();
-
-      final id = data['id'];
-      final isIdMissing = id == null || (id is String && id.trim().isEmpty);
-
-      if (isIdMissing) {
-        try {
-          await kidsCollection.doc(doc.id).update({'id': doc.id});
-          debugPrint("✅ Updated doc ${doc.id} with id: ${doc.id}");
-          fixedCount++;
-        } catch (e) {
-          debugPrint("❌ Failed to update doc ${doc.id}: $e");
-        }
-      }
-    }
-
-    debugPrint(
-      "🔧 Fixed $fixedCount documents with missing/empty 'id' fields.",
-    );
-  }
-
-  Future<void> fixAllNullOrEmptyLastNameFields() async {
-    final kidsCollection = FirebaseFirestore.instance.collection("kids");
-    final querySnapshot = await kidsCollection.get();
-
-    debugPrint("Fetched ${querySnapshot.docs.length} kid documents.");
-
-    int fixedCount = 0;
-
-    for (final doc in querySnapshot.docs) {
-      final data = doc.data();
-
-      final lastName = data['lastName'];
-      final isLastNameEmpty =
-          lastName == null || (lastName is String && lastName.trim().isEmpty);
-
-      if (isLastNameEmpty) {
-        try {
-          await kidsCollection.doc(doc.id).update({'lastName': "..."});
-          debugPrint("✅ Fixed lastName for doc ${doc.id}");
-          fixedCount++;
-        } catch (e) {
-          debugPrint("❌ Failed to fix lastName for doc ${doc.id}: $e");
-        }
-      }
-    }
-
-    debugPrint("🔧 Fixed $fixedCount documents with missing/empty 'lastName'.");
-  }
-
-  Future<void> migratePasswordToPincodeInKidsCollection() async {
-    final kidsCollection = FirebaseFirestore.instance.collection("kids");
-    final querySnapshot = await kidsCollection.get();
-
-    debugPrint("Fetched ${querySnapshot.docs.length} kid documents.");
-
-    int updatedCount = 0;
-
-    for (final doc in querySnapshot.docs) {
-      final data = doc.data();
-
-      final hasPassword = data.containsKey('password');
-      final hasPincode = data.containsKey('pincode');
-
-      if (hasPassword) {
-        final updates = <String, dynamic>{};
-
-        // Copy password to pincode if pincode is missing or null
-        if (!hasPincode ||
-            data['pincode'] == null ||
-            data['pincode'].toString().trim().isEmpty) {
-          updates['pincode'] = data['password'] ?? '';
-        }
-
-        // Remove the password field
-        updates['password'] = FieldValue.delete();
-
-        try {
-          await kidsCollection.doc(doc.id).update(updates);
-          debugPrint("✅ Updated doc ${doc.id}");
-          updatedCount++;
-        } catch (e) {
-          debugPrint("❌ Failed to update doc ${doc.id}: $e");
-        }
-      }
-    }
-
-    debugPrint("🔁 Finished. Updated $updatedCount documents.");
+    return chores_list;
   }
 }

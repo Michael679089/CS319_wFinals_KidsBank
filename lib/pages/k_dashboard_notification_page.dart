@@ -55,26 +55,35 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
 
   /// Fetch notifications and filter for this kid
   /// Updated function:
-  Stream<List<NotificationsModel>> getKidsNotificationsStream(String kidId) {
+  Stream<List<NotificationModel>> getKidsNotificationsStream(String kidId) {
     return FirebaseFirestore.instance
         .collection('kids_notifications')
+        .where(
+          'kid_id',
+          isEqualTo: kidId,
+        ) // Filter at query level for efficiency
         .orderBy('timestamp', descending: true)
         .snapshots()
+        .handleError((error) {
+          debugPrint('Error in notifications stream: $error');
+          return Stream.value(
+            [],
+          ); // Return empty list on error to keep stream alive
+        })
         .map((snapshot) {
           return snapshot.docs
               .map((doc) {
-                final data = doc.data();
                 try {
-                  final notification = NotificationsModel.fromMap(data);
-                  if (notification.kid_id == kidId) {
-                    return notification;
-                  }
+                  return NotificationModel.fromFirestore(
+                    doc,
+                    null,
+                  ); // Pass the whole doc
                 } catch (e) {
-                  debugPrint('Error parsing notification: $e');
+                  debugPrint('Error parsing notification ${doc.id}: $e');
+                  return null;
                 }
-                return null;
               })
-              .whereType<NotificationsModel>()
+              .whereType<NotificationModel>() // Remove nulls
               .toList();
         });
   }
@@ -163,7 +172,7 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
 
                       // ✅ Notifications List
                       Expanded(
-                        child: StreamBuilder<List<NotificationsModel>>(
+                        child: StreamBuilder<List<NotificationModel>>(
                           stream: getKidsNotificationsStream(widget.kidId),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
@@ -212,23 +221,6 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
 
                                 String title = "";
                                 String subtitle = "";
-
-                                if (type == 'reward') {
-                                  title = "🎉 You received a reward!";
-                                  subtitle =
-                                      "${notif.notification_title} \$${notif.notification_amount?.toString}";
-                                } else if (type == 'deposit') {
-                                  title = "💰 Money deposited!";
-                                  subtitle =
-                                      "+\$${notif.notification_amount.toString()} to your balance.";
-                                } else if (type == 'withdrawal') {
-                                  title = "🏧 Withdrawal made";
-                                  subtitle =
-                                      "-\$${notif.notification_amount.toString()} from your balance.";
-                                } else {
-                                  title = "🔔 Notification";
-                                  subtitle = notif.notification_message;
-                                }
 
                                 return Container(
                                   margin: const EdgeInsets.symmetric(
@@ -283,7 +275,9 @@ class _KidsNotificationsPageState extends State<KidsNotificationsPage> {
                                             color: Colors.grey[700],
                                           ),
                                         ),
-                                        if (notif.notification_message.isNotEmpty)
+                                        if (notif
+                                            .notification_message
+                                            .isNotEmpty)
                                           Padding(
                                             padding: const EdgeInsets.only(
                                               top: 4,

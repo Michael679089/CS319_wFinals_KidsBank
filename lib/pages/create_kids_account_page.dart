@@ -5,17 +5,17 @@ import 'package:intl/intl.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
-import 'package:wfinals_kidsbank/database/models/kid_payment_info.dart';
+import 'package:wfinals_kidsbank/database/models/kid_payment_info_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class CreateKidAccountPage extends StatefulWidget {
-  final dynamic familyUserId;
+  final dynamic user_id;
 
   final dynamic parentId;
 
   const CreateKidAccountPage({
     super.key,
-    required this.familyUserId,
+    required this.user_id,
     required this.parentId,
   });
 
@@ -179,20 +179,21 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
       return;
     }
 
-    final myAuthService = AuthService();
-    final user = myAuthService.getCurrentUser();
+    final user = AuthService.getCurrentUser();
     if (user == null) {
       _showSnackbar('User not authenticated', isError: true);
       return;
     }
 
-    var kidId = "";
+    String? kidId;
 
     // Step 1: Adding kids to kids collection. Try-Catch
     try {
       var firstName = firstNameController.text;
       var lastName = lastNameController.text;
-      var dateOfBirth = DateTime.parse(dateOfBirthController.text); // year-month-day 2015-01-28
+      var dateOfBirth = DateTime.parse(
+        dateOfBirthController.text,
+      ); // year-month-day 2015-01-28
       var phoneNumber = phoneNumController.text;
       var pincode = pincodeController.text;
       var avatar = selectedAvatar;
@@ -202,56 +203,64 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
         first_name: firstName,
         last_name: lastName,
         date_of_birth: dateOfBirth,
-        phone_number: phoneNumber,
         pincode: pincode,
         avatar_file_path: avatar,
-        family_id: familyUserId, kid_id: '', created_at: DateTime.now(),
+        family_id: familyUserId,
+        created_at: DateTime.now(),
       );
-      kidId = await myFirestoreService.addKidToKidsCollection(newKidModel);
+      kidId = await FirestoreService.createKid(newKidModel);
 
-      Utilities.invokeTopSnackBar('Kid account created successfully!', context);
-      debugPrint(
-        "createKidsAccountPage - succesfully created kid, moving to creating kids_payment_info",
-      );
+      if (kidId != null) {
+        Utility_TopSnackBar.show(
+          message: 'Kid account created successfully!',
+          context: context,
+        );
+        debugPrint(
+          "createKidsAccountPage - succesfully created kid, moving to creating kids_payment_info",
+        );
+
+        // Step 2: Let's now add the kids payment info for this child
+        try {
+          var phoneNumber = phoneNumController.text;
+          var family_object = await FirestoreService.readFamily(widget.user_id);
+          var family_id = family_object?.id as String;
+          KidsPaymentInfoModel newKidPaymentInfoModel = KidsPaymentInfoModel(
+            kid_id: kidId,
+            phone_number: phoneNumber,
+            total_amount_left: 0,
+            family_id: family_id,
+          );
+          FirestoreService.createKidPaymentInfo(newKidPaymentInfoModel);
+          Utility_TopSnackBar.show(
+            message: 'Kid Payment Info created successfully!',
+            context: context,
+          );
+          debugPrint(
+            "createKidsAccountPage - succesfully created kid payment info.",
+          );
+        } catch (e) {
+          debugPrint("$e");
+          return;
+        }
+
+        debugPrint(
+          "createKidsAccountPage - successfully creating a kid and a kidpaymentinfo",
+        );
+
+        navigator.pushReplacementNamed(
+          "/kids-setup-page",
+          arguments: {
+            "parent-id": parentId,
+            "came-from-parent-dashboard": _didUserCameFromParentDashboard,
+          },
+        );
+      } else {
+        debugPrint("ERROR: kid id is null");
+      }
     } catch (e) {
       _showSnackbar('Error saving data: $e', isError: true);
       return;
     }
-
-    // Step 2: Let's now add the kids payment info for this child
-    try {
-      var phoneNumber = phoneNumController.text;
-      KidsPaymentInfoModel newKidPaymentInfoModel = KidsPaymentInfoModel(
-        kid_id: kidId,
-        phone_number: phoneNumber,
-        total_amount: "0", kid_payment_info_id: '', last_updated: DateTime.now(),  created_at: DateTime.now(),
-      );
-      myFirestoreService.addKidPaymentInfoToKidPaymentInfoCollection(
-        newKidPaymentInfoModel,
-      );
-      Utilities.invokeTopSnackBar(
-        'Kid Payment Info created successfully!',
-        context,
-      );
-      debugPrint(
-        "createKidsAccountPage - succesfully created kid payment info.",
-      );
-    } catch (e) {
-      debugPrint("$e");
-      return;
-    }
-
-    debugPrint(
-      "createKidsAccountPage - successfully creating a kid and a kidpaymentinfo",
-    );
-
-    navigator.pushReplacementNamed(
-      "/kids-setup-page",
-      arguments: {
-        "parent-id": parentId,
-        "came-from-parent-dashboard": _didUserCameFromParentDashboard,
-      },
-    );
   }
 
   @override

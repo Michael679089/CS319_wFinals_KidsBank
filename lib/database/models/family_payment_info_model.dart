@@ -3,51 +3,50 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FamilyPaymentInfoModel {
-  String family_payment_info_id;
-  String family_id;
+  String? id; // This will store the Firestore document ID
+  String user_id;
   String card_name;
   String card_number;
-  double total_amount;
+  double? total_amount_left;
   DateTime exp;
   String ccv;
 
   FamilyPaymentInfoModel({
-    required this.family_payment_info_id,
-    required this.family_id,
+    this.id,
+    required this.user_id,
     required this.card_name,
     required this.card_number,
-    required this.total_amount,
+    this.total_amount_left,
     required this.ccv,
     required this.exp,
   });
 
- 
-
-  // FACTORY CONSTRUCTOR FOR FIRESTORE
-  // receiving from firestore
-  factory FamilyPaymentInfoModel.fromMap(Map<String, dynamic> map) {
+  // Factory constructor to create from Firestore document
+  factory FamilyPaymentInfoModel.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+    SnapshotOptions? options,
+  ) {
+    final data = snapshot.data()!;
     return FamilyPaymentInfoModel(
-      family_payment_info_id: map['family_payment_info_id'] as String,
-      family_id: map['family_id'] as String,
-      card_name: map['card_name']  as String,
-      card_number: map['card_number'] as String,
-      total_amount: map['total_amount'],
-      ccv: map['ccv'] as String,
-      exp: (map['exp'] as Timestamp).toDate(), // ✅ safely converts Timestamp to DateTime
+      id: snapshot.id, // Get the document ID here
+      user_id: data['user_id'] as String,
+      card_name: data['card_name'] as String,
+      card_number: data['card_number'] as String,
+      total_amount_left: data['total_amount_left']?.toDouble() ?? 0.0,
+      ccv: data['ccv'] as String,
+      exp: (data['exp'] as Timestamp).toDate(),
     );
   }
 
-  // SERIALIZATION
-  // sending from firestore
-  Map<String, dynamic> toMap() {
+  // Convert to map for Firestore (without the ID)
+  Map<String, dynamic> toFirestore() {
     return {
-      'family_payment_info_id': family_payment_info_id,
-      'family_id': family_id,
+      'user_id': user_id,
       'card_name': card_name,
       'card_number': card_number,
-      'total_amount': total_amount,
+      'total_amount_left': total_amount_left,
       'ccv': ccv,
-      'exp': exp,
+      'exp': exp, // Firestore will automatically convert DateTime
     };
   }
 }

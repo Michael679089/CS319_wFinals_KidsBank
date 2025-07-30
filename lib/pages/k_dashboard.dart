@@ -304,23 +304,18 @@ class _KidsDashboardState extends State<KidsDashboard> {
                                         ),
                                       });
 
-                                  NotificationsModel withdrawalKidNotification =
-                                      NotificationsModel(
+                                  NotificationModel withdrawalKidNotification =
+                                      NotificationModel(
                                         family_id: widget.familyUserId,
                                         kid_id: widget.kidId,
                                         notification_title: title,
                                         notification_message: desc,
-                                        type: 'withdrawal', 
-                                        notification_id: '', 
-                                        notification_amount: 0, 
-                                        created_at: DateTime.now(), 
+                                        type: 'withdrawal',
+                                        created_at: DateTime.now(),
                                       );
-                                  FirestoreService myFirestoreservice =
-                                      FirestoreService();
-                                  myFirestoreservice
-                                      .addNotificationToNotificationCollections(
-                                        withdrawalKidNotification,
-                                      );
+                                  FirestoreService.createNotification(
+                                    withdrawalKidNotification,
+                                  );
 
                                   setState(() {
                                     balance -= withdrawAmount;

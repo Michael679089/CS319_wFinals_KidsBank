@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "wfinals_kidsbank",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "wfinals_kidsbank (unauthenticated debug)",
+            "request": "launch",
+            "type": "dart",
+            "args": ["--dart-define=DEBUG_UNAUTHENTICATED=true"]  // Custom flag
+        },
+        {
+            "name": "wfinals_kidsbank (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "wfinals_kidsbank (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
