@@ -200,7 +200,10 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
     if (value == null || value.isEmpty) {
       return 'Please enter an email';
     }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+    // Updated regex pattern:
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', caseSensitive: false);
+
     if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email';
     }
@@ -339,7 +342,7 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                           child: TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            validator: _validateEmail,
+                            validator: _validateEmail, // Updated function
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFAEDDFF),
@@ -434,7 +437,14 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                           child: TextFormField(
                             controller: _cardNumberController,
                             keyboardType: TextInputType.number,
-                            validator: (value) => value!.isEmpty ? 'Please enter a card number' : null,
+                            maxLength: 14,
+                            onChanged: (value) {
+                              final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+                              if (value != cleaned) {
+                                _cardNumberController.text = cleaned;
+                                _cardNumberController.selection = TextSelection.fromPosition(TextPosition(offset: cleaned.length));
+                              }
+                            },
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFAEDDFF),

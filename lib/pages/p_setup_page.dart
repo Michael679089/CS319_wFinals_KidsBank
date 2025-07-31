@@ -52,10 +52,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
                       });
                       Navigator.of(context).pop();
                     },
-                    child: CircleAvatar(
-                      backgroundImage: AssetImage('assets/avatar$i.png'),
-                      radius: 30,
-                    ),
+                    child: CircleAvatar(backgroundImage: AssetImage('assets/avatar$i.png'), radius: 30),
                   ),
               ],
             ),
@@ -76,7 +73,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
 
     final firstName = firstNameController.text.trim();
     final lastName = lastNameController.text.trim();
-    final birthdate = DateTime.parse(dateOfBirthController.text.trim());
+    final birthdate = DateTime.parse(dateOfBirthController.text.trim() ?? DateTime.now());
     final pincode = pincodeController.text.trim();
 
     // Validate inputs
@@ -136,14 +133,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       _showSnackbar('Parent added successfully', isError: false);
 
       if (context.mounted) {
-        navigator.pushNamed(
-          '/kids-setup-page',
-          arguments: {
-            "family-user-id": myFamilyId,
-            "parent-id": parentId,
-            "came-from-parent-dashboard": false,
-          },
-        );
+        navigator.pushNamed('/kids-setup-page', arguments: {"family-user-id": myFamilyId, "parent-id": parentId, "came-from-parent-dashboard": false});
       }
     } catch (e) {
       _showSnackbar('Failed to add parent: $e', isError: true);
@@ -177,18 +167,10 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
             child: Text(
               message,
-              style: TextStyle(
-                fontFamily: GoogleFonts.fredoka().fontFamily,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
+              style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
             ),
           ),
         ),
@@ -211,16 +193,8 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF4E88CF),
-            onPrimary: Colors.white,
-            onSurface: Colors.black,
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF4E88CF),
-            ),
-          ),
+          colorScheme: const ColorScheme.light(primary: Color(0xFF4E88CF), onPrimary: Colors.white, onSurface: Colors.black),
+          textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: const Color(0xFF4E88CF))),
         ),
         child: child!,
       ),
@@ -245,11 +219,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       alignment: Alignment.centerLeft,
       child: Text(
         text,
-        style: TextStyle(
-          fontFamily: GoogleFonts.fredoka().fontFamily,
-          fontWeight: FontWeight.w700,
-          fontSize: 20,
-        ),
+        style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, fontWeight: FontWeight.w700, fontSize: 20),
       ),
     );
   }
@@ -276,15 +246,8 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
         keyboardType: keyboardType,
         onTap: onTap,
         obscuringCharacter: '*',
-        style: TextStyle(
-          fontFamily: GoogleFonts.fredoka().fontFamily,
-          fontSize: 24,
-        ),
-        decoration: const InputDecoration(
-          counterText: "",
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          border: InputBorder.none,
-        ),
+        style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, fontSize: 24),
+        decoration: const InputDecoration(counterText: "", contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12), border: InputBorder.none),
       ),
     );
   }
@@ -302,10 +265,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
               Stack(
                 alignment: Alignment.bottomRight,
                 children: [
-                  CircleAvatar(
-                    backgroundImage: AssetImage(selectedAvatar),
-                    radius: 60,
-                  ),
+                  CircleAvatar(backgroundImage: AssetImage(selectedAvatar), radius: 60),
                   Positioned(
                     bottom: 0,
                     right: 4,
@@ -313,15 +273,8 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
                       onTap: _showAvatarPicker,
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.purple,
-                        ),
-                        child: const Icon(
-                          Icons.edit,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.purple),
+                        child: const Icon(Icons.edit, color: Colors.white, size: 20),
                       ),
                     ),
                   ),
@@ -330,11 +283,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
               const SizedBox(height: 20),
               Text(
                 'Set up your account',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: GoogleFonts.fredoka().fontFamily,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily),
               ),
               const SizedBox(height: 20),
               Container(
@@ -354,19 +303,10 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
                     _buildField(lastNameController),
                     const SizedBox(height: 20),
                     _buildLabel('Date of Birth'),
-                    _buildField(
-                      dateOfBirthController,
-                      onTap: _pickDate,
-                      readOnly: true,
-                    ),
+                    _buildField(dateOfBirthController, onTap: _pickDate, readOnly: true),
                     const SizedBox(height: 20),
                     _buildLabel('Pincode'),
-                    _buildField(
-                      pincodeController,
-                      obscure: true,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                    ),
+                    _buildField(pincodeController, obscure: true, keyboardType: TextInputType.number, maxLength: 6),
                     const SizedBox(height: 25),
                     SizedBox(
                       width: double.infinity,
@@ -376,27 +316,13 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
                           backgroundColor: const Color(0xFF4E88CF),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           side: const BorderSide(color: Colors.black, width: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                         child: _isSubmitting
-                            ? const SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.black,
-                                  strokeWidth: 2,
-                                ),
-                              )
+                            ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
                             : Text(
                                 'Continue',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                  fontFamily: GoogleFonts.fredoka().fontFamily,
-                                  color: Colors.black,
-                                ),
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.black),
                               ),
                       ),
                     ),

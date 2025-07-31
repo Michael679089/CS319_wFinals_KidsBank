@@ -26,6 +26,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   String? selectedRole;
   String? selectedAvatar;
   OverlayEntry? overlayEntry;
+  bool user_first_time = false;
 
   // Saved Credentials
   String familyName = "";
@@ -51,6 +52,10 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   }
 
   Future<void> fetchUsers() async {
+    setState(() {
+      isLoading = true;
+    });
+
     var navigator = Navigator.of(context);
     var family_id = user_id;
 
@@ -72,8 +77,21 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       var is_there_a_parent = the_main_parent != null;
 
       if (is_there_a_parent == false) {
-        navigator.pushNamed("/parent-setup-page");
-        debugPrint("acountSelectorPage - the main parent is not found - redirected to /parents-setup-page");
+        setState(() {
+          user_first_time = true;
+        });
+
+        debugPrint("accountSelectorPage - the main parent is not found - will redirect to /parent-setup-page in 5 seconds");
+
+        // Add 5-second delay before navigation
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted) {
+            // Check if widget is still in the tree
+            navigator.pushNamed("/parent-setup-page");
+            debugPrint("accountSelectorPage - redirected to /parent-setup-page");
+          }
+        });
+
         return;
       }
 
@@ -144,9 +162,10 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     fetchUsers();
   }
 
-  Text _buildText(String text, double size) {
+  Text _buildText(String text, double size, {bool isTextAlignmentCenter = false}) {
     return Text(
       text,
+      textAlign: isTextAlignmentCenter ? TextAlign.center : null,
       style: TextStyle(fontSize: size, fontWeight: FontWeight.w600, fontFamily: GoogleFonts.fredoka().fontFamily),
     );
   }
@@ -175,9 +194,73 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       child: Container(color: Colors.red, child: Image.asset('assets/owl.png', height: 150, width: 240)),
     );
 
+    Widget InnerDisplay(bool isLoading) {
+      var parentEmpty = (Parent == null);
+      var kidEmpty = Kids_List.isEmpty;
+
+      if (isLoading == false && parentEmpty && !user_first_time) {
+        return Column(
+          children: [
+            Container(
+              padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
+              child: Column(children: [parentsLabelText]),
+            ),
+            Divider(color: Colors.black, thickness: 2, indent: 20, endIndent: 20),
+            Container(
+              padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
+              child: Column(children: [kidsLabelText]),
+            ),
+            Container(
+              padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
+              margin: EdgeInsetsGeometry.all(40),
+              child: ElevatedButton(
+                onPressed: _handleLoginButton,
+                style: Utilities().ourButtonStyle1(),
+                child: Text("Log in as $selectedName", style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily)),
+              ),
+            ),
+          ],
+        );
+      } else if (user_first_time) {
+        return Column(children: [_buildText("Its users first time using the app, redirecting to parent selector", 42, isTextAlignmentCenter: true)]);
+      } else {
+        return Center(child: CircularProgressIndicator());
+      }
+    }
+
+    Widget MainDisplay(bool isLoading) {
+      return Container(
+        margin: EdgeInsets.all(20),
+        child: Column(
+          children: [
+            TitleDisplay,
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+                border: Border.all(color: Colors.black, width: 2),
+              ),
+              child: InnerDisplay(isLoading),
+            ),
+
+            ElevatedButton(onPressed: _handleLogOutFromFamily, style: Utilities().ourButtonStyle1(), child: Text("Log out from Family")),
+          ],
+        ),
+      );
+    }
+
     ///
     ///
     ///
+    ///
+    ///
+
+    var doesParentExist = (Parent != null);
 
     return PopScope(
       canPop: false,
@@ -187,49 +270,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(backgroundColor: const Color(0xFFFFCA26), title: const Text("Account Selector Page"), automaticallyImplyLeading: false),
-        body: Container(
-          margin: EdgeInsets.all(20),
-          child: Column(
-            children: [
-              TitleDisplay,
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                  border: Border.all(color: Colors.black, width: 2),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
-                      child: Column(children: [parentsLabelText]),
-                    ),
-                    Divider(color: Colors.black, thickness: 2, indent: 20, endIndent: 20),
-                    Container(
-                      padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
-                      child: Column(children: [kidsLabelText]),
-                    ),
-                    Container(
-                      padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
-                      child: ElevatedButton(
-                        onPressed: _handleLoginButton,
-                        style: Utilities().ourButtonStyle1(),
-                        child: Text("Log in as $selectedName", style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              ElevatedButton(onPressed: _handleLogOutFromFamily, style: Utilities().ourButtonStyle1(), child: Text("Log out from Family")),
-            ],
-          ),
-        ),
+        body: MainDisplay(isLoading),
       ),
     );
   }
