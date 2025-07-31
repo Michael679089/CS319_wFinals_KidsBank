@@ -4,7 +4,8 @@ A new Flutter project.
 
 OUR MAIN REPO: https://github.com/Michael679089/CS319_Flutter-Application-Development
 
-video login demo:
+video login demo: https://github.com/Michael679089/CS319_wFinals_KidsBank/blob/main/video%20login%20demo.mp4
+
 ----
 
 # Things Fixed so far:
