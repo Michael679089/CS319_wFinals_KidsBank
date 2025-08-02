@@ -271,145 +271,139 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     );
 
     Widget InnerDisplayContainer(bool isLoading) {
-      var is_users_first_time_signing_in =
-          (widget.there_are_parents_in_family == false);
+      final isFirstTimeUser = widget.there_are_parents_in_family == false;
+      final selectedNameText = selectedName != null
+          ? "Log in as $selectedName"
+          : "Log in as";
 
-      String? selected_name = selectedName ?? "";
-      var full_string_selected_name = "Log in as $selected_name";
+      if (isLoading) {
+        debugPrint("Showing loading indicator");
+        return const Center(child: CircularProgressIndicator());
+      }
 
-      if (isLoading == false && is_users_first_time_signing_in == false) {
-        debugPrint(
-          "AccountSelectorPage - showing account selector inner display",
+      if (isFirstTimeUser) {
+        debugPrint("Redirecting first-time user");
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: _buildText(
+            "First-time user - redirecting to parent setup...",
+            30,
+            isTextAlignmentCenter: true,
+          ),
         );
-        return Column(
-          children: [
-            // Main Parent Container
-            Container(
-              color: Colors.white,
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(40, 20, 40, 20),
-              child: Column(
-                children: [
-                  Center(
-                    // The Thing that's makes this clickable
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero, // Remove default padding
-                        tapTargetSize: MaterialTapTargetSize
-                            .shrinkWrap, // Tight press area
-                        foregroundColor: Colors.black, // Default text color
-                      ),
-                      onPressed: () {
-                        _handleSelectingAccount(
-                          Parent!.id as String,
-                          Parent!.first_name,
-                          "Parent",
-                          Parent!.avatar_file_path,
-                        );
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            Parent!.avatar_file_path,
-                            width: 100,
-                            height: 100,
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildText(Parent!.first_name, 20),
-                              _buildText("[Main Parent]", 20),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      }
 
-            // KIDS Container
+      // Main UI
+      return Column(
+        children: [
+          // Parent Container
+          if (Parent != null)
             Container(
+              width: double.infinity,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.white, // Moved color here
+                border: Border(
+                  bottom: BorderSide(color: Colors.black, width: 1.0),
+                ),
               ),
-              padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-              child: Column(
-                children: [
-                  // The Title Kids Label
-                  kidsLabelText,
-                  const SizedBox(height: 10),
-
-                  // Gridview
-                  GridView.count(
-                    crossAxisCount: 3, // 2 items per row
-                    childAspectRatio: 3, // Width/height ratio for each item
-                    mainAxisSpacing: 10, // Vertical spacing
-                    crossAxisSpacing: 10, // Horizontal spacing
-                    children: Kids_List.map(
-                      (kid) => Container(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          children: [
-                            Image.asset(
-                              kid.avatar_file_path,
-                              fit: BoxFit.cover,
-                            ),
-                            Text(kid.first_name),
-                          ],
-                        ),
-                      ),
-                    ).toList(),
-                  ),
-                ],
-              ),
-            ),
-
-            // The LOGIN Button.
-            Container(
-              color: Colors.black,
-              width: double.infinity,
-              padding: EdgeInsets.all(20),
-              child: ElevatedButton(
-                onPressed: _handleLoginButton,
-                style: Utilities().ourButtonStyle2(),
-                child: _buildText(
-                  full_string_selected_name,
-                  25,
-                  textColor: Colors.black,
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 20),
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => _handleSelectingAccount(
+                  Parent!.id as String,
+                  Parent!.first_name,
+                  "Parent",
+                  Parent!.avatar_file_path,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      Parent!.avatar_file_path,
+                      width: 80,
+                      height: 80,
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildText(Parent!.first_name, 20),
+                        _buildText("[Main Parent]", 20),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        );
-      } else if (is_users_first_time_signing_in) {
-        debugPrint(
-          "AccountSelectorPage - inner display is stopped because user is first time user",
-        );
-        return Column(
-          children: [
-            Padding(
-              padding: EdgeInsetsGeometry.all(20),
-              child: _buildText(
-                "Its users first time using the app... redirecting to parent setup...",
-                30,
-                isTextAlignmentCenter: true,
-              ),
+
+          // Kids Container
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
-        );
-      } else {
-        debugPrint(
-          "AccountSelectorPage - showing inner display ciruclar progress",
-        );
-        return Center(child: CircularProgressIndicator());
-      }
+            margin: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Column(
+              children: [
+                kidsLabelText,
+                const SizedBox(height: 10),
+                GridView.count(
+                  shrinkWrap: true,
+                  padding: EdgeInsetsGeometry.fromLTRB(0, 0, 0, 20),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  childAspectRatio: 1, // Adjust this ratio as needed
+                  mainAxisSpacing: 10, // Vertical spacing between items
+                  crossAxisSpacing: 10, // Horizontal spacing between items
+                  children: Kids_List.map(
+                    (kid) => Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Kid's Avatar
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            50,
+                          ), // Circular avatar
+                          child: Image.asset(
+                            kid.avatar_file_path,
+                            width: 80, // Fixed size for consistency
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Kid's Name
+                        Text(
+                          kid.first_name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
+                  ).toList(),
+                ),
+              ],
+            ),
+          ),
+
+          // Login Button
+          Container(
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _handleLoginButton,
+              style: Utilities.ourButtonStyle2(),
+              child: _buildText(selectedNameText, 25),
+            ),
+          ),
+        ],
+      );
     }
 
     Widget MainDisplay(bool isLoading) {
@@ -442,12 +436,16 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
             // -----------------------------------------------
 
             // Log out Button
-            ElevatedButton(
-              onPressed: _handleLogOutFromFamily,
-              style: Utilities().ourButtonStyle1(),
-              child: Text(
-                "Log out from Family",
-                style: TextStyle(color: Colors.white),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+              child: ElevatedButton(
+                onPressed: _handleLogOutFromFamily,
+                style: Utilities.ourButtonStyle3(),
+                child: Text(
+                  "Log out from Family",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ],

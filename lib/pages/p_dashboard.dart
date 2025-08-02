@@ -13,7 +13,11 @@ class ParentDashboard extends StatefulWidget {
   final String user_id;
   final String parent_id;
 
-  const ParentDashboard({super.key, required this.user_id, required this.parent_id});
+  const ParentDashboard({
+    super.key,
+    required this.user_id,
+    required this.parent_id,
+  });
 
   @override
   State<ParentDashboard> createState() => _ParentDashboardState();
@@ -66,7 +70,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
     var family_id = await FirestoreService.fetch_family_id(user_id) as String;
 
     // Step 1: Get list of kid models
-    List<KidModel> KidsList = await FirestoreService.fetch_all_kids_by_family_id(family_id);
+    List<KidModel> KidsList =
+        await FirestoreService.fetch_all_kids_by_family_id(family_id);
     debugPrint("PDashboardPage - KidsList: ${KidsList.toList().toString()}");
     List<Map<String, dynamic>> tempKidsData = [];
     double runningTotal = 0.0;
@@ -79,13 +84,21 @@ class _ParentDashboardState extends State<ParentDashboard> {
 
       // Step 2: Get the total_amount_left of kid
       double total_amount_left = 0.0;
-      var kid_payment_info = await FirestoreService.readKidPaymentInfo(family_id);
+      var kid_payment_info = await FirestoreService.readKidPaymentInfo(
+        family_id,
+      );
       total_amount_left = kid_payment_info!.total_amount_left;
-      debugPrint("parentDashboardPage - $new_kid_name - ${kid_payment_info.total_amount_left}");
+      debugPrint(
+        "parentDashboardPage - $new_kid_name - ${kid_payment_info.total_amount_left}",
+      );
 
       // Step 3: Get the total_withdraw of kid
       double total_withdrawn = 0.0;
-      final withdrawalsSnapshot = await FirestoreService.fetch_all_transactions_by_family_id_and_type(family_id, "withdrawal");
+      final withdrawalsSnapshot =
+          await FirestoreService.fetch_all_transactions_by_family_id_and_type(
+            family_id,
+            "withdrawal",
+          );
       for (var withdrawalDoc in withdrawalsSnapshot) {
         total_withdrawn += (withdrawalDoc.amount);
       }
@@ -120,10 +133,17 @@ class _ParentDashboardState extends State<ParentDashboard> {
     debugPrint("hi");
   }
 
-  void showChoresModal(BuildContext context, String kidName, String kidId, String avatar) {
+  void showChoresModal(
+    BuildContext context,
+    String kidName,
+    String kidId,
+    String avatar,
+  ) {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
-    final TextEditingController amountController = TextEditingController(text: '1.00');
+    final TextEditingController amountController = TextEditingController(
+      text: '1.00',
+    );
 
     double rewardMoney = 1.00;
 
@@ -137,7 +157,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
           child: Material(
             color: Colors.transparent,
             child: SingleChildScrollView(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom * 0.4),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom * 0.4,
+              ),
               child: Container(
                 width: MediaQuery.of(context).size.width * 0.85,
                 padding: const EdgeInsets.all(20),
@@ -151,14 +173,35 @@ class _ParentDashboardState extends State<ParentDashboard> {
                     return Stack(
                       children: [
                         // Overlapping Image on top-right
-                        Positioned(top: 0, right: 0, child: Image.asset(avatar, width: 80, height: 80, fit: BoxFit.cover)),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Image.asset(
+                            avatar,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 10),
-                            Text("Chores", style: GoogleFonts.fredoka(fontSize: 38, fontWeight: FontWeight.bold)),
-                            Text("for $kidName", style: GoogleFonts.fredoka(fontSize: 24, color: const Color.fromARGB(137, 0, 0, 0))),
+                            Text(
+                              "Chores",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 38,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "for $kidName",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 24,
+                                color: const Color.fromARGB(137, 0, 0, 0),
+                              ),
+                            ),
                             const SizedBox(height: 20),
 
                             // Chore Title Field
@@ -168,7 +211,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                 labelText: "Chore Title",
                                 filled: true,
                                 fillColor: Colors.white,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -181,12 +226,20 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                 labelText: "Chore Description",
                                 filled: true,
                                 fillColor: Colors.white,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
 
-                            Text("Reward Money", style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.w700)),
+                            Text(
+                              "Reward Money",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             const SizedBox(height: 10),
 
                             // Reward Controls
@@ -198,7 +251,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                     if (rewardMoney > 1) {
                                       setModalState(() {
                                         rewardMoney -= 1;
-                                        amountController.text = rewardMoney.toStringAsFixed(2);
+                                        amountController.text = rewardMoney
+                                            .toStringAsFixed(2);
                                       });
                                     }
                                   },
@@ -207,7 +261,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFFFCA26),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.black, width: 2),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 2,
+                                      ),
                                     ),
                                     child: const Icon(Icons.remove, size: 20),
                                   ),
@@ -217,14 +274,22 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                   width: 100,
                                   child: TextField(
                                     controller: amountController,
-                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     textAlign: TextAlign.center,
                                     decoration: InputDecoration(
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(15),
-                                        borderSide: const BorderSide(color: Colors.black),
+                                        borderSide: const BorderSide(
+                                          color: Colors.black,
+                                        ),
                                       ),
-                                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            vertical: 8,
+                                          ),
                                     ),
                                     onChanged: (value) {
                                       final parsed = double.tryParse(value);
@@ -239,7 +304,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                   onTap: () {
                                     setModalState(() {
                                       rewardMoney += 1;
-                                      amountController.text = rewardMoney.toStringAsFixed(2);
+                                      amountController.text = rewardMoney
+                                          .toStringAsFixed(2);
                                     });
                                   },
                                   child: Container(
@@ -247,7 +313,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFFFCA26),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.black, width: 2),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 2,
+                                      ),
                                     ),
                                     child: const Icon(Icons.add, size: 20),
                                   ),
@@ -258,12 +327,22 @@ class _ParentDashboardState extends State<ParentDashboard> {
 
                             // Set Button
                             ElevatedButton(
-                              onPressed: () => _handleAddChoreSubmission(kidId, titleController, descriptionController, rewardMoney, messenger),
+                              onPressed: () => _handleAddChoreSubmission(
+                                kidId,
+                                titleController,
+                                descriptionController,
+                                rewardMoney,
+                                messenger,
+                              ),
 
-                              style: Utilities().ourButtonStyle1(),
+                              style: Utilities.ourButtonStyle1(),
                               child: Text(
                                 "Set",
-                                style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
                               ),
                             ),
                           ],
@@ -280,7 +359,12 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  void showManageFundsModal(BuildContext context, String kidName, String kidId, String avatar) {
+  void showManageFundsModal(
+    BuildContext context,
+    String kidName,
+    String kidId,
+    String avatar,
+  ) {
     debugPrint("hello");
   }
 
@@ -294,19 +378,33 @@ class _ParentDashboardState extends State<ParentDashboard> {
         // Do nothing when back is pressed
       },
       child: Scaffold(
-        drawer: ParentDrawer(selectedPage: 'dashboard', familyName: myFamilyName, user_id: widget.user_id, parentId: widget.parent_id),
+        drawer: ParentDrawer(
+          selectedPage: 'dashboard',
+          familyName: myFamilyName,
+          user_id: widget.user_id,
+          parentId: widget.parent_id,
+        ),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(
           backgroundColor: const Color(0xFFFFCA26),
           elevation: 0,
           title: Text(
             "KidsBank",
-            style: GoogleFonts.fredoka(fontSize: 44, fontWeight: FontWeight.bold, color: Colors.black),
+            style: GoogleFonts.fredoka(
+              fontSize: 44,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
           centerTitle: true,
           leading: Builder(
             builder: (context) => Padding(
-              padding: const EdgeInsets.only(left: 12, right: 4, top: 5, bottom: 10),
+              padding: const EdgeInsets.only(
+                left: 12,
+                right: 4,
+                top: 5,
+                bottom: 10,
+              ),
               child: InkWell(
                 onTap: () {
                   Scaffold.of(context).openDrawer(); // Opens drawer if added
@@ -319,7 +417,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   padding: const EdgeInsets.all(8),
                   child: const Icon(
                     Icons.menu,
-                    color: Color(0xFFFFCA26), // Yellow icon (same as background)
+                    color: Color(
+                      0xFFFFCA26,
+                    ), // Yellow icon (same as background)
                   ),
                 ),
               ),
@@ -349,13 +449,27 @@ class _ParentDashboardState extends State<ParentDashboard> {
                         const SizedBox(height: 160), // space for image
                         Text(
                           "\$${totalDepositedFunds.toStringAsFixed(2)}", // Static placeholder
-                          style: GoogleFonts.fredoka(fontSize: 46, fontWeight: FontWeight.bold, color: Colors.black),
+                          style: GoogleFonts.fredoka(
+                            fontSize: 46,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
-                        Text("Total Deposited Funds", style: GoogleFonts.fredoka(fontSize: 17.3, color: Colors.black)),
+                        Text(
+                          "Total Deposited Funds",
+                          style: GoogleFonts.fredoka(
+                            fontSize: 17.3,
+                            color: Colors.black,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  Positioned(top: 50, left: 12, child: Image.asset('assets/pig.png', width: 150)),
+                  Positioned(
+                    top: 50,
+                    left: 12,
+                    child: Image.asset('assets/pig.png', width: 150),
+                  ),
                   Positioned(
                     top: 60,
                     right: 70,
@@ -364,11 +478,19 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       children: [
                         Text(
                           "Children",
-                          style: GoogleFonts.fredoka(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.fredoka(
+                            fontSize: 18,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           "$totalChildren",
-                          style: GoogleFonts.fredoka(fontSize: 90.2, fontWeight: FontWeight.bold, color: Colors.black),
+                          style: GoogleFonts.fredoka(
+                            fontSize: 90.2,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                       ],
                     ),
@@ -393,7 +515,11 @@ class _ParentDashboardState extends State<ParentDashboard> {
                       // The Title
                       Text(
                         "Kid's Info",
-                        style: GoogleFonts.fredoka(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.black),
+                        style: GoogleFonts.fredoka(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
                       const SizedBox(height: 12),
 
@@ -407,26 +533,46 @@ class _ParentDashboardState extends State<ParentDashboard> {
                             final kidId = kid['id'];
                             final kidName = kid['name'];
                             final kidAvatar = kid['avatar'];
-                            final tileColor = tileColors[index % tileColors.length];
+                            final tileColor =
+                                tileColors[index % tileColors.length];
                             return Container(
                               margin: const EdgeInsets.only(bottom: 14),
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: tileColor,
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.black, width: 2),
+                                border: Border.all(
+                                  color: Colors.black,
+                                  width: 2,
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  CircleAvatar(backgroundImage: AssetImage(kid['avatar']), radius: 24),
+                                  CircleAvatar(
+                                    backgroundImage: AssetImage(kid['avatar']),
+                                    radius: 24,
+                                  ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(kid['name'], style: GoogleFonts.fredoka(fontSize: 23, fontWeight: FontWeight.bold)),
+                                        Text(
+                                          kid['first_name'],
+                                          style: GoogleFonts.fredoka(
+                                            fontSize: 23,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                         const SizedBox(height: 2),
-                                        Text("\$${kid['balance'].toStringAsFixed(2)}", style: GoogleFonts.fredoka(fontSize: 23, color: Colors.black87)),
+                                        Text(
+                                          "\$${kid['total_amount_left'].toStringAsFixed(2)}",
+                                          style: GoogleFonts.fredoka(
+                                            fontSize: 23,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -434,41 +580,103 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                     children: [
                                       ElevatedButton(
                                         onPressed: () {
-                                          if (kidId == null || kidName == null || kidAvatar == null) {
-                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Missing kid information")));
+                                          if (kidId == null ||
+                                              kidName == null ||
+                                              kidAvatar == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "Missing kid information",
+                                                ),
+                                              ),
+                                            );
                                             return;
                                           } else {
-                                            showManageFundsModal(context, kidName, kidId, kidAvatar);
+                                            showManageFundsModal(
+                                              context,
+                                              kidName,
+                                              kidId,
+                                              kidAvatar,
+                                            );
                                           }
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFFFFCA26),
+                                          backgroundColor: const Color(
+                                            0xFFFFCA26,
+                                          ),
                                           foregroundColor: Colors.black,
-                                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 2),
-                                          side: const BorderSide(color: Colors.black, width: 2),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 15,
+                                            vertical: 2,
+                                          ),
+                                          side: const BorderSide(
+                                            color: Colors.black,
+                                            width: 2,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
                                         ),
-                                        child: Text("Manage Funds", style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold)),
+                                        child: Text(
+                                          "Manage Funds",
+                                          style: GoogleFonts.fredoka(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ),
                                       const SizedBox(height: 6),
                                       OutlinedButton(
                                         onPressed: () {
-                                          if (kidId == null || kidName == null || kidAvatar == null) {
-                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Missing kid information")));
+                                          if (kidId == null ||
+                                              kidName == null ||
+                                              kidAvatar == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "Missing kid information",
+                                                ),
+                                              ),
+                                            );
                                             return;
                                           }
 
-                                          showChoresModal(context, kidName, kidId, kidAvatar);
+                                          showChoresModal(
+                                            context,
+                                            kidName,
+                                            kidId,
+                                            kidAvatar,
+                                          );
                                         },
                                         style: OutlinedButton.styleFrom(
                                           backgroundColor: Colors.white,
-                                          side: const BorderSide(color: Colors.black, width: 2),
-                                          padding: const EdgeInsets.symmetric(horizontal: 33, vertical: 1),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          side: const BorderSide(
+                                            color: Colors.black,
+                                            width: 2,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 33,
+                                            vertical: 1,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
                                         ),
                                         child: Text(
                                           "Chores",
-                                          style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                                          style: GoogleFonts.fredoka(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
                                         ),
                                       ),
                                     ],

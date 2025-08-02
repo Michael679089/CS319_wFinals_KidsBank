@@ -13,7 +13,12 @@ class CreateKidAccountPage extends StatefulWidget {
   final String parent_id;
   final bool didUserCameFromDashboard;
 
-  const CreateKidAccountPage({super.key, required this.user_id, required this.parent_id, required this.didUserCameFromDashboard});
+  const CreateKidAccountPage({
+    super.key,
+    required this.user_id,
+    required this.parent_id,
+    required this.didUserCameFromDashboard,
+  });
 
   @override
   State<CreateKidAccountPage> createState() => _CreateKidAccountPageState();
@@ -87,7 +92,10 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                       });
                       Navigator.of(context).pop();
                     },
-                    child: CircleAvatar(backgroundImage: AssetImage('assets/avatar$i.png'), radius: 30),
+                    child: CircleAvatar(
+                      backgroundImage: AssetImage('assets/avatar$i.png'),
+                      radius: 30,
+                    ),
                   ),
               ],
             ),
@@ -105,7 +113,11 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: Color(0xFF4E88CF), onPrimary: Colors.white, onSurface: Colors.black),
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF4E88CF),
+            onPrimary: Colors.white,
+            onSurface: Colors.black,
+          ),
         ),
         child: child!,
       ),
@@ -129,10 +141,18 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Text(
               message,
-              style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+              style: TextStyle(
+                fontFamily: GoogleFonts.fredoka().fontFamily,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
             ),
           ),
         ),
@@ -170,7 +190,9 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
     try {
       var firstName = firstNameController.text;
       var lastName = lastNameController.text;
-      var dateOfBirth = DateTime.parse(dateOfBirthController.text); // year-month-day 2015-01-28
+      var dateOfBirth = DateTime.parse(
+        dateOfBirthController.text,
+      ); // year-month-day 2015-01-28
       var pincode = pincodeController.text;
       var avatar = selectedAvatar;
       var user_id = AuthService.getCurrentUser()!.uid;
@@ -187,8 +209,13 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
       kidId = await FirestoreService.createKid(newKidModel);
 
       if (kidId != null) {
-        UtilityTopSnackBar.show(message: 'Kid account created successfully!', context: context);
-        debugPrint("createKidsAccountPage - succesfully created kid, moving to creating kids_payment_info");
+        UtilityTopSnackBar.show(
+          message: 'Kid account created successfully!',
+          context: context,
+        );
+        debugPrint(
+          "createKidsAccountPage - succesfully created kid, moving to creating kids_payment_info",
+        );
 
         // Step 2: Let's now add the kids payment info for this child
         try {
@@ -201,24 +228,37 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
             total_amount_left: 0,
             family_id: family_id,
           );
-          var str = await FirestoreService.createKidPaymentInfo(newKidPaymentInfoModel);
+          var str = await FirestoreService.createKidPaymentInfo(
+            newKidPaymentInfoModel,
+          );
           if (str.isEmpty) {
             debugPrint("CreateKidsAccountPage - str is empty");
             throw Error;
           }
 
-          UtilityTopSnackBar.show(message: 'Kid Payment Info created successfully!', context: context);
-          debugPrint("createKidsAccountPage - succesfully created kid payment info.");
+          UtilityTopSnackBar.show(
+            message: 'Kid Payment Info created successfully!',
+            context: context,
+          );
+          debugPrint(
+            "createKidsAccountPage - succesfully created kid payment info.",
+          );
         } catch (e) {
           debugPrint("$e");
           return;
         }
 
-        debugPrint("createKidsAccountPage - successfully creating a kid and a kidpaymentinfo");
+        debugPrint(
+          "createKidsAccountPage - successfully creating a kid and a kidpaymentinfo",
+        );
 
         navigator.pushReplacementNamed(
           "/kids-setup-page",
-          arguments: {"family-id": family_id, "parent-id": parentId, "came-from-parent-dashboard": _didUserCameFromParentDashboard},
+          arguments: {
+            "family-id": family_id,
+            "parent-id": parentId,
+            "came-from-parent-dashboard": _didUserCameFromParentDashboard,
+          },
         );
       } else {
         debugPrint("ERROR: kid id is null");
@@ -242,7 +282,10 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
               Stack(
                 alignment: Alignment.bottomRight,
                 children: [
-                  CircleAvatar(backgroundImage: AssetImage(selectedAvatar), radius: 60),
+                  CircleAvatar(
+                    backgroundImage: AssetImage(selectedAvatar),
+                    radius: 60,
+                  ),
                   Positioned(
                     bottom: 0,
                     right: 4,
@@ -250,8 +293,15 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                       onTap: _showAvatarPicker,
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.purple),
-                        child: const Icon(Icons.edit, color: Colors.white, size: 20),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.purple,
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -265,7 +315,11 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Set Up Kid’s Account',
-                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily),
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: GoogleFonts.fredoka().fontFamily,
+                    ),
                   ),
                 ),
               ),
@@ -286,10 +340,17 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                     _buildField(lastNameController),
                     const SizedBox(height: 20),
                     _buildLabel('Date of birth'),
-                    _buildField(dateOfBirthController, onTap: _pickDate, readOnly: true),
+                    _buildField(
+                      dateOfBirthController,
+                      onTap: _pickDate,
+                      readOnly: true,
+                    ),
                     const SizedBox(height: 20),
                     _buildLabel('Phone Number #(ex: +63)'),
-                    _buildField(phoneNumController, keyboardType: TextInputType.phone),
+                    _buildField(
+                      phoneNumController,
+                      keyboardType: TextInputType.phone,
+                    ),
                     const SizedBox(height: 20),
                     _buildLabel('Password'),
                     _buildField(pincodeController, obscure: true),
@@ -299,10 +360,15 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _handleSubmit,
-                        style: Utilities().ourButtonStyle1(),
+                        style: Utilities.ourButtonStyle1(),
                         child: Text(
                           'Create Account',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.black),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: GoogleFonts.fredoka().fontFamily,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ),
@@ -321,7 +387,11 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
       alignment: Alignment.centerLeft,
       child: Text(
         text,
-        style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, fontWeight: FontWeight.w700, fontSize: 20),
+        style: TextStyle(
+          fontFamily: GoogleFonts.fredoka().fontFamily,
+          fontWeight: FontWeight.w700,
+          fontSize: 20,
+        ),
       ),
     );
   }
@@ -348,8 +418,15 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
         keyboardType: keyboardType,
         onTap: onTap,
         obscuringCharacter: '*',
-        style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, fontSize: 24),
-        decoration: const InputDecoration(counterText: "", contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12), border: InputBorder.none),
+        style: TextStyle(
+          fontFamily: GoogleFonts.fredoka().fontFamily,
+          fontSize: 24,
+        ),
+        decoration: const InputDecoration(
+          counterText: "",
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          border: InputBorder.none,
+        ),
       ),
     );
   }

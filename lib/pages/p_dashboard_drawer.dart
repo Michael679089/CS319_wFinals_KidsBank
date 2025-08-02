@@ -10,7 +10,13 @@ class ParentDrawer extends StatelessWidget {
   final String parentId;
 
   // Constructor of our drawer navbar page
-  const ParentDrawer({super.key, required this.selectedPage, required this.familyName, required this.user_id, required this.parentId});
+  const ParentDrawer({
+    super.key,
+    required this.selectedPage,
+    required this.familyName,
+    required this.user_id,
+    required this.parentId,
+  });
 
   void _handleConfirmLogOut(BuildContext context) {
     var navigator = Navigator.of(context);
@@ -21,14 +27,21 @@ class ParentDrawer extends StatelessWidget {
         title: const Text("Log out?"),
         content: const Text("Are you sure you want to log out?"),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("Cancel"),
+          ),
           ElevatedButton(
             onPressed: () {
               navigator.pop(); // close dialog
 
               navigator.pushReplacementNamed(
                 "/account-selector-page",
-                arguments: {"family-name": familyName, "user-id": user_id, "there-are-parent-in-family": true},
+                arguments: {
+                  "family-name": familyName,
+                  "user-id": user_id,
+                  "there-are-parent-in-family": true,
+                },
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -54,14 +67,25 @@ class ParentDrawer extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black,
+                  ),
                   padding: const EdgeInsets.all(5),
-                  child: const Icon(Icons.menu, color: Color(0xFFFFCA26), size: 28),
+                  child: const Icon(
+                    Icons.menu,
+                    color: Color(0xFFFFCA26),
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   "Menu",
-                  style: GoogleFonts.fredoka(fontSize: 44, fontWeight: FontWeight.bold, color: Colors.black),
+                  style: GoogleFonts.fredoka(
+                    fontSize: 44,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                 ),
               ],
             ),
@@ -78,7 +102,11 @@ class ParentDrawer extends StatelessWidget {
               if (selectedPage != 'dashboard') {
                 navigator.pushReplacementNamed(
                   "/parent-dashboard-page",
-                  arguments: {"parent-id": parentId, "family-name": familyName, "family-user-id": user_id},
+                  arguments: {
+                    "parent-id": parentId,
+                    "family-name": familyName,
+                    "family-user-id": user_id,
+                  },
                 );
               }
             },
@@ -91,10 +119,16 @@ class ParentDrawer extends StatelessWidget {
               if (selectedPage != 'notifications') {
                 navigator.pushReplacementNamed(
                   "/parent-notifications-page",
-                  arguments: {"family-name": familyName, "family-user-id": user_id, "parent-id": parentId},
+                  arguments: {
+                    "family-name": familyName,
+                    "family-user-id": user_id,
+                    "parent-id": parentId,
+                  },
                 );
 
-                debugPrint("parentDashboardDrawer - redirected to notifications - check: $parentId");
+                debugPrint(
+                  "parentDashboardDrawer - redirected to notifications - check: $parentId",
+                );
               }
             },
           ),
@@ -104,7 +138,14 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'chores',
             onTap: () {
               if (selectedPage != 'chores') {
-                navigator.pushReplacementNamed("/parent-chores-page", arguments: {"parent-id": parentId, "family-name": familyName, "family-user-id": user_id});
+                navigator.pushReplacementNamed(
+                  "/parent-chores-page",
+                  arguments: {
+                    "parent-id": parentId,
+                    "family-name": familyName,
+                    "family-user-id": user_id,
+                  },
+                );
               }
             },
           ),
@@ -114,17 +155,33 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'make-new-child-account',
             onTap: () {
               if (selectedPage != 'make-new-child-account') {
+                debugPrint(
+                  "PDashboard@Drawer - selected make new child account",
+                );
+                debugPrint("PDashboard@Drawer - parent id: $parentId");
                 navigator.pushNamed(
                   "/kids-setup-page",
-                  arguments: {"family-name": familyName, "family-user-id": user_id, "came-from-parent-dashboard": true, "parent-id": parentId},
+                  arguments: {
+                    "family-name": familyName,
+                    "user-id": user_id,
+                    "came-from-parent-dashboard": true,
+                    "parent-id": parentId,
+                  },
                 );
               }
             },
           ),
-          _buildMenuItem(context, label: "Logout", onTap: () => _handleConfirmLogOut(context)),
+          _buildMenuItem(
+            context,
+            label: "Logout",
+            onTap: () => _handleConfirmLogOut(context),
+          ),
           const Spacer(),
           Center(
-            child: Padding(padding: const EdgeInsets.only(bottom: 20), child: Image.asset('assets/owl2.png', width: 200)),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Image.asset('assets/owl2.png', width: 200),
+            ),
           ),
         ],
       ),
@@ -133,7 +190,12 @@ class ParentDrawer extends StatelessWidget {
 
   // Widgets for BUILD
 
-  Widget _buildMenuItem(BuildContext context, {required String label, required VoidCallback onTap, bool isSelected = false}) {
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required String label,
+    required VoidCallback onTap,
+    bool isSelected = false,
+  }) {
     return ListTile(
       title: Row(
         children: [
@@ -144,7 +206,11 @@ class ParentDrawer extends StatelessWidget {
             ),
           Text(
             label,
-            style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 28, color: Colors.black),
+            style: GoogleFonts.fredoka(
+              fontWeight: FontWeight.bold,
+              fontSize: 28,
+              color: Colors.black,
+            ),
           ),
         ],
       ),

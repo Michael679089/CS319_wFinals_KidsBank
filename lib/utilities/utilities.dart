@@ -7,7 +7,7 @@ class Utilities {
   }
 
   // Widgets
-  ButtonStyle ourButtonStyle1() {
+  static ButtonStyle ourButtonStyle1() {
     return ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFF4E88CF),
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -16,9 +16,18 @@ class Utilities {
     );
   }
 
-  ButtonStyle ourButtonStyle2() {
+  static ButtonStyle ourButtonStyle2() {
     return ElevatedButton.styleFrom(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      side: const BorderSide(color: Colors.black, width: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    );
+  }
+
+  static ButtonStyle ourButtonStyle3() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color.fromARGB(255, 240, 83, 83),
       padding: const EdgeInsets.symmetric(vertical: 16),
       side: const BorderSide(color: Colors.black, width: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -31,7 +40,12 @@ class UtilityTopSnackBar {
 
   UtilityTopSnackBar(String s, BuildContext context);
 
-  static void show({required BuildContext context, required String message, bool isError = false, Duration duration = const Duration(seconds: 3)}) {
+  static void show({
+    required BuildContext context,
+    required String message,
+    bool isError = false,
+    Duration duration = const Duration(seconds: 3),
+  }) {
     // Remove any existing snackbar before showing a new one
     _overlayEntry?.remove();
     _overlayEntry = null;
@@ -49,10 +63,18 @@ class UtilityTopSnackBar {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Text(
               message,
-              style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+              style: TextStyle(
+                fontFamily: GoogleFonts.fredoka().fontFamily,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
             ),
           ),
         ),
@@ -72,9 +94,14 @@ class UtilitiesKidsDashboardNavigation {
   static var selectedPage = "";
   static var currentPageIndex = 0;
 
-  static final WidgetStateProperty<TextStyle?> labelTextStyle = WidgetStateProperty.all(TextStyle(color: Colors.white));
+  static final WidgetStateProperty<TextStyle?> labelTextStyle =
+      WidgetStateProperty.all(TextStyle(color: Colors.white));
 
-  static final _myHamburgerIcon = SizedBox(height: 24, width: 24, child: Image.asset('assets/hamburger_icon.png'));
+  static final _myHamburgerIcon = SizedBox(
+    height: 24,
+    width: 24,
+    child: Image.asset('assets/hamburger_icon.png'),
+  );
 
   static final List<NavigationDestination> myDestinations = [
     NavigationDestination(
@@ -99,7 +126,12 @@ class UtilitiesKidsDashboardNavigation {
     ),
   ];
 
-  static void handleKidDashboardNavigationBottomBar({required int index, required String kidId, required String familyUserId, required BuildContext context}) {
+  static void handleKidDashboardNavigationBottomBar({
+    required int index,
+    required String kidId,
+    required String familyUserId,
+    required BuildContext context,
+  }) {
     var navigator = Navigator.of(context);
     currentPageIndex = index;
 
@@ -107,25 +139,37 @@ class UtilitiesKidsDashboardNavigation {
       case 0:
         if (selectedPage != "dashboard") {
           selectedPage = "dashboard";
-          navigator.pushReplacementNamed("/kids-dashboard-page", arguments: {"kid-id": kidId, "family-user-id": familyUserId});
+          navigator.pushReplacementNamed(
+            "/kids-dashboard-page",
+            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
+          );
         }
         break;
       case 1:
         if (selectedPage != "chores") {
           selectedPage = "chores";
-          navigator.pushReplacementNamed("/kids-chores-page", arguments: {"kid-id": kidId, "family-user-id": familyUserId});
+          navigator.pushReplacementNamed(
+            "/kids-chores-page",
+            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
+          );
         }
         break;
       case 2:
         if (selectedPage != "notifications") {
           selectedPage = "notifications";
-          navigator.pushReplacementNamed("/kids-notifications-page", arguments: {"kid-id": kidId, "family-user-id": familyUserId});
+          navigator.pushReplacementNamed(
+            "/kids-notifications-page",
+            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
+          );
         }
         break;
       case 3:
         if (selectedPage != "logout") {
           selectedPage = "logout";
-          navigator.pushReplacementNamed("/account-selector-page", arguments: {"kid-id": kidId, "family-user-id": familyUserId});
+          navigator.pushReplacementNamed(
+            "/account-selector-page",
+            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
+          );
         }
         break;
     }

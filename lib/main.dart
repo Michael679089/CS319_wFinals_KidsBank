@@ -19,12 +19,17 @@ import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
 import 'pages/welcomepage.dart';
 import 'firebase_options.dart'; // auto-generated file by flutterfire CLI
 
-const bool isUnauthenticatedDebug = bool.fromEnvironment('DEBUG_UNAUTHENTICATED', defaultValue: false);
+const bool isUnauthenticatedDebug = bool.fromEnvironment(
+  'DEBUG_UNAUTHENTICATED',
+  defaultValue: false,
+);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  debugPrint("Initialized the firebase to the currentPlatform ${DefaultFirebaseOptions.currentPlatform.appId}");
+  debugPrint(
+    "Initialized the firebase to the currentPlatform ${DefaultFirebaseOptions.currentPlatform.appId}",
+  );
 
   if (isUnauthenticatedDebug) {
     // Force unauthenticated state
@@ -43,7 +48,8 @@ class MissingRouteArgumentException implements Exception {
   MissingRouteArgumentException(this.routeName, this.missingArgs);
 
   @override
-  String toString() => 'Missing required arguments for $routeName: $missingArgs';
+  String toString() =>
+      'Missing required arguments for $routeName: $missingArgs';
 }
 
 class MyApp extends StatelessWidget {
@@ -66,7 +72,14 @@ class MyApp extends StatelessWidget {
 
         // Helper function to validate required arguments
         void validateArgs(String routeName, List<String> requiredKeys) {
-          final missingArgs = requiredKeys.where((key) => !args.containsKey(key) || args[key] == null || args[key] == '').toList();
+          final missingArgs = requiredKeys
+              .where(
+                (key) =>
+                    !args.containsKey(key) ||
+                    args[key] == null ||
+                    args[key] == '',
+              )
+              .toList();
           if (missingArgs.isNotEmpty) {
             throw MissingRouteArgumentException(routeName, missingArgs);
           }
@@ -77,39 +90,84 @@ class MyApp extends StatelessWidget {
             /// AUTHENTICATION PAGES:
             case '/register-page':
               validateArgs(settings.name as String, ["is-broken-register"]);
-              page = RegisterAccountPage(is_broken_register: args["is-broken-register"]);
+              page = RegisterAccountPage(
+                is_broken_register: args["is-broken-register"],
+              );
               break;
             case '/verify-email-page':
-              validateArgs(settings.name as String, ["new-family-model", "new-family-payment-info-model"]);
-              page = VerificationEmailPage(newFamilyModel: args["new-family-model"], newFamilyPaymentInfoModel: args["new-family-payment-info-model"]);
+              validateArgs(settings.name as String, [
+                "new-family-model",
+                "new-family-payment-info-model",
+              ]);
+              page = VerificationEmailPage(
+                newFamilyModel: args["new-family-model"],
+                newFamilyPaymentInfoModel:
+                    args["new-family-payment-info-model"],
+              );
               break;
             case '/account-selector-page':
-              validateArgs(settings.name as String, ["user-id", "there-are-parent-in-family"]);
-              page = AccountSelectorPage(user_id: args["user-id"], there_are_parents_in_family: args["there-are-parent-in-family"]);
+              validateArgs(settings.name as String, [
+                "user-id",
+                "there-are-parent-in-family",
+              ]);
+              page = AccountSelectorPage(
+                user_id: args["user-id"],
+                there_are_parents_in_family: args["there-are-parent-in-family"],
+              );
               break;
 
             ///
             /// Below will be the KID's PAGES:
             ///
             case '/kids-setup-page':
-              validateArgs('/kids-setup-page', ['family-id', 'came-from-parent-dashboard']);
-              page = KidsSetupPage(family_id: args['family-id'], cameFromParentDashboard: args['came-from-parent-dashboard'] ?? false);
+              validateArgs('/kids-setup-page', [
+                'user-id',
+                'came-from-parent-dashboard',
+              ]);
+              page = KidsSetupPage(
+                user_id: args['user-id'],
+                cameFromParentDashboard:
+                    args['came-from-parent-dashboard'] ?? false,
+              );
               break;
             case '/kids-dashboard-page':
-              validateArgs('/kids-dashboard-page', ['kid-id', 'family-user-id']);
-              page = KidsDashboard(kidId: args['kid-id'], familyUserId: args['family-user-id']);
+              validateArgs('/kids-dashboard-page', [
+                'kid-id',
+                'family-user-id',
+              ]);
+              page = KidsDashboard(
+                kidId: args['kid-id'],
+                familyUserId: args['family-user-id'],
+              );
               break;
             case '/kids-notifications-page':
-              validateArgs('/kids-notifications-page', ['kid-id', 'family-user-id']);
-              page = KidsNotificationsPage(kidId: args['kid-id'], familyUserId: args['family-user-id']);
+              validateArgs('/kids-notifications-page', [
+                'kid-id',
+                'family-user-id',
+              ]);
+              page = KidsNotificationsPage(
+                kidId: args['kid-id'],
+                familyUserId: args['family-user-id'],
+              );
               break;
             case '/kids-chores-page':
               validateArgs('/kids-chores-page', ['kid-id', 'family-user-id']);
-              page = KidsChoresPage(kid_id: args['kid-id'], familyUserId: args['family-user-id']);
+              page = KidsChoresPage(
+                kid_id: args['kid-id'],
+                familyUserId: args['family-user-id'],
+              );
               break;
             case '/create-kids-account-page':
-              validateArgs('/create-kids-account-page', ['parent-id', 'user-id', "came-from-parent-dashboard"]);
-              page = CreateKidAccountPage(parent_id: args['parent-id'], user_id: args['user-id'], didUserCameFromDashboard: args["came-from-parent-dashboard"]);
+              validateArgs('/create-kids-account-page', [
+                'parent-id',
+                'user-id',
+                "came-from-parent-dashboard",
+              ]);
+              page = CreateKidAccountPage(
+                parent_id: args['parent-id'],
+                user_id: args['user-id'],
+                didUserCameFromDashboard: args["came-from-parent-dashboard"],
+              );
               break;
 
             ///
@@ -121,24 +179,44 @@ class MyApp extends StatelessWidget {
               break;
             case '/parent-login-page':
               validateArgs(settings.name as String, ["parent-id", "user-id"]);
-              page = ParentLoginPage(parent_id: args["parent-id"], user_id: args["user-id"]);
+              page = ParentLoginPage(
+                parent_id: args["parent-id"],
+                user_id: args["user-id"],
+              );
               break;
             case '/parent-dashboard-page':
               validateArgs('/parent-dashboard-page', ['user-id', 'parent-id']);
-              page = ParentDashboard(user_id: args['user-id'], parent_id: args['parent-id']);
+              page = ParentDashboard(
+                user_id: args['user-id'],
+                parent_id: args['parent-id'],
+              );
               break;
             case '/parent-notifications-page':
-              validateArgs('/parent-notifications-page', ['family-user-id', 'parent-id']);
-              page = ParentNotificationsPage(familyUserId: args['family-user-id'], parentId: args['parent-id']);
+              validateArgs('/parent-notifications-page', [
+                'family-user-id',
+                'parent-id',
+              ]);
+              page = ParentNotificationsPage(
+                familyUserId: args['family-user-id'],
+                parentId: args['parent-id'],
+              );
               break;
             case '/parent-chores-page':
-              validateArgs('/parent-chores-page', ['family-user-id', 'parent-id']);
-              page = ParentChoresPage(user_id: args['family-user-id'], parentId: args['parent-id']);
+              validateArgs('/parent-chores-page', [
+                'family-user-id',
+                'parent-id',
+              ]);
+              page = ParentChoresPage(
+                user_id: args['family-user-id'],
+                parentId: args['parent-id'],
+              );
               break;
             default:
               page = Scaffold(
                 appBar: AppBar(title: const Text('Route Not Found')),
-                body: Center(child: Text('No route defined for ${settings.name}')),
+                body: Center(
+                  child: Text('No route defined for ${settings.name}'),
+                ),
               );
           }
           return MaterialPageRoute(builder: (_) => page, settings: settings);
