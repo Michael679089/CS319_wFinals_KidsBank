@@ -255,6 +255,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
         navigator.pushReplacementNamed(
           "/kids-setup-page",
           arguments: {
+            "user-id": user.uid,
             "family-id": family_id,
             "parent-id": parentId,
             "came-from-parent-dashboard": _didUserCameFromParentDashboard,

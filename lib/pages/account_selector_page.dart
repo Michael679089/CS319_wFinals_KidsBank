@@ -340,57 +340,70 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
             ),
 
           // Kids Container
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black),
-              borderRadius: BorderRadius.circular(8),
+Container(
+  margin: const EdgeInsets.all(20),
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    border: Border.all(color: Colors.black, width: 2),
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      kidsLabelText,
+      const SizedBox(height: 16),
+
+      // Smaller scrollable grid of kids (height adjusted to fix overflow)
+      SizedBox(
+        height: 100,
+        child: Scrollbar(
+          thumbVisibility: true,
+          radius: const Radius.circular(10),
+          child: GridView.builder(
+            itemCount: Kids_List.length,
+            scrollDirection: Axis.vertical,
+            physics: const BouncingScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.85,
             ),
-            margin: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-            child: Column(
-              children: [
-                kidsLabelText,
-                const SizedBox(height: 10),
-                GridView.count(
-                  shrinkWrap: true,
-                  padding: EdgeInsetsGeometry.fromLTRB(0, 0, 0, 20),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  crossAxisCount: 3,
-                  childAspectRatio: 1, // Adjust this ratio as needed
-                  mainAxisSpacing: 10, // Vertical spacing between items
-                  crossAxisSpacing: 10, // Horizontal spacing between items
-                  children: Kids_List.map(
-                    (kid) => Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Kid's Avatar
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(
-                            50,
-                          ), // Circular avatar
-                          child: Image.asset(
-                            kid.avatar_file_path,
-                            width: 80, // Fixed size for consistency
-                            height: 80,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Kid's Name
-                        Text(
-                          kid.first_name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                        ),
-                      ],
+            itemBuilder: (context, index) {
+              final kid = Kids_List[index];
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(40),
+                    child: Image.asset(
+                      kid.avatar_file_path,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
                     ),
-                  ).toList(),
-                ),
-              ],
-            ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    kid.first_name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
+        ),
+      ),
+    ],
+  ),
+),
+
 
           // Login Button
           Container(
