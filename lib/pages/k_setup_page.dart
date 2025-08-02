@@ -1,23 +1,18 @@
 import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
+import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 import 'login_page.dart';
 
 class KidsSetupPage extends StatefulWidget {
   final bool cameFromParentDashboard;
-  final String parentId;
+  final String family_id;
 
-  const KidsSetupPage({
-    super.key,
-    required this.cameFromParentDashboard,
-    required this.parentId,
-  });
+  const KidsSetupPage({super.key, required this.cameFromParentDashboard, required this.family_id});
 
   @override
   State<KidsSetupPage> createState() => _KidsSetupPageState();
@@ -29,7 +24,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
   String familyUserId = '';
   String parentId = '';
 
-  bool _didUserCameFromParentDashboard = false;
+  String? user_id;
 
   // INITSTATE Function:
 
@@ -42,44 +37,51 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
     });
   }
 
+  //
   // Other Functions:
+  //
 
+  // loading information functions:
   Future<void> _loadParentInfo() async {
-    final familyUser = FirebaseAuth.instance.currentUser;
-    if (familyUser != null) {
-      // Step 1: Try to get the Parent that got here name.
-      final myModalRoute = ModalRoute.of(context);
+    debugPrint("KSetupPage - loadParentInfo Function START");
+    var user = AuthService.getCurrentUser();
 
-      if (myModalRoute == null) {
-        debugPrint("kidsSetupPage - ERROR: myModalRoute was null");
-        return;
-      }
-      final args = myModalRoute.settings.arguments as Map<String, dynamic>;
-      var newParentId = args["parent-id"] as String;
+    if (user != null) {
+      user_id = user.uid;
+      if (user_id != null) {
+        var the_family_id = widget.family_id;
+        var didUserCameFromParentDashboard = widget.cameFromParentDashboard;
 
-      // 1 - making sure user didn't came from dashboard if it was available
-      try {
-        _didUserCameFromParentDashboard =
-            args["came-from-parent-dashboard"] as bool;
-      } catch (e) {
-        debugPrint("kidsSetupPage - parent didn't come from dashboard");
-      }
+        ParentModel? current_parent;
+        try {
+          current_parent = await FirestoreService.readParent(the_family_id);
+        } catch (e) {
+          debugPrint("KSetupPage - failed to load current parent");
+        }
 
-      var parentCollection = FirebaseFirestore.instance.collection("parents");
-      var parentDoc = await parentCollection.doc(newParentId).get();
-      var lastName =
-          "${parentDoc['lastName']?.toString().substring(0, 1).toUpperCase()}.";
-      var newParentName = "${parentDoc['firstName']}, $lastName.";
-      var newParentAvatar = parentDoc['avatarFilePath'];
-      var newFamilyUserId = familyUser.uid;
+        if (current_parent != null) {
+          var parent_last_name = current_parent.last_name;
+          var parent_last_name_parsed = parent_last_name.toString().substring(0, 1).toUpperCase();
+          var parent_first_name = current_parent.first_name;
+          var parent_first_name_parsed = parent_first_name.toString().substring(0, 1).toUpperCase();
+          var parent_full_name = "$parent_first_name_parsed $parent_last_name_parsed";
 
-      if (parentDoc.exists) {
-        setState(() {
-          parentName = newParentName;
-          parentAvatar = newParentAvatar;
-          familyUserId = newFamilyUserId;
-          parentId = newParentId;
-        });
+          var parent_avatar_file_path = current_parent.avatar_file_path;
+          var parent_id = current_parent.id as String;
+
+          var user = AuthService.getCurrentUser();
+
+          if (user != null) {
+            var newUserId = user.uid;
+
+            setState(() {
+              parentName = parent_full_name;
+              parentAvatar = parent_avatar_file_path;
+              user_id = newUserId;
+              parentId = parent_id;
+            });
+          }
+        }
       }
     }
   }
@@ -99,20 +101,22 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
     }
   }
 
-  void addKid() async {
-    var navigator = Navigator.of(context);
+  // -----
 
-    navigator.pushNamed(
-      '/create-kids-account-page',
-      arguments: {
-        "parent-id": parentId,
-        "came-from-parent-dashboard": _didUserCameFromParentDashboard,
-        "family-user-id": familyUserId,
-      },
-    );
-    debugPrint(
-      "kidsSetupPage - addKids BTN pressed, redirected to create-kids-account-page",
-    );
+  void _handleAddKidFunction() async {
+    debugPrint("KSetupPage - _handleAddKidFunction START");
+    debugPrint("KSetupPage - add kid button was pressed");
+    var navigator = Navigator.of(context);
+    var user = AuthService.getCurrentUser();
+
+    if (user != null) {
+      debugPrint("KSetupPage - addKids BTN pressed, redirected to create-kids-account-page");
+      navigator.pushNamed(
+        '/create-kids-account-page',
+        arguments: {"parent-id": parentId, "came-from-parent-dashboard": widget.cameFromParentDashboard, "family-user-id": user.uid},
+      );
+    }
+    debugPrint("KSetupPage - _handleAddKidFunction END");
   }
 
   //
@@ -130,14 +134,9 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
           return;
         }
 
-        if (_didUserCameFromParentDashboard) {
-          navigator.pushReplacementNamed(
-            "/parent-dashboard-page",
-            arguments: {"family-user-id": familyUserId, "parent-id": parentId},
-          );
-          debugPrint(
-            "kidsSetupPage - User that came from parent dashboard pressed back on phone - redirected to Parent-Dashbaord-Page",
-          );
+        if (widget.cameFromParentDashboard) {
+          navigator.pushReplacementNamed("/parent-dashboard-page", arguments: {"family-user-id": familyUserId, "parent-id": parentId});
+          debugPrint("kidsSetupPage - User that came from parent dashboard pressed back on phone - redirected to Parent-Dashbaord-Page");
           return;
         }
 
@@ -145,22 +144,14 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Log Out'),
-            content: const Text(
-              'Do you want to log out and return to the login page?',
-            ),
+            content: const Text('Do you want to log out and return to the login page?'),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('No'),
-              ),
+              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
               TextButton(
                 onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
+                  await AuthService.logoutAccount();
                   if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                      (route) => false,
-                    );
+                    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (route) => false);
                   }
                 },
                 child: const Text('Yes'),
@@ -170,10 +161,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
         );
 
         if (shouldLogout == true && context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-            (route) => false,
-          );
+          Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (route) => false);
         }
       },
       child: Scaffold(
@@ -189,31 +177,18 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      backgroundImage: parentAvatar.isNotEmpty
-                          ? AssetImage(parentAvatar)
-                          : const AssetImage('assets/avatar1.png'),
-                      radius: 50,
-                    ),
+                    CircleAvatar(backgroundImage: parentAvatar.isNotEmpty ? AssetImage(parentAvatar) : const AssetImage('assets/avatar1.png'), radius: 50),
                     const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           parentName.isNotEmpty ? parentName : "Parent",
-                          style: TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: GoogleFonts.fredoka().fontFamily,
-                          ),
+                          style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily),
                         ),
                         Text(
                           "[Parent]",
-                          style: TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: GoogleFonts.fredoka().fontFamily,
-                          ),
+                          style: TextStyle(fontSize: 34, fontWeight: FontWeight.w600, fontFamily: GoogleFonts.fredoka().fontFamily),
                         ),
                       ],
                     ),
@@ -228,11 +203,7 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
                   "Set up kid’s account",
-                  style: TextStyle(
-                    fontSize: 28.8,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: GoogleFonts.fredoka().fontFamily,
-                  ),
+                  style: TextStyle(fontSize: 28.8, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily),
                 ),
               ),
 
@@ -252,35 +223,27 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                     child: FutureBuilder<List<KidModel>>(
                       future: _loadKids(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
                         }
 
-                        final List<KidModel> kids =
-                            snapshot.data as List<KidModel>;
+                        final List<KidModel> kids = snapshot.data as List<KidModel>;
 
                         return ListView(
                           children: [
                             ...kids.map((kid) => _buildKidTile(kid)),
                             const SizedBox(height: 12),
 
-                            // "+" Add Kid Button - Where the Add Kid Logic is
+                            // The Add Kid Button + + +
                             Center(
                               child: GestureDetector(
                                 onTap: () {
-                                  addKid();
+                                  _handleAddKidFunction();
                                 },
                                 child: CircleAvatar(
                                   backgroundColor: const Color(0xFF4E88CF),
                                   radius: 30,
-                                  child: const Icon(
-                                    Icons.add,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
+                                  child: const Icon(Icons.add, color: Colors.white, size: 32),
                                 ),
                               ),
                             ),
@@ -301,43 +264,23 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (!_didUserCameFromParentDashboard) {
-                        navigator.pushReplacementNamed(
-                          "/account-selector-page",
-                          arguments: {"family-user-id": familyUserId},
-                        );
-                        debugPrint(
-                          "kidsSetupPage - user not from dashboard. user pressed continue. Redirected to account-selector-page",
-                        );
+                      if (widget.cameFromParentDashboard == false) {
+                        navigator.pushReplacementNamed("/account-selector-page", arguments: {"user-id": familyUserId, 'there-are-parent-in-family': true});
+                        debugPrint("kidsSetupPage - user not from dashboard. user pressed continue. Redirected to account-selector-page");
                       } else {
-                        navigator.pushReplacementNamed(
-                          "/parent-dashboard-page",
-                          arguments: {
-                            "family-user-id": familyUserId,
-                            "parent-id": parentId,
-                          },
-                        );
-                        debugPrint(
-                          "kidsSetupPage - user from dashboard. user pressed continue. Redirected to parent-dashboard-page",
-                        );
+                        navigator.pushReplacementNamed("/parent-dashboard-page", arguments: {"family-user-id": familyUserId, "parent-id": parentId});
+                        debugPrint("kidsSetupPage - user from dashboard. user pressed continue. Redirected to parent-dashboard-page");
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4E88CF),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: const BorderSide(color: Colors.black, width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                     child: Text(
                       'Continue',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: GoogleFonts.fredoka().fontFamily,
-                        color: Colors.black,
-                      ),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.black),
                     ),
                   ),
                 ),
@@ -378,19 +321,11 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundImage: AssetImage(kid.avatar_file_path),
-            radius: 26,
-          ),
+          CircleAvatar(backgroundImage: AssetImage(kid.avatar_file_path), radius: 26),
           const SizedBox(width: 12),
           Text(
             kid.first_name,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              fontFamily: GoogleFonts.fredoka().fontFamily,
-              color: Colors.black,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.black),
           ),
         ],
       ),

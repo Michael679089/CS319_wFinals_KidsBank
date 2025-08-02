@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,8 +11,9 @@ import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class AccountSelectorPage extends StatefulWidget {
   final String user_id;
+  final bool there_are_parents_in_family;
 
-  const AccountSelectorPage({super.key, required this.user_id});
+  const AccountSelectorPage({super.key, required this.user_id, required this.there_are_parents_in_family});
 
   @override
   State<AccountSelectorPage> createState() => _AccountSelectorPageState();
@@ -21,12 +24,12 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   List<KidModel> Kids_List = [];
   bool isLoading = true;
   String? errorMessage;
+
+  // This is Account Selector, these are for selecting the account to log in as:
   String? selectedId;
   String? selectedName;
   String? selectedRole;
   String? selectedAvatar;
-  OverlayEntry? overlayEntry;
-  bool user_first_time = false;
 
   // Saved Credentials
   String familyName = "";
@@ -57,7 +60,10 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     });
 
     var navigator = Navigator.of(context);
-    var family_id = user_id;
+    var family_object = await FirestoreService.readFamily(user_id);
+    var family_id = family_object?.id as String;
+
+    debugPrint("AccountSelectorPage@fetchUsers - familyID: $family_id");
 
     // Step 1: Get the USER_ID
     final user = AuthService.getCurrentUser();
@@ -67,66 +73,91 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         isLoading = false;
       });
       return;
-    }
+    } else {
+      // Step 2: Fetch the single parent and all the kids.
+      try {
+        var the_main_parent = await FirestoreService.readParent(family_id);
+        var newKids = await FirestoreService.fetch_all_kids_by_family_id(family_id);
+        var is_there_a_parent = (the_main_parent != null);
 
-    // Step 2: Fetch the parent and all the kids.
-    try {
-      var the_main_parent = await FirestoreService.readParent(family_id);
-      var newKids = await FirestoreService.fetch_all_kids_by_family_id(family_id);
+        if (is_there_a_parent == false) {
+          debugPrint("accountSelectorPage - the main parent is not found - will redirect to /parent-setup-page in 5 seconds");
+          debugPrint("accountSelectorPage - user needs to add a single parent for the app to work.");
 
-      var is_there_a_parent = the_main_parent != null;
+          // Step 3: Add 5-second delay for users to read before navigation
+          Future.delayed(const Duration(seconds: 5), () {
+            if (mounted) {
+              navigator.pushNamed("/parent-setup-page", arguments: {"first-time-user": true});
+              debugPrint("accountSelectorPage - redirected to /parent-setup-page");
+            }
+          });
+          return;
+        }
 
-      if (is_there_a_parent == false) {
+        if (newKids.isEmpty) {
+          debugPrint("AccountSelectorPage - newKids list is empty");
+        }
+
         setState(() {
-          user_first_time = true;
+          Parent = the_main_parent;
+          Kids_List = newKids;
+          isLoading = false;
         });
 
-        debugPrint("accountSelectorPage - the main parent is not found - will redirect to /parent-setup-page in 5 seconds");
-
-        // Add 5-second delay before navigation
-        Future.delayed(const Duration(seconds: 5), () {
-          if (mounted) {
-            // Check if widget is still in the tree
-            navigator.pushNamed("/parent-setup-page");
-            debugPrint("accountSelectorPage - redirected to /parent-setup-page");
-          }
-        });
-
+        debugPrint("accountSelectorPage - fetchUsers successfully");
         return;
+      } catch (e) {
+        debugPrint("accountSelectorPage - ERROR: fetching users $e");
+        return;
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
       }
-
-      setState(() {
-        Parent = the_main_parent;
-        Kids_List = newKids;
-        isLoading = false;
-      });
-
-      debugPrint("accountSelectorPage - fetchUsers successfully");
-      return;
-    } catch (e) {
-      debugPrint("accountSelectorPage - ERROR: fetching users $e");
-      return;
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
     }
   }
 
-  void _handleSelectingAccount(String id, String role) {}
+  void _handleSelectingAccount(String id, String name, String role, String avatar) {
+    debugPrint("AccSelectPage - Handle Account Selection START");
+    if (role == "Parent") {
+      debugPrint("Selected parent ID: $id");
+
+      setState(() {
+        selectedAvatar = avatar;
+        selectedName = name;
+        selectedId = id;
+        selectedRole = role;
+      });
+    } else if (role == "Kid") {
+      debugPrint("Selected Kid ID: $id");
+    }
+
+    debugPrint("AccSelectPage - Handle Account Selection END");
+  }
 
   void _handleLoginButton() {
+    debugPrint("AccSelectPage - Login Button START");
+
     var navigator = Navigator.of(context);
 
     debugPrint("accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName");
 
     if (selectedName == null || selectedRole == null) {
-      Utility_TopSnackBar.show(context: context, message: "Please select a user above first");
+      UtilityTopSnackBar.show(context: context, message: "Please select a user above first");
       return;
     }
 
-    if (selectedRole == 'parent') {
-    } else {}
+    if (selectedRole == 'Parent') {
+      debugPrint("AccSelectPage - selected user is a parent");
+
+      String? my_parent_id = selectedId as String;
+      if (my_parent_id.isNotEmpty) {
+        navigator.pushNamed("/parent-login-page", arguments: {"user-id": user_id, "parent-id": my_parent_id});
+      }
+    } else if (selectedRole == 'Kid') {
+      debugPrint("AccSelectPage - selected user is a kid");
+    }
+    debugPrint("AccSelectPage - Login Button END");
   }
 
   // Helper method to show SnackBar, consistent with LoginPage
@@ -162,68 +193,157 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     fetchUsers();
   }
 
-  Text _buildText(String text, double size, {bool isTextAlignmentCenter = false}) {
+  Text _buildText(
+    String text,
+    double size, {
+    bool isTextAlignmentCenter = false,
+    Color textColor = Colors.black, // Changed from Colors to Color
+    FontWeight fontWeight = FontWeight.w600,
+  }) {
     return Text(
       text,
       textAlign: isTextAlignmentCenter ? TextAlign.center : null,
-      style: TextStyle(fontSize: size, fontWeight: FontWeight.w600, fontFamily: GoogleFonts.fredoka().fontFamily),
+      style: TextStyle(
+        fontSize: size,
+        fontWeight: fontWeight,
+        fontFamily: GoogleFonts.fredoka().fontFamily,
+        color: textColor, // Added color parameter
+      ),
     );
   }
 
   Text get title => _buildText("Hi!", 56);
   Text get subTitle => _buildText("Who is using?", 28.8);
   Text get parentsLabelText => _buildText("Parents", 20);
-  Text get kidsLabelText => _buildText("Kids", 20);
+  Text get kidsLabelText => _buildText("[Kids]", 20);
 
   // BUILD FUNCTION
 
   @override
   Widget build(BuildContext context) {
-    Row TitleDisplay = Row(
+    Image myOwlImage = Image.asset('assets/owl.png', height: 150, width: 240, alignment: Alignment.centerRight);
+
+    Row Top_Title_Display = Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Flexible(
           flex: 2,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, subTitle]),
         ),
-        Flexible(flex: 1, child: Image.asset('assets/owl.png', height: 150, width: 240, alignment: Alignment.centerRight)),
+        Flexible(flex: 1, child: myOwlImage),
       ],
     );
 
-    Positioned myOwl = Positioned(
-      child: Container(color: Colors.red, child: Image.asset('assets/owl.png', height: 150, width: 240)),
-    );
+    Widget InnerDisplayContainer(bool isLoading) {
+      var is_users_first_time_signing_in = (widget.there_are_parents_in_family == false);
 
-    Widget InnerDisplay(bool isLoading) {
-      var parentEmpty = (Parent == null);
-      var kidEmpty = Kids_List.isEmpty;
+      String? selected_name = selectedName ?? "";
+      var full_string_selected_name = "Log in as $selected_name";
 
-      if (isLoading == false && parentEmpty && !user_first_time) {
+      if (isLoading == false && is_users_first_time_signing_in == false) {
+        debugPrint("AccountSelectorPage - showing account selector inner display");
         return Column(
           children: [
+            // Main Parent Container
             Container(
-              padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
-              child: Column(children: [parentsLabelText]),
+              color: Colors.white,
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(40, 20, 40, 20),
+              child: Column(
+                children: [
+                  Center(
+                    // The Thing that's makes this clickable
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero, // Remove default padding
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Tight press area
+                        foregroundColor: Colors.black, // Default text color
+                      ),
+                      onPressed: () {
+                        _handleSelectingAccount(Parent!.id as String, Parent!.first_name, "Parent", Parent!.avatar_file_path);
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(Parent!.avatar_file_path, width: 100, height: 100),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [_buildText(Parent!.first_name, 20), _buildText("[Main Parent]", 20)],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Divider(color: Colors.black, thickness: 2, indent: 20, endIndent: 20),
+
+            // KIDS Container
             Container(
-              padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
-              child: Column(children: [kidsLabelText]),
+              padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+              child: Column(
+                children: [
+                  // The Title Kids Label
+                  kidsLabelText,
+                  const SizedBox(height: 10),
+
+                  // Gridview
+                  GridView.count(
+                    shrinkWrap: true, // Important for nested scrolling
+                    physics: const NeverScrollableScrollPhysics(), // Disable nested scrolling
+                    crossAxisCount: 3, // 2 items per row
+                    childAspectRatio: 3, // Width/height ratio for each item
+                    mainAxisSpacing: 10, // Vertical spacing
+                    crossAxisSpacing: 10, // Horizontal spacing
+                    children: Kids_List.map(
+                      (kid) => Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        height: 160,
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          children: [
+                            Image.asset(kid.avatar_file_path, alignment: Alignment.centerRight),
+                            Text(kid.first_name),
+                          ],
+                        ),
+                      ),
+                    ).toList(),
+                  ),
+                ],
+              ),
             ),
+
+            // The LOGIN Button.
             Container(
-              padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
-              margin: EdgeInsetsGeometry.all(40),
+              color: Colors.black,
+              width: double.infinity,
+              padding: EdgeInsets.all(20),
               child: ElevatedButton(
                 onPressed: _handleLoginButton,
-                style: Utilities().ourButtonStyle1(),
-                child: Text("Log in as $selectedName", style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily)),
+                style: Utilities().ourButtonStyle2(),
+                child: _buildText(full_string_selected_name, 25, textColor: Colors.black),
               ),
             ),
           ],
         );
-      } else if (user_first_time) {
-        return Column(children: [_buildText("Its users first time using the app, redirecting to parent selector", 42, isTextAlignmentCenter: true)]);
+      } else if (is_users_first_time_signing_in) {
+        debugPrint("AccountSelectorPage - inner display is stopped because user is first time user");
+        return Column(
+          children: [
+            Padding(
+              padding: EdgeInsetsGeometry.all(20),
+              child: _buildText("Its users first time using the app... redirecting to parent setup...", 30, isTextAlignmentCenter: true),
+            ),
+          ],
+        );
       } else {
+        debugPrint("AccountSelectorPage - showing inner display ciruclar progress");
         return Center(child: CircularProgressIndicator());
       }
     }
@@ -233,22 +353,32 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         margin: EdgeInsets.all(20),
         child: Column(
           children: [
-            TitleDisplay,
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-                border: Border.all(color: Colors.black, width: 2),
-              ),
-              child: InnerDisplay(isLoading),
+            Top_Title_Display,
+            // ACCOUNT SELECTOR PAGE - Container with ClipRect;
+            Builder(
+              builder: (context) {
+                final parentBorderRadius = BorderRadius.circular(20);
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: parentBorderRadius,
+                    border: Border.all(color: Colors.black, width: 3),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: parentBorderRadius, // Same as parent
+                    child: Container(width: double.infinity, constraints: BoxConstraints(maxWidth: 700), child: InnerDisplayContainer(isLoading)),
+                  ),
+                );
+              },
             ),
 
-            ElevatedButton(onPressed: _handleLogOutFromFamily, style: Utilities().ourButtonStyle1(), child: Text("Log out from Family")),
+            // -----------------------------------------------
+
+            // Log out Button
+            ElevatedButton(
+              onPressed: _handleLogOutFromFamily,
+              style: Utilities().ourButtonStyle1(),
+              child: Text("Log out from Family", style: TextStyle(color: Colors.white)),
+            ),
           ],
         ),
       );
@@ -259,8 +389,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     ///
     ///
     ///
-
-    var doesParentExist = (Parent != null);
 
     return PopScope(
       canPop: false,

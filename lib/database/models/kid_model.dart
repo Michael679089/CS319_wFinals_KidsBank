@@ -28,10 +28,7 @@ class KidModel {
   // receiving data from firestore function:
   // receiving from firestore
   // Factory constructor to create from Firestore document
-  factory KidModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> snapshot,
-    SnapshotOptions? options,
-  ) {
+  factory KidModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot, SnapshotOptions? options) {
     final data = snapshot.data()!;
     return KidModel(
       id: snapshot.id, // Get the document ID here
@@ -41,7 +38,7 @@ class KidModel {
       date_of_birth: (data['date_of_birth'] as Timestamp).toDate(),
       pincode: data["pincode"],
       avatar_file_path: data["avatar_file_path"],
-      created_at: data["created_at"],
+      created_at: (data["created_at"] as Timestamp).toDate(),
     );
   }
 

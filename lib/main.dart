@@ -58,7 +58,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/welcome-page': (context) => const WelcomePage(),
         '/login-page': (context) => const LoginPage(),
-        '/parent-setup-page': (context) => const ParentSetupPage(),
         '/kids-login-page': (context) => const KidsLoginPage(),
       },
       onGenerateRoute: (settings) {
@@ -75,6 +74,7 @@ class MyApp extends StatelessWidget {
 
         try {
           switch (settings.name) {
+            /// AUTHENTICATION PAGES:
             case '/register-page':
               validateArgs(settings.name as String, ["is-broken-register"]);
               page = RegisterAccountPage(is_broken_register: args["is-broken-register"]);
@@ -84,105 +84,57 @@ class MyApp extends StatelessWidget {
               page = VerificationEmailPage(newFamilyModel: args["new-family-model"], newFamilyPaymentInfoModel: args["new-family-payment-info-model"]);
               break;
             case '/account-selector-page':
-              validateArgs(settings.name as String, ["user-id"]);
-              page = AccountSelectorPage(user_id: args["user-id"]);
+              validateArgs(settings.name as String, ["user-id", "there-are-parent-in-family"]);
+              page = AccountSelectorPage(user_id: args["user-id"], there_are_parents_in_family: args["there-are-parent-in-family"]);
               break;
 
-            // Below will be the Pages of Kids
-            // case '/kids-setup-page':
-            //   validateArgs('/kids-setup-page', [
-            //     'parent-id',
-            //     'came-from-parent-dashboard',
-            //   ]);
-            //   page = KidsSetupPage(
-            //     parentId: args['parent-id'],
-            //     cameFromParentDashboard:
-            //         args['came-from-parent-dashboard'] ?? false,
-            //   );
-            //   break;
-            // case '/kids-dashboard-page':
-            //   validateArgs('/kids-dashboard-page', [
-            //     'kid-id',
-            //     'family-user-id',
-            //   ]);
-            //   page = KidsDashboard(
-            //     kidId: args['kid-id'],
-            //     familyUserId: args['family-user-id'],
-            //   );
-            //   break;
-            // case '/kids-notifications-page':
-            //   validateArgs('/kids-notifications-page', [
-            //     'kid-id',
-            //     'family-user-id',
-            //   ]);
-            //   page = KidsNotificationsPage(
-            //     kidId: args['kid-id'],
-            //     familyUserId: args['family-user-id'],
-            //   );
-            //   break;
-            // case '/kids-chores-page':
-            //   validateArgs('/kids-chores-page', ['kid-id', 'family-user-id']);
-            //   page = KidsChoresPage(
-            //     kidId: args['kid-id'],
-            //     familyUserId: args['family-user-id'],
-            //   );
-            //   break;
-            // case '/create-kids-account-page':
-            //   validateArgs('/create-kids-account-page', [
-            //     'parent-id',
-            //     'family-user-id',
-            //   ]);
-            //   page = CreateKidAccountPage(
-            //     parentId: args['parent-id'],
-            //     familyUserId: args['family-user-id'],
-            //   );
-            //   break;
+            ///
+            /// Below will be the KID's PAGES:
+            ///
+            case '/kids-setup-page':
+              validateArgs('/kids-setup-page', ['family-id', 'came-from-parent-dashboard']);
+              page = KidsSetupPage(family_id: args['family-id'], cameFromParentDashboard: args['came-from-parent-dashboard'] ?? false);
+              break;
+            case '/kids-dashboard-page':
+              validateArgs('/kids-dashboard-page', ['kid-id', 'family-user-id']);
+              page = KidsDashboard(kidId: args['kid-id'], familyUserId: args['family-user-id']);
+              break;
+            case '/kids-notifications-page':
+              validateArgs('/kids-notifications-page', ['kid-id', 'family-user-id']);
+              page = KidsNotificationsPage(kidId: args['kid-id'], familyUserId: args['family-user-id']);
+              break;
+            case '/kids-chores-page':
+              validateArgs('/kids-chores-page', ['kid-id', 'family-user-id']);
+              page = KidsChoresPage(kid_id: args['kid-id'], familyUserId: args['family-user-id']);
+              break;
+            case '/create-kids-account-page':
+              validateArgs('/create-kids-account-page', ['parent-id', 'user-id', "came-from-parent-dashboard"]);
+              page = CreateKidAccountPage(parent_id: args['parent-id'], user_id: args['user-id'], didUserCameFromDashboard: args["came-from-parent-dashboard"]);
+              break;
 
-            // Below will be the pages of Parents.
-            // case '/parent-login-page':
-            //   validateArgs(settings.name as String, ["family-user-id"]);
-            //   page = ParentLoginPage(familyId: args["family-user-id"]);
-            //   break;
-            // case '/parent-dashboard-page':
-            //   validateArgs('/parent-dashboard-page', [
-            //     'family-user-id',
-            //     'parent-id',
-            //   ]);
-            //   page = ParentDashboard(
-            //     familyUserId: args['family-user-id'],
-            //     parentId: args['parent-id'],
-            //   );
-            //   break;
-            // case '/parent-notifications-page':
-            //   validateArgs('/parent-notifications-page', [
-            //     'family-user-id',
-            //     'parent-id',
-            //   ]);
-            //   page = ParentNotificationsPage(
-            //     familyUserId: args['family-user-id'],
-            //     parentId: args['parent-id'],
-            //   );
-            //   break;
-            // case '/parent-chores-page':
-            //   validateArgs('/parent-chores-page', [
-            //     'family-user-id',
-            //     'parent-id',
-            //   ]);
-            //   page = ParentChoresPage(
-            //     familyUserId: args['family-user-id'],
-            //     parentId: args['parent-id'],
-            //   );
-            //   break;
-            // case '/create-kid-account-page':
-            //   validateArgs('/create-kid-account-page', [
-            //     'family-user-id',
-            //     'parent-id',
-            //   ]);
-            //   page = CreateKidAccountPage(
-            //     familyUserId: args['family-user-id'],
-            //     parentId: args['parent-id'],
-            //   );
-            //   break;
+            ///
+            /// Below will be the PARENT's PAGES:
+            ///
+            case '/parent-setup-page':
+              validateArgs(settings.name as String, ["first-time-user"]);
+              page = ParentSetupPage(first_time_user: args["first-time-user"]);
+              break;
+            case '/parent-login-page':
+              validateArgs(settings.name as String, ["parent-id", "user-id"]);
+              page = ParentLoginPage(parent_id: args["parent-id"], user_id: args["user-id"]);
+              break;
+            case '/parent-dashboard-page':
+              validateArgs('/parent-dashboard-page', ['user-id', 'parent-id']);
+              page = ParentDashboard(user_id: args['user-id'], parent_id: args['parent-id']);
+              break;
+            case '/parent-notifications-page':
+              validateArgs('/parent-notifications-page', ['family-user-id', 'parent-id']);
+              page = ParentNotificationsPage(familyUserId: args['family-user-id'], parentId: args['parent-id']);
+              break;
+            case '/parent-chores-page':
+              validateArgs('/parent-chores-page', ['family-user-id', 'parent-id']);
+              page = ParentChoresPage(user_id: args['family-user-id'], parentId: args['parent-id']);
+              break;
             default:
               page = Scaffold(
                 appBar: AppBar(title: const Text('Route Not Found')),

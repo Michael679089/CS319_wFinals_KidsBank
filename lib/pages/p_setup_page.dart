@@ -4,9 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/parent_model.dart';
+import 'package:wfinals_kidsbank/utilities/Enum_For_Avatar_Images.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class ParentSetupPage extends StatefulWidget {
-  const ParentSetupPage({super.key});
+  final bool first_time_user;
+  const ParentSetupPage({super.key, required this.first_time_user});
 
   @override
   State<ParentSetupPage> createState() => _ParentSetupPageState();
@@ -27,7 +30,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
   FirestoreService myFirestoreAPI = FirestoreService();
   AuthService myAuthService = AuthService();
 
-  String? familyId = '';
+  String? user_id = '';
 
   // FUNCTIONS
 
@@ -43,18 +46,17 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
               alignment: WrapAlignment.center,
               spacing: 20,
               runSpacing: 20,
-              children: [
-                for (var i = 1; i <= 6; i++)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedAvatar = 'assets/avatar$i.png';
-                      });
-                      Navigator.of(context).pop();
-                    },
-                    child: CircleAvatar(backgroundImage: AssetImage('assets/avatar$i.png'), radius: 30),
-                  ),
-              ],
+              children: AvatarImages.values.map((avatar) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedAvatar = avatar.filePath;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: CircleAvatar(backgroundImage: AssetImage(avatar.filePath), radius: 30),
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -71,78 +73,90 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
       _isSubmitting = true;
     });
 
+    // Step 1: Setting the inputs, then validating the inputs
     final firstName = firstNameController.text.trim();
     final lastName = lastNameController.text.trim();
-    final birthdate = DateTime.parse(dateOfBirthController.text.trim() ?? DateTime.now());
+    DateTime? birthdate;
+    try {
+      birthdate = DateTime.parse(dateOfBirthController.text.trim());
+    } catch (e) {
+      birthdate = null;
+    }
     final pincode = pincodeController.text.trim();
 
-    // Validate inputs
+    // 1: Validate inputs
     if (firstName.isEmpty) {
-      _showSnackbar('First name is required', isError: true);
+      UtilityTopSnackBar.show(message: 'First name is required', context: context, isError: true);
       setState(() {
         _isSubmitting = false;
       });
       return;
     }
     if (lastName.isEmpty) {
-      _showSnackbar('Last name is required', isError: true);
+      UtilityTopSnackBar.show(message: 'Last name is required', context: context, isError: true);
       setState(() {
         _isSubmitting = false;
       });
       return;
     }
     if (birthdate == null) {
-      _showSnackbar('Date of birth is required', isError: true);
+      UtilityTopSnackBar.show(message: 'Date of birth is required', context: context, isError: true);
       setState(() {
         _isSubmitting = false;
       });
       return;
     }
     if (pincode.isEmpty || pincode.length < 4) {
-      _showSnackbar('Pincode must be at least 4 digits', isError: true);
+      UtilityTopSnackBar.show(message: 'Pincode must be at least 4 digits', context: context, isError: true);
       setState(() {
         _isSubmitting = false;
       });
       return;
     }
 
+    // Step 2: Reached here = user has validated inputs.
+    // Continue to add new parent.
+
     try {
       final user = AuthService.getCurrentUser();
       if (user == null) {
-        _showSnackbar('User not authenticated', isError: true);
+        UtilityTopSnackBar.show(message: 'User not authenticated', context: context, isError: true);
         setState(() {
           _isSubmitting = false;
         });
         return;
       }
 
-      familyId = AuthService.getCurrentUser()?.uid;
-      String myFamilyId = familyId as String;
+      user_id = AuthService.getCurrentUser()?.uid;
+      var family_object = await FirestoreService.readFamily(user_id as String);
+      if (family_object != null) {
+        var family_id = family_object.id as String;
 
-      final newParent = ParentModel(
-        avatar_file_path: selectedAvatar,
-        family_id: myFamilyId,
-        first_name: firstName,
-        last_name: lastName,
-        pincode: pincode,
-        date_of_birth: birthdate,
-        created_at: DateTime.now(),
-      );
-
-      var parentId = await FirestoreService.createParent(newParent);
-      _showSnackbar('Parent added successfully', isError: false);
-
-      if (context.mounted) {
-        navigator.pushNamed('/kids-setup-page', arguments: {"family-user-id": myFamilyId, "parent-id": parentId, "came-from-parent-dashboard": false});
+        final newParent = ParentModel(
+          family_id: family_id,
+          first_name: firstName,
+          last_name: lastName,
+          pincode: pincode,
+          avatar_file_path: selectedAvatar,
+          date_of_birth: birthdate,
+          created_at: DateTime.now(),
+        );
+        var parentId = await FirestoreService.createParent(newParent);
+        UtilityTopSnackBar.show(message: 'Parent added successfully', context: context, isError: false);
+        navigator.pushNamed('/kids-setup-page', arguments: {"user-id": user_id, "parent-id": parentId, "came-from-parent-dashboard": false});
       }
     } catch (e) {
-      _showSnackbar('Failed to add parent: $e', isError: true);
+      debugPrint("parentSetupPage - failed to add a parent: $e");
+      if (mounted) {
+        UtilityTopSnackBar.show(message: 'Failed to add parent: $e', context: context, isError: true);
+      }
     } finally {
       if (context.mounted) {
         setState(() {
           _isSubmitting = false;
         });
       }
+      debugPrint("parentSetupPage - submit function END");
     }
   }
 
@@ -254,6 +268,11 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
 
   @override
   Widget build(BuildContext context) {
+    var top_title_text = 'Set up your parent account';
+    if (widget.first_time_user) {
+      top_title_text = "Set up your first parent account";
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFCA26),
       body: SafeArea(
@@ -281,9 +300,16 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              Text(
-                'Set up your account',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily),
+              // Top-Title-Text
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20), // X: 20, Y: 0
+                child: Center(
+                  child: Text(
+                    top_title_text,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, fontFamily: GoogleFonts.fredoka().fontFamily),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               Container(

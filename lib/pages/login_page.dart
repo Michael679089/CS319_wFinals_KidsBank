@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class LoginPage extends StatefulWidget {
@@ -103,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
                 : () async {
                     final email = _resetEmailController.text.trim();
                     if (email.isEmpty) {
-                      Utility_TopSnackBar.show(message: "Please enter an email address", context: context, isError: false);
+                      UtilityTopSnackBar.show(message: "Please enter an email address", context: context, isError: false);
                       return;
                     }
                     setState(() {
@@ -112,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                     try {
                       await AuthService.sendPasswordResetEmail(email);
                       Navigator.pop(ctx, true); // Close dialog on success
-                      Utility_TopSnackBar.show(message: "Password reset email sent successfully!", context: context, isError: false);
+                      UtilityTopSnackBar.show(message: "Password reset email sent successfully!", context: context, isError: false);
                     } on FirebaseAuthException catch (e) {
                       String errorMessage;
                       switch (e.code) {
@@ -125,10 +126,10 @@ class _LoginPageState extends State<LoginPage> {
                         default:
                           errorMessage = "Error sending password reset email: ${e.message}";
                       }
-                      Utility_TopSnackBar.show(message: errorMessage, context: context, isError: true);
+                      UtilityTopSnackBar.show(message: errorMessage, context: context, isError: true);
                       debugPrint("loginPage.dart - Forgot Password error: $e");
                     } catch (e) {
-                      Utility_TopSnackBar.show(message: "Unexpected error: $e", context: context, isError: true);
+                      UtilityTopSnackBar.show(message: "Unexpected error: $e", context: context, isError: true);
                       debugPrint("loginPage.dart - Unexpected Forgot Password error: $e");
                     } finally {
                       setState(() {
@@ -159,6 +160,16 @@ class _LoginPageState extends State<LoginPage> {
     // Do nothing if dialog was canceled
   }
 
+  Future<bool> check_if_there_is_at_least_one_parent_in_family(String user_id) async {
+    // Step 1: Check if a parent exist before navigation to account selector
+    // this will be used to check if we should redirect user to parent-setup-page;
+    var family_object = await FirestoreService.readFamily(user_id);
+    var family_id = family_object?.id as String;
+    ParentModel? parent_object = await FirestoreService.readParent(family_id);
+    bool there_are_parents_in_family = (parent_object != null);
+    return there_are_parents_in_family;
+  }
+
   void _tryAutoLogin() async {
     setState(() {
       _isLoadingIndicatorActive = true;
@@ -185,7 +196,8 @@ class _LoginPageState extends State<LoginPage> {
             var user_Id = user.uid;
 
             if (user.emailVerified) {
-              navigator.pushNamed("/account-selector-page", arguments: {"user-id": user_Id});
+              var there_are_parents_in_family = await check_if_there_is_at_least_one_parent_in_family(user_Id);
+              navigator.pushNamed("/account-selector-page", arguments: {"user-id": user_Id, "there-are-parent-in-family": there_are_parents_in_family});
               return;
             } else {
               debugPrint("loginPage - email not verified");
@@ -242,19 +254,20 @@ class _LoginPageState extends State<LoginPage> {
 
     if (loginResponse["status"] == "success") {
       var user = AuthService.getCurrentUser();
-      var user_id = user?.uid;
+      String user_id = user!.uid;
       final prefs = await SharedPreferences.getInstance();
       prefs.setBool('keepLoggedIn', keepLoggedIn);
+      var there_are_parents_in_family = await check_if_there_is_at_least_one_parent_in_family(user_id);
 
       debugPrint("LoginPage - successful login");
-      navigator.pushReplacementNamed("/account-selector-page", arguments: {"user-id": user_id});
+      navigator.pushNamed("/account-selector-page", arguments: {"user-id": user_id, "there-are-parent-in-family": there_are_parents_in_family});
     } else if (loginResponse["status"] == "unverified") {
       debugPrint("loginPage - user is found unverified. Sending user to register page");
       navigator.pushNamed("/register-page", arguments: {"is-broken-register": true});
-      Utility_TopSnackBar.show(message: "ERROR: user is found unverified. Sending user to register page", context: context, isError: false);
+      UtilityTopSnackBar.show(message: "ERROR: user is found unverified. Sending user to register page", context: context, isError: false);
     } else {
       debugPrint("loginPage - an error occurred during login");
-      Utility_TopSnackBar.show(message: "ERROR: Logging In", context: context, isError: false);
+      UtilityTopSnackBar.show(message: "ERROR: Logging In", context: context, isError: false);
     }
 
     setState(() {
@@ -397,6 +410,7 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 20),
 
                     // Register Button

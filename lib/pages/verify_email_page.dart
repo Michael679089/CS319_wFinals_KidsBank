@@ -25,9 +25,9 @@ class _VerificationEmailPageState extends State<VerificationEmailPage> {
     var sendingEmailSucces = await AuthService.sendEmailVerification();
 
     if (sendingEmailSucces) {
-      Utility_TopSnackBar.show(message: "Email Verification is sent", context: context);
+      UtilityTopSnackBar.show(message: "Email Verification is sent", context: context);
     } else {
-      Utility_TopSnackBar.show(message: "Error sending email", context: context, isError: true);
+      UtilityTopSnackBar.show(message: "Error sending email", context: context, isError: true);
     }
   }
 
@@ -41,14 +41,14 @@ class _VerificationEmailPageState extends State<VerificationEmailPage> {
     if (user != null) {
       await user.reload();
       if (user.emailVerified) {
-        Utility_TopSnackBar.show(message: "Great, user email is verified, adding the Family & Payment Info to Firestore", context: context);
+        UtilityTopSnackBar.show(message: "Great, user email is verified, adding the Family & Payment Info to Firestore", context: context);
         FirestoreService.createFamily(widget.newFamilyModel);
         FirestoreService.createFamilyPaymentInfo(widget.newFamilyPaymentInfoModel);
 
         debugPrint("verifyEmailPage - email verification complete, user will be redirected to login page");
         navigator.pushReplacementNamed("/login-page");
       } else {
-        Utility_TopSnackBar.show(message: "Oops, email not yet verified, please try again", context: context, isError: true);
+        UtilityTopSnackBar.show(message: "Oops, email not yet verified, please try again", context: context, isError: true);
       }
     } else {
       debugPrint("user is null");

@@ -73,7 +73,7 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
         children: [
           GestureDetector(
             onTap: () {
-              Utility_TopSnackBar.show(message: "WARNING: Can't remove overlay, please press a button to continue", context: context, isError: false);
+              UtilityTopSnackBar.show(message: "WARNING: Can't remove overlay, please press a button to continue", context: context, isError: false);
             },
             child: Container(color: Colors.black54),
           ),
@@ -88,7 +88,7 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                   ElevatedButton(
                     onPressed: () {
                       _removeAllOverlays();
-                      Utility_TopSnackBar.show(message: "Sorry, your parent needs to register first", context: context, isError: true);
+                      UtilityTopSnackBar.show(message: "Sorry, your parent needs to register first", context: context, isError: true);
                       debugPrint("registerAccPage.dart - User selected role child");
                       navigator.pop(context);
                     },
@@ -181,16 +181,16 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
         } else {
           debugPrint("loginPage - unwanted statuses:");
           if (create_auth_response['status'] == "account-already-verified") {
-            Utility_TopSnackBar.show(message: create_auth_response['message'] as String, context: context, isError: true);
+            UtilityTopSnackBar.show(message: create_auth_response['message'] as String, context: context, isError: true);
           } else {
             debugPrint("registerPage - unwanted status, return void");
-            Utility_TopSnackBar.show(message: "ERROR: Connecting to firebase", context: context, isError: true);
+            UtilityTopSnackBar.show(message: "ERROR: Connecting to firebase", context: context, isError: true);
           }
         }
       }
     } catch (e) {
       debugPrint("registerPage - ERROR: Connection lost");
-      Utility_TopSnackBar.show(message: "ERROR: Connection: $e", context: context, isError: true);
+      UtilityTopSnackBar.show(message: "ERROR: Connection: $e", context: context, isError: true);
     }
   }
 
@@ -531,7 +531,7 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                   _handleRegisterButtonFunction(context);
                                 } else {
                                   if (!mounted) return;
-                                  Utility_TopSnackBar.show(message: 'Please fill out all fields correctly!', context: context, isError: false);
+                                  UtilityTopSnackBar.show(message: 'Please fill out all fields correctly!', context: context, isError: false);
                                 }
                               },
                               style: ElevatedButton.styleFrom(

@@ -2,11 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/database/models/family_payment_info_model.dart';
+import 'package:wfinals_kidsbank/database/models/kid_model.dart';
+import 'package:wfinals_kidsbank/database/models/parent_model.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class ParentLoginPage extends StatefulWidget {
-  final String familyId;
+  final String parent_id;
+  final String user_id;
 
-  const ParentLoginPage({super.key, required this.familyId});
+  const ParentLoginPage({super.key, required this.parent_id, required this.user_id});
 
   @override
   State<ParentLoginPage> createState() => _ParentLoginPageState();
@@ -17,10 +23,9 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
   final TextEditingController cardController = TextEditingController();
 
   // Saved Credentials
-  String parentId = '';
   String parentName = '';
   String avatarPath = '';
-  String familyUserId = '';
+  String user_id = '';
   String familyName = '';
 
   // INITSTATE FUNCTION
@@ -42,21 +47,26 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
     if (myModalRoute == null) {
       return;
     }
-    final args = myModalRoute.settings.arguments as Map<String, String?>;
-    setState(() {
-      parentId = args['parent-id'] as String;
-      parentName = args["name"] as String;
-      avatarPath = args["avatar"] as String;
-      familyName = args["family-name"] as String;
-      familyUserId = user.uid;
-    });
 
-    debugPrint(
-      "parentLoginPage - successfully loaded the data - parentID: $parentId",
-    );
+    user_id = widget.user_id;
+
+    ParentModel? newParentModel = await FirestoreService.fetch_parent_by_parent_id(widget.parent_id);
+    var newFamilyName = await FirestoreService.fetch_family_name(user_id);
+
+    if (newParentModel != null && newFamilyName.isNotEmpty) {
+      setState(() {
+        parentName = newParentModel.first_name;
+        avatarPath = newParentModel.avatar_file_path;
+        familyName = newFamilyName;
+      });
+    } else {
+      debugPrint("PLoginPage - wrong parent_id = ${widget.parent_id}");
+    }
+
+    debugPrint("parentLoginPage - successfully loaded the data - parentID: ${widget.parent_id}");
   }
 
-  Future<void> _login() async {
+  Future<void> _handleLogin() async {
     debugPrint("parentLoginPage - attempt to login");
 
     // The Login Function
@@ -66,79 +76,73 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
 
     // Step 1: Cleaning the input
     if (pincode.isEmpty) {
-      _showSnackbar("Password cannot be empty.");
+      UtilityTopSnackBar.show(message: "Password cannot be empty.", context: context, isError: true);
       return;
     }
 
     if (cardDigits.length != 4 || int.tryParse(cardDigits) == null) {
-      _showSnackbar("Card digits must be 4 numbers.");
+      UtilityTopSnackBar.show(message: "Card digits must be 4 numbers.", context: context, isError: true);
       return;
     }
 
     // Step 2: Password Input Done - Now Get the real passcode from Firestore and Verify it.
     try {
       final parentCollection = FirebaseFirestore.instance.collection("parents");
-      final parentDoc = await parentCollection.doc(parentId).get();
+      final parentDoc = await parentCollection.doc(widget.parent_id).get();
 
       if (parentDoc['pincode'] != pincode) {
-        _showSnackbar("Incorrect password.");
+        UtilityTopSnackBar.show(message: "Incorrect password.", context: context, isError: true);
         debugPrint("parentLoginPage - ERROR: User input Wrong Password.");
         return;
       }
 
       // Step 3: Now for card digits verify if correct.
-      final familyPaymentCollection = FirebaseFirestore.instance.collection(
-        "familyPaymentInfo",
-      );
-      final familyPaymentSnapshot = await familyPaymentCollection
-          .where("familyId", isEqualTo: familyUserId)
-          .get();
-      final familyPaymentDoc = familyPaymentSnapshot.docs.first;
-      var cardNumber = familyPaymentDoc["cardNumber"].toString();
+      user_id = widget.user_id;
+      debugPrint(user_id);
+      FamilyPaymentInfoModel? familyPaymentDoc = await FirestoreService.readFamilyPaymentInfo(user_id);
 
-      if (cardNumber.length >= 4) {
-        if (cardNumber.endsWith(cardDigits)) {
-          debugPrint("parentLoginPage - Card Digits Verified");
+      if (familyPaymentDoc != null) {
+        var cardNumber = familyPaymentDoc.card_number;
+
+        if (cardNumber.length >= 4) {
+          if (cardNumber.endsWith(cardDigits)) {
+            debugPrint("parentLoginPage - Card Digits Verified");
+          }
+        } else {
+          debugPrint("parentLoginPage - ERROR: cardNumber isn't more than 4 numbers");
+          UtilityTopSnackBar.show(message: "Card not found.", context: context, isError: true);
+          return;
         }
       } else {
-        debugPrint(
-          "parentLoginPage - ERROR: cardNumber isn't more than 4 numbers",
-        );
-        _showSnackbar("Card not found.");
-        return;
+        debugPrint("PLoginPage - family payment info was found null. Throwing Error");
+        throw Error;
       }
 
       // Step 4: CardDigits is verified, user can proceed to Parent Dashboard Page.
-      _showSnackbar("Login successful!", isError: false);
+      UtilityTopSnackBar.show(message: "Login successful!", context: context, isError: false);
 
-      debugPrint(
-        "parentLoginPage - Parent Login Successful. Redirecting to Parent-Dashboard-Page $familyUserId",
-      );
-      navigator.pushReplacementNamed(
-        '/parent-dashboard-page',
-        arguments: {
-          "family-name": familyName,
-          "family-user-id": familyUserId,
-          "parent-id": parentId,
-        },
-      );
+      // Step 5: Hold on, let's check if there's kids.
+      var family_id = await FirestoreService.fetch_family_id(user_id);
+      List<KidModel> kidsList = await FirestoreService.fetch_all_kids_by_family_id(family_id!);
+      if (kidsList.isEmpty) {
+        if (mounted) {
+          UtilityTopSnackBar.show(
+            message: "Hold on, you can't go to parent dashboard just yet, you need to have at least one kid account",
+            context: context,
+            isError: true,
+          );
+        }
+        navigator.pushNamed(
+          "/create-kids-account-page",
+          arguments: {"parent-id": widget.parent_id, "user-id": widget.user_id, "came-from-parent-dashboard": false},
+        );
+      } else {
+        debugPrint("parentLoginPage - Parent Login Successful. Redirecting to Parent-Dashboard-Page $user_id");
+        navigator.pushReplacementNamed('/parent-dashboard-page', arguments: {"family-name": familyName, "user-id": user_id, "parent-id": widget.parent_id});
+      }
     } catch (e) {
-      _showSnackbar("Error checking pincode == password: ${e.toString()}");
+      UtilityTopSnackBar.show(message: "Error checking pincode == password: ${e.toString()}", context: context, isError: true);
     }
-  }
-
-  void _showSnackbar(String message, {bool isError = true}) {
-    final snackBar = SnackBar(
-      content: Text(message, style: GoogleFonts.fredoka(color: Colors.white)),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      duration: const Duration(seconds: 2),
-    );
-
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(snackBar);
   }
 
   // BUILD
@@ -166,18 +170,11 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha((0.3 * 255).toInt()),
-                            spreadRadius: 1,
-                            blurRadius: 10,
-                            offset: const Offset(10, 12),
-                          ),
+                          BoxShadow(color: Colors.black.withAlpha((0.3 * 255).toInt()), spreadRadius: 1, blurRadius: 10, offset: const Offset(10, 12)),
                         ],
                       ),
                       child: CircleAvatar(
-                        backgroundImage: avatarPath.isNotEmpty
-                            ? AssetImage(avatarPath)
-                            : const AssetImage('assets/avatar1.png'),
+                        backgroundImage: avatarPath.isNotEmpty ? AssetImage(avatarPath) : const AssetImage('assets/avatar1.png'),
                         radius: 70,
                         backgroundColor: const Color(0xFF4E88CF),
                       ),
@@ -185,16 +182,10 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                     const SizedBox(height: 12),
                     Text(
                       parentName.isNotEmpty ? "Hi $parentName!" : "Hi!",
-                      style: GoogleFonts.fredoka(
-                        fontSize: 58.2,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
+                      style: GoogleFonts.fredoka(fontSize: 58.2, fontWeight: FontWeight.bold, color: Colors.black),
                     ),
                     const SizedBox(height: 20),
-                    _buildLabel(
-                      "Please input this parent's sub-account pincode",
-                    ),
+                    _buildLabel("Please input this parent's sub-account pincode"),
                     const SizedBox(height: 8),
                     _buildPincodeField(passwordController),
 
@@ -208,25 +199,16 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _login,
+                            onPressed: _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFFCA26),
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(
-                                color: Colors.black,
-                                width: 2,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                              side: const BorderSide(color: Colors.black, width: 2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             ),
                             child: Text(
                               'Log in',
-                              style: GoogleFonts.fredoka(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: GoogleFonts.fredoka(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -234,35 +216,17 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                         // The Back BUTTON
                         ElevatedButton.icon(
                           onPressed: () {
-                            navigator.pushReplacementNamed(
-                              "/account-selector-page",
-                              arguments: {
-                                "family-name": familyName,
-                                "family-user-id": familyUserId,
-                              },
-                            );
+                            navigator.pushReplacementNamed("/account-selector-page", arguments: {"family-name": familyName, "family-user-id": user_id});
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 30,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                          ),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
                           label: Text(
                             "Back",
-                            style: GoogleFonts.fredoka(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
+                            style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
                           ),
                         ),
                       ],
@@ -283,11 +247,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
     return RichText(
       text: TextSpan(
         text: text,
-        style: GoogleFonts.fredoka(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.black,
-        ),
+        style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black),
         children: const [
           TextSpan(
             text: " *",
@@ -310,15 +270,8 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
         obscureText: true,
         obscuringCharacter: '•',
         keyboardType: TextInputType.number,
-        style: GoogleFonts.fredoka(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: Colors.black,
-        ),
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
+        style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+        decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
       ),
     );
   }
@@ -336,16 +289,8 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
         maxLength: 4,
         obscureText: true,
         obscuringCharacter: '•',
-        style: GoogleFonts.fredoka(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: Colors.black,
-        ),
-        decoration: const InputDecoration(
-          counterText: "",
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
+        style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+        decoration: const InputDecoration(counterText: "", border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
       ),
     );
   }
