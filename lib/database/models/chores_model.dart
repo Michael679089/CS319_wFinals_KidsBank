@@ -34,8 +34,8 @@ class ChoreModel {
       kid_id: data['kid_id'] as String,
       chore_title: data['chore_title'] as String,
       chore_description: data['chore_description'] as String,
-      reward_money: data['notification_message'] as double,
-      status: data['type'] as String,
+      reward_money: (data['reward_money'] as num).toDouble(),
+      status: data['status'] as String,
       created_at: (data["created_at"] as Timestamp).toDate(),
     );
   }

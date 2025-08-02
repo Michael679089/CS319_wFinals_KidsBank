@@ -33,7 +33,43 @@ class Utilities {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
+
+  static ButtonStyle ourButtonStyle4() {
+    return ElevatedButton.styleFrom(
+     backgroundColor: const Color(0xFF60C56F),
+      padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 12),
+      shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                side: const BorderSide(color: Colors.black, width: 2),
+                              ),
+    );
+  }
+
+  static ButtonStyle depositButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF60C56F), // green
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12), // no horizontal padding
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: const BorderSide(color: Colors.black, width: 2),
+      ),
+    );
+  }
+
+  static ButtonStyle withdrawButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFFFEB40D), // yellow-orange
+      padding: const EdgeInsets.symmetric(horizontal: 25,vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: const BorderSide(color: Colors.black, width: 2),
+      ),
+    );
+  }
 }
+
+
+
 
 class UtilityTopSnackBar {
   static OverlayEntry? _overlayEntry;

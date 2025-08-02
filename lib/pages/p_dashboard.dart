@@ -8,6 +8,7 @@ import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
 import 'package:wfinals_kidsbank/pages/p_dashboard_drawer.dart';
 import 'package:flutter/services.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ParentDashboard extends StatefulWidget {
   final String user_id;
@@ -123,15 +124,43 @@ class _ParentDashboardState extends State<ParentDashboard> {
     debugPrint("PDashboardPage: KID's DATA: ${Kids_Data.toList().toString()}");
   }
 
-  void _handleAddChoreSubmission(
-    String kidId,
-    TextEditingController titleController,
-    TextEditingController descriptionController,
-    double rewardMoney,
-    messenger,
-  ) async {
-    debugPrint("hi");
+void _handleAddChoreSubmission(
+  String kidId,
+  TextEditingController titleController,
+  TextEditingController descriptionController,
+  double rewardMoney,
+  ScaffoldMessengerState messenger,
+) async {
+  try {
+    final chore = ChoreModel(
+      kid_id: kidId,
+      chore_title: titleController.text.trim(),
+      chore_description: descriptionController.text.trim(),
+      reward_money: rewardMoney,
+      status: 'pending',
+      created_at: DateTime.now(),
+    );
+
+    await FirebaseFirestore.instance
+        .collection('chores')
+        .add(chore.toMap());
+
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('✅ Chore added successfully!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  } catch (e) {
+    debugPrint("Error adding chore: $e");
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('❌ Failed to add chore.'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   void showChoresModal(
     BuildContext context,
@@ -334,8 +363,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                 rewardMoney,
                                 messenger,
                               ),
-
-                              style: Utilities.ourButtonStyle1(),
+                              style: Utilities.ourButtonStyle4(),
+                              
                               child: Text(
                                 "Set",
                                 style: GoogleFonts.fredoka(
@@ -359,15 +388,279 @@ class _ParentDashboardState extends State<ParentDashboard> {
     );
   }
 
-  void showManageFundsModal(
-    BuildContext context,
-    String kidName,
-    String kidId,
-    String avatar,
-  ) {
-    debugPrint("hello");
-  }
+void showManageFundsModal(
+  BuildContext context,
+  String kidName,
+  String kidId,
+  String kidAvatar,
+) async {
+  final firestore = FirebaseFirestore.instance;
+  final kidDoc = await firestore.collection('kids').doc(kidId).get();
+  final data = kidDoc.data();
+  if (data == null) return;
 
+  double usableBalance = (data['balance'] ?? 0).toDouble();
+  double totalWithdrawn = (data['totalWithdrawn'] ?? 0).toDouble();
+  double totalDeposited = usableBalance + totalWithdrawn;
+  final familyId = data['family_id'];
+
+  final TextEditingController amountController = TextEditingController(text: '1.00');
+  final TextEditingController messageController = TextEditingController();
+  double fundAmount = 1.00;
+
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom * 0.4,
+            ),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.85,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: Colors.black, width: 2),
+              ),
+              child: StatefulBuilder(
+                builder: (context, setModalState) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Manage Funds",
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 38,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  "for $kidName",
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 24,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(50),
+                            child: Image.asset(
+                              kidAvatar,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: messageController,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          labelText: "Message",
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        "Amount (₱)",
+                        style: GoogleFonts.fredoka(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              if (fundAmount > 1) {
+                                setModalState(() {
+                                  fundAmount -= 1;
+                                  amountController.text = fundAmount.toStringAsFixed(2);
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFCA26),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.black, width: 2),
+                              ),
+                              child: const Icon(Icons.remove, size: 20),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          SizedBox(
+                            width: 100,
+                            child: TextField(
+                              controller: amountController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              textAlign: TextAlign.center,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: const BorderSide(color: Colors.black),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                              onChanged: (value) {
+                                final parsed = double.tryParse(value);
+                                if (parsed != null && parsed >= 0) {
+                                  fundAmount = parsed;
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          InkWell(
+                            onTap: () {
+                              setModalState(() {
+                                fundAmount += 1;
+                                amountController.text = fundAmount.toStringAsFixed(2);
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFCA26),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.black, width: 2),
+                              ),
+                              child: const Icon(Icons.add, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () async {
+                              if (fundAmount <= 0) {
+                                UtilityTopSnackBar.show(
+                                  context: context,
+                                  message: "Enter a valid amount.",
+                                  isError: true,
+                                );
+                                return;
+                              }
+
+                              // Update kid doc
+                              await firestore.collection('kids').doc(kidId).update({
+                                'balance': usableBalance + fundAmount,
+                                'totalDeposited': totalDeposited + fundAmount,
+                              });
+
+                              // Notification
+                              await firestore.collection('kids_notifications').add({
+                                'family_id': familyId,
+                                'kid_id': kidId,
+                                'notification_title': 'Funds Deposited',
+                                'notification_message': messageController.text.trim().isEmpty
+                                    ? '₱${fundAmount.toStringAsFixed(2)} has been deposited to your account.'
+                                    : messageController.text.trim(),
+                                'type': 'deposit',
+                                'created_at': FieldValue.serverTimestamp(),
+                              });
+
+                              Navigator.pop(context);
+                              UtilityTopSnackBar.show(
+                                context: context,
+                                message: "Deposited ₱${fundAmount.toStringAsFixed(2)}!",
+                              );
+                            },
+                            style: Utilities.depositButtonStyle(),
+                            child: Text(
+                              "Deposit",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              if (fundAmount <= 0 || fundAmount > usableBalance) {
+                                UtilityTopSnackBar.show(
+                                  context: context,
+                                  message: "Invalid or insufficient balance.",
+                                  isError: true,
+                                );
+                                return;
+                              }
+
+                              // Update kid doc
+                              await firestore.collection('kids').doc(kidId).update({
+                                'balance': usableBalance - fundAmount,
+                                'totalWithdrawn': totalWithdrawn + fundAmount,
+                              });
+
+                              // Notification
+                              await firestore.collection('kids_notifications').add({
+                                'family_id': familyId,
+                                'kid_id': kidId,
+                                'notification_title': 'Funds Withdrawn',
+                                'notification_message': messageController.text.trim().isEmpty
+                                    ? '₱${fundAmount.toStringAsFixed(2)} has been withdrawn from your account.'
+                                    : messageController.text.trim(),
+                                'type': 'withdraw',
+                                'created_at': FieldValue.serverTimestamp(),
+                              });
+
+                              Navigator.pop(context);
+                              UtilityTopSnackBar.show(
+                                context: context,
+                                message: "Withdrew ₱${fundAmount.toStringAsFixed(2)}!",
+                              );
+                            },
+                            style: Utilities.withdrawButtonStyle(),
+                            child: Text(
+                              "Withdraw",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
   // BUILD Function:
 
   @override
@@ -530,8 +823,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                           itemBuilder: (context, index) {
                             debugPrint("PDashboardPage - loading kid $index");
                             final kid = Kids_Data[index];
-                            final kidId = kid['id'];
-                            final kidName = kid['name'];
+                            final kidId = kid['kid_id'];
+                            final kidName = kid['first_name'];
                             final kidAvatar = kid['avatar'];
                             final tileColor =
                                 tileColors[index % tileColors.length];
@@ -579,7 +872,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                   Column(
                                     children: [
                                       ElevatedButton(
-                                        onPressed: () {
+                                        onPressed: () async {
                                           if (kidId == null ||
                                               kidName == null ||
                                               kidAvatar == null) {
@@ -593,7 +886,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                               ),
                                             );
                                             return;
-                                          } else {
+                                          } 
+                                          else {
                                             showManageFundsModal(
                                               context,
                                               kidName,
