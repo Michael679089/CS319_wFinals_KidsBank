@@ -79,9 +79,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     } else {
       try {
         var the_main_parent = await FirestoreService.readParent(family_id);
-        var newKids = await FirestoreService.fetch_all_kids_by_family_id(
-          family_id,
-        );
+        var newKids = await FirestoreService.fetch_all_kids_by_family_id(family_id);
         var is_there_a_parent = (the_main_parent != null);
 
         if (is_there_a_parent == false) {
@@ -137,10 +135,10 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   ) {
     debugPrint("AccSelectPage - Handle Account Selection START");
     setState(() {
-      selectedAvatar = avatar;
-      selectedName = name;
       selectedId = id;
+      selectedName = name;
       selectedRole = role;
+      selectedAvatar = avatar;
     });
     debugPrint("Selected $role: $name ($id)");
   }
@@ -172,29 +170,13 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       );
     }
   } else if (selectedRole == 'Kid') {
-      debugPrint("AccSelectPage - selected user is a kid");
+      debugPrint("AccSelectPage - selected user is a parent");
+
       String? my_kid_id = selectedId as String;
-      
-      // Add debug prints to verify values
-      debugPrint("Kid ID: $my_kid_id");
-      debugPrint("Kid Name: $selectedName");
-      debugPrint("Kid Avatar: $selectedAvatar");
-      
-      if (my_kid_id.isNotEmpty && selectedName != null && selectedAvatar != null) {
+      if (my_kid_id.isNotEmpty) {
         navigator.pushNamed(
           "/kids-login-page",
-          arguments: {
-            "user-id": user_id,
-            "kid-id": my_kid_id,
-            "kid-name": selectedName!,
-            "kid-avatar": selectedAvatar!,
-          },
-        );
-      } else {
-        UtilityTopSnackBar.show(
-          context: context,
-          message: "Missing kid information",
-          isError: true,
+          arguments: {"user-id": user_id, "parent-id": my_kid_id},
         );
       }
     }

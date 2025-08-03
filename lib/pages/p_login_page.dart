@@ -216,7 +216,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
                         // The Back BUTTON
                         ElevatedButton.icon(
                           onPressed: () {
-                            navigator.pushReplacementNamed("/account-selector-page", arguments: {"family-name": familyName, "family-user-id": user_id});
+                            Navigator.of(context).pop();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,

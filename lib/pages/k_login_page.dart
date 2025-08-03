@@ -200,11 +200,10 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                         const SizedBox(width: 12),
                         // Back Button - Original Design
                         ElevatedButton.icon(
-                          onPressed: isLoading
-                              ? null
-                              : () => navigator.pushReplacementNamed(
-                                    "/account-selector-page",
-                                  ),
+                            onPressed: () {
+                              // Simply pop/close the current page to go back
+                              Navigator.of(context).pop();
+                            },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(
