@@ -63,12 +63,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/welcome-page': (context) => const WelcomePage(),
         '/login-page': (context) => const LoginPage(),
-        '/kids-login-page': (context) => const KidsLoginPage(
-              user_id: '',
-              kid_id: '',
-              kid_name: '',
-              kid_avatar: '',
-            ), // Default values, will be overridden by onGenerateRoute
       },
       onGenerateRoute: (settings) {
         Widget page;
@@ -124,14 +118,10 @@ class MyApp extends StatelessWidget {
               validateArgs('/kids-login-page', [
                 'user-id',
                 'kid-id',
-                'kid-name',
-                'kid-avatar',
               ]);
               page = KidsLoginPage(
                 user_id: args['user-id'] as String,
                 kid_id: args['kid-id'] as String,
-                kid_name: args['kid-name'] as String,
-                kid_avatar: args['kid-avatar'] as String,
               );
               break;
             case '/kids-setup-page':

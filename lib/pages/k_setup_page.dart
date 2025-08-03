@@ -160,7 +160,9 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
         if (widget.cameFromParentDashboard) {
           navigator.pushReplacementNamed(
             "/parent-dashboard-page",
-            arguments: {"family-user-id": user_id, "parent-id": parentId},
+            arguments: {
+              "user-id": widget.user_id, "parent-id": parentId
+              },
           );
           debugPrint(
             "kidsSetupPage - User that came from parent dashboard pressed back on phone - redirected to Parent-Dashbaord-Page",

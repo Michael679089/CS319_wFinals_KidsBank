@@ -8,6 +8,7 @@ import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'package:wfinals_kidsbank/database/models/parent_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AccountSelectorPage extends StatefulWidget {
   final String user_id;
@@ -79,7 +80,24 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     } else {
       try {
         var the_main_parent = await FirestoreService.readParent(family_id);
-        var newKids = await FirestoreService.fetch_all_kids_by_family_id(family_id);
+        //Fetch kids from Firestore using family_id and include doc.id
+        var kidsSnapshot = await FirebaseFirestore.instance
+                .collection('kids')
+                .where('family_id', isEqualTo: family_id)
+                .get();
+
+            Kids_List = kidsSnapshot.docs.map((doc) {
+              var data = doc.data();
+              return KidModel(
+                id: doc.id,
+                first_name: data['first_name'],
+                last_name: data['last_name'],
+                avatar_file_path: data['avatar_file_path'],
+                pincode: data['pincode'],
+                date_of_birth: (data['date_of_birth'] as Timestamp).toDate(),
+                family_id: data['family_id'],
+              );
+            }).toList();
         var is_there_a_parent = (the_main_parent != null);
 
         if (is_there_a_parent == false) {
@@ -104,13 +122,12 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           return;
         }
 
-        if (newKids.isEmpty) {
-          debugPrint("AccountSelectorPage - newKids list is empty");
-        }
+        if (Kids_List.isEmpty) {
+            debugPrint("AccountSelectorPage - Kids_List is empty");
+          }
 
         setState(() {
           Parent = the_main_parent;
-          Kids_List = newKids;
           isLoading = false;
         });
 
@@ -170,16 +187,20 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       );
     }
   } else if (selectedRole == 'Kid') {
-      debugPrint("AccSelectPage - selected user is a parent");
+  debugPrint("AccSelectPage - selected user is a kid");
 
-      String? my_kid_id = selectedId as String;
-      if (my_kid_id.isNotEmpty) {
-        navigator.pushNamed(
-          "/kids-login-page",
-          arguments: {"user-id": user_id, "parent-id": my_kid_id},
-        );
-      }
-    }
+  String my_kid_id = selectedId ?? '';
+
+  if (my_kid_id.isNotEmpty) {
+    navigator.pushNamed(
+      "/kids-login-page",
+      arguments: {
+        "user-id": user_id,
+        "kid-id": my_kid_id,
+      },
+    );
+  }
+}
   debugPrint("AccSelectPage - Login Button END");
 }
 
