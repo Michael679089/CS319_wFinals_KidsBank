@@ -3,9 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/database/api/auth_service.dart';
 import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsLoginPage extends StatefulWidget {
-  const KidsLoginPage({super.key});
+  final String user_id;
+  final String kid_id;
+  final String kid_name;
+  final String kid_avatar;
+
+  const KidsLoginPage({
+    super.key,
+    required this.user_id,
+    required this.kid_id,
+    required this.kid_name,
+    required this.kid_avatar,
+  });
 
   @override
   State<KidsLoginPage> createState() => _KidsLoginPageState();
@@ -13,61 +25,89 @@ class KidsLoginPage extends StatefulWidget {
 
 class _KidsLoginPageState extends State<KidsLoginPage> {
   final TextEditingController pincodeController = TextEditingController();
+  bool isLoading = false;
+  bool hasError = false;
 
-  // Saved Credentials
-  String user_id = '';
-  String kidId = '';
-  String avatarFilePath = '';
-  String kidFirstName = '';
-
-  // My Services
-  var myAuthService = AuthService();
-  var myFirestoreService = FirestoreService();
-
-  //
-  // INITSTATE Function:
-  //
-  @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
-  }
-
-  // Other Functions
-
-  void _loadData() async {
-    // Step 1: Get Family User UID;
-    var user = AuthService.getCurrentUser();
-    if (user == null) return;
-    user_id = user.uid;
-
-    // Step 2: Get the kids Docs;
-    var family_object = await FirestoreService.readFamily(user_id);
-    var newKidId = "";
-    var newAvatarPath = "";
-    var newKidFirstName = "";
-    if (family_object != null) {
-      if (family_object.id != null) {
-        var family_id = family_object.id as String;
-        var kid_object = await FirestoreService.readKid(family_id);
-
-        if (kid_object != null) {
-          newAvatarPath = kid_object.avatar_file_path;
-          newKidFirstName = kid_object.first_name;
-        }
-      }
+  Future<void> _login() async {
+    if (widget.kid_id.isEmpty) {
+      UtilityTopSnackBar.show(
+        context: context,
+        message: "Error: No kid account selected",
+        isError: true,
+      );
+      return;
     }
 
     setState(() {
-      kidId = newKidId;
-      avatarFilePath = newAvatarPath;
-      kidFirstName = newKidFirstName;
+      isLoading = true;
+      hasError = false;
     });
 
-    debugPrint("kidsLoginPage - loadData success");
+    final pincode = pincodeController.text.trim();
+
+    if (pincode.isEmpty) {
+      UtilityTopSnackBar.show(
+        context: context,
+        message: "Pincode cannot be empty",
+        isError: true,
+      );
+      setState(() => isLoading = false);
+      return;
+    }
+
+    try {
+      // Verify pincode against Firestore
+      final kidDoc = await FirebaseFirestore.instance
+          .collection('kids')
+          .doc(widget.kid_id)
+          .get();
+
+      if (!kidDoc.exists) {
+        UtilityTopSnackBar.show(
+          context: context,
+          message: "Kid account not found",
+          isError: true,
+        );
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final kidData = kidDoc.data();
+      if (kidData == null || kidData['pincode'] != pincode) {
+        UtilityTopSnackBar.show(
+          context: context,
+          message: "Incorrect pincode",
+          isError: true,
+        );
+        setState(() => isLoading = false);
+        return;
+      }
+
+      UtilityTopSnackBar.show(
+        context: context,
+        message: "Login successful!",
+        isError: false,
+      );
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(
+        "/kids-dashboard-page",
+        arguments: {
+          "kid-id": widget.kid_id,
+          "family-user-id": widget.user_id,
+        },
+      );
+    } catch (e) {
+      UtilityTopSnackBar.show(
+        context: context,
+        message: "Error: ${e.toString()}",
+        isError: true,
+      );
+      debugPrint("Login error: $e");
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -88,7 +128,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Avatar
+                    // Avatar - Original Design
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -102,14 +142,15 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                         ],
                       ),
                       child: CircleAvatar(
-                        backgroundImage: AssetImage(avatarFilePath),
+                        backgroundImage: AssetImage(widget.kid_avatar),
                         radius: 70,
                         backgroundColor: const Color(0xFF4E88CF),
                       ),
                     ),
                     const SizedBox(height: 12),
+                    // Greeting - Now shows the actual kid's name from widget parameters
                     Text(
-                      "Hi $kidFirstName!",
+                      "Hi ${widget.kid_name}!",
                       style: GoogleFonts.fredoka(
                         fontSize: 58.2,
                         fontWeight: FontWeight.bold,
@@ -125,7 +166,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _login,
+                            onPressed: isLoading ? null : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFFCA26),
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -137,28 +178,33 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
-                            child: Text(
-                              'Log in',
-                              style: GoogleFonts.fredoka(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : Text(
+                                    'Log in',
+                                    style: GoogleFonts.fredoka(
+                                      color: Colors.black,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 12),
-
-                        // Back Button
+                        // Back Button - Original Design
                         ElevatedButton.icon(
-                          onPressed: () {
-                            debugPrint(
-                              "kidsLoginPage - going back to account Selector Page",
-                            );
-                            navigator.pushReplacementNamed(
-                              "/account-selector-page",
-                            );
-                          },
+                          onPressed: isLoading
+                              ? null
+                              : () => navigator.pushReplacementNamed(
+                                    "/account-selector-page",
+                                  ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(
@@ -194,75 +240,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
     );
   }
 
-  void _login() async {
-    var navigator = Navigator.of(context);
-
-    debugPrint("kidsLoginPage - Login called");
-    final pincode = pincodeController.text.trim();
-
-    if (pincode.isEmpty) {
-      _showSnackbar("Password cannot be empty.");
-      return;
-    }
-
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('kids')
-          .doc(kidId)
-          .get();
-
-      // Just for legacy accounts I want them to use pincode later.
-      try {
-        if (doc["password"] != pincode) {
-          debugPrint("kidsLoginPage - incorrect pincode");
-          return;
-        }
-      } catch (e) {
-        debugPrint("kidsLoginPage - password doesn't exist. Try pincode");
-      }
-
-      try {
-        if (doc["pincode"] != pincode) {
-          debugPrint("kidsLoginPage - incorrect pincode");
-          return;
-        }
-      } catch (e) {
-        debugPrint("kidsLoginPage - pincode doesn't exist. error");
-        throw Error();
-      }
-
-      _showSnackbar("Login successful!", isError: false);
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-      if (!mounted) return;
-
-      //Navigate and pass kidId to KidsDashboard
-      debugPrint(
-        "kidsLoginPage - login sucess, redirecting to kids-dashboard-page.",
-      );
-      navigator.pushReplacementNamed(
-        "/kids-dashboard-page",
-        arguments: {"kid-id": kidId, "family-user-id": user_id},
-      );
-    } catch (e) {
-      _showSnackbar("Error: ${e.toString()}");
-    }
-  }
-
-  void _showSnackbar(String message, {bool isError = true}) {
-    final snackBar = SnackBar(
-      content: Text(message, style: GoogleFonts.fredoka(color: Colors.white)),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
-      duration: const Duration(seconds: 2),
-    );
-
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(snackBar);
-  }
-
+  // Original Helper Widgets
   Widget _buildLabel(String text) {
     return RichText(
       text: TextSpan(
@@ -293,7 +271,8 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
         controller: controller,
         obscureText: true,
         obscuringCharacter: '•',
-        keyboardType: TextInputType.visiblePassword,
+        keyboardType: TextInputType.number,
+        maxLength: 4,
         style: GoogleFonts.fredoka(
           fontSize: 20,
           fontWeight: FontWeight.w700,
@@ -303,8 +282,15 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
           counterText: "",
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          hintText: "Enter 4-digit pincode",
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    pincodeController.dispose();
+    super.dispose();
   }
 }

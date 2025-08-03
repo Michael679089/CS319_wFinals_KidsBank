@@ -29,7 +29,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   bool isLoading = true;
   String? errorMessage;
 
-  // This is Account Selector, these are for selecting the account to log in as:
+  // Account Selection
   String? selectedId;
   String? selectedName;
   String? selectedRole;
@@ -39,7 +39,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   String familyName = "";
   String user_id = "";
 
-  // My Services
+  // Services
   final myFirestoreService = FirestoreService();
 
   // FUNCTIONS
@@ -69,7 +69,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
 
     debugPrint("AccountSelectorPage@fetchUsers - familyID: $family_id");
 
-    // Step 1: Get the USER_ID
     final user = AuthService.getCurrentUser();
     if (user == null) {
       setState(() {
@@ -78,7 +77,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       });
       return;
     } else {
-      // Step 2: Fetch the single parent and all the kids.
       try {
         var the_main_parent = await FirestoreService.readParent(family_id);
         var newKids = await FirestoreService.fetch_all_kids_by_family_id(
@@ -94,7 +92,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
             "accountSelectorPage - user needs to add a single parent for the app to work.",
           );
 
-          // Step 3: Add 5-second delay for users to read before navigation
           Future.delayed(const Duration(seconds: 5), () {
             if (mounted) {
               navigator.pushNamed(
@@ -139,72 +136,84 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     String avatar,
   ) {
     debugPrint("AccSelectPage - Handle Account Selection START");
-    if (role == "Parent") {
-      debugPrint("Selected parent ID: $id");
-
-      setState(() {
-        selectedAvatar = avatar;
-        selectedName = name;
-        selectedId = id;
-        selectedRole = role;
-      });
-    } else if (role == "Kid") {
-      debugPrint("Selected Kid ID: $id");
-    }
-
-    debugPrint("AccSelectPage - Handle Account Selection END");
+    setState(() {
+      selectedAvatar = avatar;
+      selectedName = name;
+      selectedId = id;
+      selectedRole = role;
+    });
+    debugPrint("Selected $role: $name ($id)");
   }
 
   void _handleLoginButton() {
-    debugPrint("AccSelectPage - Login Button START");
+  debugPrint("AccSelectPage - Login Button START");
 
-    var navigator = Navigator.of(context);
+  var navigator = Navigator.of(context);
 
-    debugPrint(
-      "accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName",
+  debugPrint(
+    "accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName",
+  );
+
+  if (selectedName == null || selectedRole == null) {
+    UtilityTopSnackBar.show(
+      context: context,
+      message: "Please select a user above first",
     );
-
-    if (selectedName == null || selectedRole == null) {
-      UtilityTopSnackBar.show(
-        context: context,
-        message: "Please select a user above first",
-      );
-      return;
-    }
-
-    if (selectedRole == 'Parent') {
-      debugPrint("AccSelectPage - selected user is a parent");
-
-      String? my_parent_id = selectedId as String;
-      if (my_parent_id.isNotEmpty) {
-        navigator.pushNamed(
-          "/parent-login-page",
-          arguments: {"user-id": user_id, "parent-id": my_parent_id},
-        );
-      }
-    } else if (selectedRole == 'Kid') {
-      debugPrint("AccSelectPage - selected user is a kid");
-    }
-    debugPrint("AccSelectPage - Login Button END");
+    return;
   }
 
-  // Helper method to show SnackBar, consistent with LoginPage
+  if (selectedRole == 'Parent') {
+    debugPrint("AccSelectPage - selected user is a parent");
+    String? my_parent_id = selectedId as String;
+    if (my_parent_id.isNotEmpty) {
+      navigator.pushNamed(
+        "/parent-login-page",
+        arguments: {"user-id": user_id, "parent-id": my_parent_id},
+      );
+    }
+  } else if (selectedRole == 'Kid') {
+      debugPrint("AccSelectPage - selected user is a kid");
+      String? my_kid_id = selectedId as String;
+      
+      // Add debug prints to verify values
+      debugPrint("Kid ID: $my_kid_id");
+      debugPrint("Kid Name: $selectedName");
+      debugPrint("Kid Avatar: $selectedAvatar");
+      
+      if (my_kid_id.isNotEmpty && selectedName != null && selectedAvatar != null) {
+        navigator.pushNamed(
+          "/kids-login-page",
+          arguments: {
+            "user-id": user_id,
+            "kid-id": my_kid_id,
+            "kid-name": selectedName!,
+            "kid-avatar": selectedAvatar!,
+          },
+        );
+      } else {
+        UtilityTopSnackBar.show(
+          context: context,
+          message: "Missing kid information",
+          isError: true,
+        );
+      }
+    }
+  debugPrint("AccSelectPage - Login Button END");
+}
+
   void _handleLogOutFromFamily() async {
     var navigator = Navigator.of(context);
 
-    // Step 1: Log User out but don't redirect him yet.
     var logoutResponse = await AuthService.logoutAccount();
 
     if (logoutResponse["status"] == "success") {
       debugPrint("log out successful");
 
-      // Step 2: If log out successful removed shared preferences
       final prefs = await SharedPreferences.getInstance();
       prefs.remove('savedEmail');
       prefs.remove('savedPassword');
       prefs.remove('keepLoggedIn');
 
-      // Step 3: Finally Redirect him
       (context, "Logged out successfully!", isError: false);
       navigator.pushReplacementNamed("/login-page");
       return;
@@ -213,7 +222,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     debugPrint("log out failed");
   }
 
-  // INITSTATE
   @override
   void initState() {
     super.initState();
@@ -225,7 +233,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     String text,
     double size, {
     bool isTextAlignmentCenter = false,
-    Color textColor = Colors.black, // Changed from Colors to Color
+    Color textColor = Colors.black,
     FontWeight fontWeight = FontWeight.w600,
   }) {
     return Text(
@@ -235,7 +243,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         fontSize: size,
         fontWeight: fontWeight,
         fontFamily: GoogleFonts.fredoka().fontFamily,
-        color: textColor, // Added color parameter
+        color: textColor,
       ),
     );
   }
@@ -244,8 +252,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   Text get subTitle => _buildText("Who is using?", 28.8);
   Text get parentsLabelText => _buildText("Parents", 20);
   Text get kidsLabelText => _buildText("[Kids]", 20);
-
-  // BUILD FUNCTION
 
   @override
   Widget build(BuildContext context) {
@@ -293,7 +299,6 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         );
       }
 
-      // Main UI
       return Column(
         children: [
           // Parent Container
@@ -301,7 +306,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white, // Moved color here
+                color: Colors.white,
                 border: Border(
                   bottom: BorderSide(color: Colors.black, width: 1.0),
                 ),
@@ -340,70 +345,88 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
             ),
 
           // Kids Container
-Container(
-  margin: const EdgeInsets.all(20),
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    color: Colors.white,
-    border: Border.all(color: Colors.black, width: 2),
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      kidsLabelText,
-      const SizedBox(height: 16),
-
-      // Smaller scrollable grid of kids (height adjusted to fix overflow)
-      SizedBox(
-        height: 100,
-        child: Scrollbar(
-          thumbVisibility: true,
-          radius: const Radius.circular(10),
-          child: GridView.builder(
-            itemCount: Kids_List.length,
-            scrollDirection: Axis.vertical,
-            physics: const BouncingScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.85,
+          Container(
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.black, width: 2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            itemBuilder: (context, index) {
-              final kid = Kids_List[index];
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(40),
-                    child: Image.asset(
-                      kid.avatar_file_path,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                kidsLabelText,
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 100,
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    radius: const Radius.circular(10),
+                    child: GridView.builder(
+                      itemCount: Kids_List.length,
+                      scrollDirection: Axis.vertical,
+                      physics: const BouncingScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 0.85,
+                      ),
+                      itemBuilder: (context, index) {
+                        final kid = Kids_List[index];
+                        final isSelected = selectedId == kid.id;
+                        return GestureDetector(
+                          onTap: () => _handleSelectingAccount(
+                            kid.id as String,
+                            kid.first_name,
+                            "Kid",
+                            kid.avatar_file_path,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(40),
+                                  border: isSelected
+                                      ? Border.all(
+                                          color: Colors.blue,
+                                          width: 3,
+                                        )
+                                      : null,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(40),
+                                  child: Image.asset(
+                                    kid.avatar_file_path,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                kid.first_name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? Colors.blue : Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    kid.first_name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              );
-            },
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-    ],
-  ),
-),
-
 
           // Login Button
           Container(
@@ -425,7 +448,6 @@ Container(
         child: Column(
           children: [
             Top_Title_Display,
-            // ACCOUNT SELECTOR PAGE - Container with ClipRect;
             Builder(
               builder: (context) {
                 final parentBorderRadius = BorderRadius.circular(20);
@@ -435,7 +457,7 @@ Container(
                     border: Border.all(color: Colors.black, width: 3),
                   ),
                   child: ClipRRect(
-                    borderRadius: parentBorderRadius, // Same as parent
+                    borderRadius: parentBorderRadius,
                     child: Container(
                       width: double.infinity,
                       constraints: BoxConstraints(maxWidth: 700),
@@ -445,8 +467,6 @@ Container(
                 );
               },
             ),
-
-            // -----------------------------------------------
 
             // Log out Button
             Container(
@@ -466,12 +486,6 @@ Container(
       );
     }
 
-    ///
-    ///
-    ///
-    ///
-    ///
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -483,7 +497,7 @@ Container(
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(
           backgroundColor: const Color(0xFFFFCA26),
-          title: const Text("Account Selector Page"),
+          title: const Text(" "),
           automaticallyImplyLeading: false,
         ),
         body: MainDisplay(isLoading),

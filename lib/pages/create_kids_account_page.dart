@@ -38,24 +38,18 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
   String parentId = '';
   bool _didUserCameFromParentDashboard = false;
 
-  // INIT STATE FUNCTION
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadParentInfo();
     });
   }
 
-  // Other Functions:
-
   Future<void> _loadParentInfo() async {
     final familyUser = FirebaseAuth.instance.currentUser;
     if (familyUser != null) {
-      // Step 1: Try to get the Parent that got here name.
       final myModalRoute = ModalRoute.of(context);
-
       if (myModalRoute == null) {
         debugPrint("kidsSetupPage - ERROR: myModalRoute was null");
         return;
@@ -67,8 +61,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
         _didUserCameFromParentDashboard = widget.didUserCameFromDashboard;
       });
     }
-
-    debugPrint("createKidsAccountPage - succesfully load parent info");
+    debugPrint("createKidsAccountPage - successfully load parent info");
   }
 
   void _showAvatarPicker() {
@@ -169,12 +162,17 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
     final name = firstNameController.text.trim();
     final dob = dateOfBirthController.text.trim();
     final phone = phoneNumController.text.trim();
-    final password = pincodeController.text;
+    final pincode = pincodeController.text;
 
     var navigator = Navigator.of(context);
 
-    if (name.isEmpty || dob.isEmpty || phone.isEmpty || password.isEmpty) {
+    if (name.isEmpty || dob.isEmpty || phone.isEmpty || pincode.isEmpty) {
       _showSnackbar('All fields are required', isError: true);
+      return;
+    }
+
+    if (pincode.length != 4) {
+      _showSnackbar('Pincode must be 4 digits', isError: true);
       return;
     }
 
@@ -186,14 +184,10 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
 
     String? kidId;
 
-    // Step 1: Adding kids to kids collection. Try-Catch
     try {
       var firstName = firstNameController.text;
       var lastName = lastNameController.text;
-      var dateOfBirth = DateTime.parse(
-        dateOfBirthController.text,
-      ); // year-month-day 2015-01-28
-      var pincode = pincodeController.text;
+      var dateOfBirth = DateTime.parse(dateOfBirthController.text);
       var avatar = selectedAvatar;
       var user_id = AuthService.getCurrentUser()!.uid;
       var family_id = await FirestoreService.fetch_family_id(user_id) as String;
@@ -203,7 +197,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
         first_name: firstName,
         last_name: lastName,
         date_of_birth: dateOfBirth,
-        pincode: pincode,
+        pincode: pincode, // Now using pincode instead of password
         avatar_file_path: avatar,
       );
       kidId = await FirestoreService.createKid(newKidModel);
@@ -213,11 +207,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
           message: 'Kid account created successfully!',
           context: context,
         );
-        debugPrint(
-          "createKidsAccountPage - succesfully created kid, moving to creating kids_payment_info",
-        );
 
-        // Step 2: Let's now add the kids payment info for this child
         try {
           var phoneNumber = phoneNumController.text;
           var family_object = await FirestoreService.readFamily(widget.user_id);
@@ -240,17 +230,10 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
             message: 'Kid Payment Info created successfully!',
             context: context,
           );
-          debugPrint(
-            "createKidsAccountPage - succesfully created kid payment info.",
-          );
         } catch (e) {
           debugPrint("$e");
           return;
         }
-
-        debugPrint(
-          "createKidsAccountPage - successfully creating a kid and a kidpaymentinfo",
-        );
 
         navigator.pushReplacementNamed(
           "/kids-setup-page",
@@ -309,13 +292,12 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              // Title - Set up Kids Account
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Set Up Kid’s Account',
+                    "Set Up Kid's Account",
                     style: TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.w700,
@@ -353,9 +335,13 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 20),
-                    _buildLabel('Password'),
-                    _buildField(pincodeController, obscure: true),
-
+                    _buildLabel('4-Digit Pincode'), // Changed label
+                    _buildField(
+                      pincodeController,
+                      obscure: true,
+                      maxLength: 4, // Limit to 4 digits
+                      keyboardType: TextInputType.number, // Number keyboard
+                    ),
                     const SizedBox(height: 25),
                     SizedBox(
                       width: double.infinity,

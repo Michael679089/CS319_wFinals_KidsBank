@@ -17,12 +17,13 @@ import 'package:wfinals_kidsbank/pages/register_account_page.dart';
 import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
 import 'pages/welcomepage.dart';
-import 'firebase_options.dart'; // auto-generated file by flutterfire CLI
+import 'firebase_options.dart';
 
 const bool isUnauthenticatedDebug = bool.fromEnvironment(
   'DEBUG_UNAUTHENTICATED',
   defaultValue: false,
 );
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -32,7 +33,6 @@ void main() async {
   );
 
   if (isUnauthenticatedDebug) {
-    // Force unauthenticated state
     FirebaseAuth.instance.signOut();
     debugPrint("main.dart - unauthenticated debug is active.");
   }
@@ -57,20 +57,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // I have 19 pages in this project. There should only be 19 routes.
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       initialRoute: '/welcome-page',
       routes: {
         '/welcome-page': (context) => const WelcomePage(),
         '/login-page': (context) => const LoginPage(),
-        '/kids-login-page': (context) => const KidsLoginPage(),
+        '/kids-login-page': (context) => const KidsLoginPage(
+              user_id: '',
+              kid_id: '',
+              kid_name: '',
+              kid_avatar: '',
+            ), // Default values, will be overridden by onGenerateRoute
       },
       onGenerateRoute: (settings) {
         Widget page;
         final args = settings.arguments as Map<String, dynamic>? ?? {};
 
-        // Helper function to validate required arguments
         void validateArgs(String routeName, List<String> requiredKeys) {
           final missingArgs = requiredKeys
               .where(
@@ -116,9 +119,21 @@ class MyApp extends StatelessWidget {
               );
               break;
 
-            ///
-            /// Below will be the KID's PAGES:
-            ///
+            /// KID'S PAGES:
+            case '/kids-login-page':
+              validateArgs('/kids-login-page', [
+                'user-id',
+                'kid-id',
+                'kid-name',
+                'kid-avatar',
+              ]);
+              page = KidsLoginPage(
+                user_id: args['user-id'] as String,
+                kid_id: args['kid-id'] as String,
+                kid_name: args['kid-name'] as String,
+                kid_avatar: args['kid-avatar'] as String,
+              );
+              break;
             case '/kids-setup-page':
               validateArgs('/kids-setup-page', [
                 'user-id',
@@ -170,9 +185,7 @@ class MyApp extends StatelessWidget {
               );
               break;
 
-            ///
-            /// Below will be the PARENT's PAGES:
-            ///
+            /// PARENT'S PAGES:
             case '/parent-setup-page':
               validateArgs(settings.name as String, ["first-time-user"]);
               page = ParentSetupPage(first_time_user: args["first-time-user"]);
