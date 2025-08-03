@@ -9,12 +9,14 @@ class KidsDashboard extends StatefulWidget {
   final String kidId;
   final String familyUserId;
   final String? familyName; // Added for consistency
+  final bool there_are_parent_in_family;
 
   const KidsDashboard({
     super.key,
     required this.kidId,
     required this.familyUserId,
     this.familyName,
+    this.there_are_parent_in_family = false,
   });
 
   @override
@@ -26,54 +28,72 @@ class _KidsDashboardState extends State<KidsDashboard> {
   double balance = 0.0;
   bool isLoading = true;
   String? errorMessage;
+  late bool thereAreParents;
 
   // for navigation:
-  @override
-  void initState() {
-    super.initState();
-    fetchKidInfo();
+@override
+void initState() {
+  super.initState();
+  thereAreParents = widget.there_are_parent_in_family;
+  UtilitiesKidsDashboardNavigation.currentPageIndex = 0;
+  UtilitiesKidsDashboardNavigation.selectedPage = "dashboard";
+  fetchKidInfo();
+}
 
-    UtilitiesKidsDashboardNavigation.currentPageIndex =
-        0; // Restart it to zero if user comes back.
-    UtilitiesKidsDashboardNavigation.selectedPage =
-        "dashboard"; // Restart it if user comes back.
-  }
+Future<void> fetchKidInfo() async {
+  try {
+    debugPrint("Fetching kid info for kidId: ${widget.kidId}");
 
-  Future<void> fetchKidInfo() async {
-    try {
-      // Batch fetch kid and payment info
-      final kidDoc = FirebaseFirestore.instance
-          .collection('kids')
-          .doc(widget.kidId);
-      final paymentDoc = FirebaseFirestore.instance
-          .collection('kids_payment_info')
-          .doc(widget.kidId);
+    // Fetch kid profile
+    final kidSnapshot = await FirebaseFirestore.instance
+        .collection('kids')
+        .doc(widget.kidId)
+        .get();
 
-      final results = await Future.wait([kidDoc.get(), paymentDoc.get()]);
-
-      final kidSnapshot = results[0];
-      final paymentSnapshot = results[1];
-
-      if (!kidSnapshot.exists) {
-        throw Exception('Kid profile not found');
-      }
-
-      setState(() {
-        kidName = kidSnapshot.data()!['firstName'] ?? 'Unknown';
-        balance = paymentSnapshot.exists
-            ? (paymentSnapshot['usable_balance']?.toDouble() ?? 0.0)
-            : 0.0;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Failed to load kid info: $e';
-      });
-      showCustomSnackBar('Error: $e', isError: true);
+    if (!kidSnapshot.exists) {
+      throw Exception('Kid profile not found');
     }
-  }
 
+    // Fetch payment info by kid_id
+    final paymentQuery = await FirebaseFirestore.instance
+        .collection('kids_payment_info')
+        .where('kid_id', isEqualTo: widget.kidId)
+        .limit(1)
+        .get();
+
+    double fetchedBalance = 0.0;
+    if (paymentQuery.docs.isNotEmpty) {
+      final paymentData = paymentQuery.docs.first.data();
+      debugPrint("paymentData: $paymentData");
+
+      final rawValue = paymentData['total_amount_left'];
+      if (rawValue is int) {
+        fetchedBalance = rawValue.toDouble();
+      } else if (rawValue is double) {
+        fetchedBalance = rawValue;
+      } else {
+        debugPrint("total_amount_left is not numeric: $rawValue");
+      }
+    } else {
+      debugPrint("No payment info found for this kid.");
+    }
+
+    setState(() {
+      kidName = kidSnapshot.data()!['first_name'] ?? 'Unknown';
+      balance = fetchedBalance;
+      isLoading = false;
+    });
+
+    debugPrint("Final balance set to: $balance");
+  } catch (e) {
+    setState(() {
+      isLoading = false;
+      errorMessage = 'Failed to load kid info: $e';
+    });
+    debugPrint("Error: $e");
+    showCustomSnackBar('Error: $e', isError: true);
+  }
+}
   Stream<List<Map<String, dynamic>>> getChoresStream() {
     return FirebaseFirestore.instance
         .collection('chores')
@@ -134,31 +154,83 @@ class _KidsDashboardState extends State<KidsDashboard> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  void _showWithdrawModal() {
-    final TextEditingController titleController = TextEditingController();
-    final TextEditingController descriptionController = TextEditingController();
-    double withdrawAmount = 1.0;
+void _showWithdrawModal(QueryDocumentSnapshot paymentDoc) {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  double withdrawAmount = 1.0;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom * 0.4,
-              ),
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.85,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(color: Colors.black, width: 2),
-                ),
-                child: StatefulBuilder(
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: Colors.black, width: 2),
+            ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('kids_payment_info')
+                  .where('kid_id', isEqualTo: widget.kidId)
+                  .limit(1)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Text(
+                    "No payment info found.",
+                    style: GoogleFonts.fredoka(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+                  );
+                }
+
+                final liveDoc = snapshot.data!.docs.first;
+                final liveBalance =
+                    (liveDoc['total_amount_left'] ?? 0).toDouble();
+
+                return StatefulBuilder(
                   builder: (context, setModalState) {
+                    if (liveBalance <= 0) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Withdraw Money",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            "You have no balance to withdraw.",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
+                            child: const Text("Close"),
+                          )
+                        ],
+                      );
+                    }
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
@@ -172,6 +244,7 @@ class _KidsDashboardState extends State<KidsDashboard> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
+
                         TextField(
                           controller: titleController,
                           decoration: InputDecoration(
@@ -180,11 +253,13 @@ class _KidsDashboardState extends State<KidsDashboard> {
                             fillColor: Colors.grey[100],
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
-                              borderSide: const BorderSide(color: Colors.black),
+                              borderSide:
+                                  const BorderSide(color: Colors.black),
                             ),
                           ),
                         ),
                         const SizedBox(height: 10),
+
                         TextField(
                           controller: descriptionController,
                           maxLines: 2,
@@ -194,18 +269,21 @@ class _KidsDashboardState extends State<KidsDashboard> {
                             fillColor: Colors.grey[100],
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
-                              borderSide: const BorderSide(color: Colors.black),
+                              borderSide:
+                                  const BorderSide(color: Colors.black),
                             ),
                           ),
                         ),
                         const SizedBox(height: 20),
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             IconButton(
                               onPressed: () {
                                 if (withdrawAmount > 1) {
-                                  setModalState(() => withdrawAmount -= 1);
+                                  setModalState(
+                                      () => withdrawAmount -= 1);
                                 }
                               },
                               icon: const Icon(Icons.remove, size: 20),
@@ -240,8 +318,10 @@ class _KidsDashboardState extends State<KidsDashboard> {
                             ),
                             const SizedBox(width: 10),
                             IconButton(
-                              onPressed: () =>
-                                  setModalState(() => withdrawAmount += 1),
+                              onPressed: withdrawAmount < liveBalance
+                                  ? () => setModalState(
+                                      () => withdrawAmount += 1)
+                                  : null,
                               icon: const Icon(Icons.add, size: 20),
                               style: IconButton.styleFrom(
                                 backgroundColor: const Color(0xFFFFCA26),
@@ -257,6 +337,7 @@ class _KidsDashboardState extends State<KidsDashboard> {
                           ],
                         ),
                         const SizedBox(height: 20),
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -272,68 +353,82 @@ class _KidsDashboardState extends State<KidsDashboard> {
                               ),
                             ),
                             ElevatedButton(
-                              onPressed: () async {
-                                final title = titleController.text.trim();
-                                final desc = descriptionController.text.trim();
+                              onPressed: (withdrawAmount <= 0 ||
+                                      withdrawAmount > liveBalance)
+                                  ? null
+                                  : () async {
+                                      final title =
+                                          titleController.text.trim();
+                                      final desc =
+                                          descriptionController.text.trim();
 
-                                if (title.isEmpty ||
-                                    desc.isEmpty ||
-                                    withdrawAmount <= 0) {
-                                  showCustomSnackBar(
-                                    "Please fill all fields and enter a valid amount.",
-                                    isError: true,
-                                  );
-                                  return;
-                                }
+                                      if (title.isEmpty || desc.isEmpty) {
+                                        UtilityTopSnackBar.show(
+                                          context: context,
+                                          message:
+                                              "Please fill all fields.",
+                                          isError: true,
+                                        );
+                                        return;
+                                      }
 
-                                if (withdrawAmount > balance) {
-                                  showCustomSnackBar(
-                                    "Cannot withdraw more than your balance (\$${balance.toStringAsFixed(2)}).",
-                                    isError: true,
-                                  );
-                                  return;
-                                }
+                                      try {
+                                        await FirebaseFirestore.instance
+                                            .runTransaction(
+                                                (transaction) async {
+                                          final freshSnap =
+                                              await transaction.get(
+                                                  liveDoc.reference);
+                                          final currentBal =
+                                              (freshSnap['total_amount_left'] ??
+                                                      0)
+                                                  .toDouble();
+                                          if (withdrawAmount >
+                                              currentBal) {
+                                            throw Exception(
+                                                "Insufficient funds.");
+                                          }
+                                          transaction.update(
+                                              liveDoc.reference, {
+                                            'total_amount_left':
+                                                FieldValue.increment(
+                                                    -withdrawAmount),
+                                            'totalWithdrawn':
+                                                FieldValue.increment(
+                                                    withdrawAmount),
+                                          });
+                                        });
 
-                                try {
-                                  await FirebaseFirestore.instance
-                                      .collection('kidsPaymentInfo')
-                                      .doc(widget.kidId)
-                                      .update({
-                                        'usableBalance': FieldValue.increment(
-                                          -withdrawAmount,
-                                        ),
-                                      });
+                                        NotificationModel notif =
+                                            NotificationModel(
+                                          family_id:
+                                              widget.familyUserId,
+                                          kid_id: widget.kidId,
+                                          notification_title: title,
+                                          notification_message: desc,
+                                          type: 'withdrawal',
+                                          created_at: DateTime.now(),
+                                          amount: withdrawAmount,
+                                        );
+                                        FirestoreService
+                                            .createNotification(notif);
 
-                                  NotificationModel withdrawalKidNotification =
-                                      NotificationModel(
-                                        family_id: widget.familyUserId,
-                                        kid_id: widget.kidId,
-                                        notification_title: title,
-                                        notification_message: desc,
-                                        type: 'withdrawal',
-                                        created_at: DateTime.now(),
-                                        amount: withdrawAmount, 
-                                      );
-                                  FirestoreService.createNotification(
-                                    withdrawalKidNotification,
-                                  );
-
-                                  setState(() {
-                                    balance -= withdrawAmount;
-                                  });
-
-                                  Navigator.pop(context);
-                                  showCustomSnackBar(
-                                    "Withdrawal of \$${withdrawAmount.toStringAsFixed(2)} submitted!",
-                                    isError: false,
-                                  );
-                                } catch (e) {
-                                  showCustomSnackBar(
-                                    "Failed to process withdrawal: $e",
-                                    isError: true,
-                                  );
-                                }
-                              },
+                                        Navigator.pop(context);
+                                        UtilityTopSnackBar.show(
+                                          context: context,
+                                          message:
+                                              "Withdrawal of \$${withdrawAmount.toStringAsFixed(2)} submitted!",
+                                          isError: false,
+                                        );
+                                      } catch (e) {
+                                        UtilityTopSnackBar.show(
+                                          context: context,
+                                          message:
+                                              "Failed to process withdrawal: $e",
+                                          isError: true,
+                                        );
+                                      }
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF60C56F),
                                 padding: const EdgeInsets.symmetric(
@@ -362,14 +457,15 @@ class _KidsDashboardState extends State<KidsDashboard> {
                       ],
                     );
                   },
-                ),
-              ),
+                );
+              },
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -381,8 +477,11 @@ class _KidsDashboardState extends State<KidsDashboard> {
         if (!didPop) {
           Navigator.pushReplacementNamed(
             context,
-            '/kids-login-page',
-            arguments: {'family-user-id': widget.familyUserId},
+            '/account-selector-page',
+            arguments: {
+              "user-id": widget.familyUserId,
+              "there-are-parent-in-family": widget.there_are_parent_in_family,
+            },
           );
         }
       },
@@ -409,329 +508,369 @@ class _KidsDashboardState extends State<KidsDashboard> {
           child: isLoading
               ? const Center(child: CircularProgressIndicator())
               : errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        errorMessage!,
-                        style: GoogleFonts.fredoka(
-                          fontSize: 20,
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: fetchKidInfo,
-                        child: Text(
-                          'Retry',
-                          style: GoogleFonts.fredoka(fontSize: 18),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Hello, $kidName${widget.familyName != null ? ' from ${widget.familyName}' : ''}",
-                                style: GoogleFonts.fredoka(
-                                  fontSize: 44,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black,
-                                ),
-                              ),
+                          Text(
+                            errorMessage!,
+                            style: GoogleFonts.fredoka(
+                              fontSize: 20,
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: fetchKidInfo,
+                            child: Text(
+                              'Retry',
+                              style: GoogleFonts.fredoka(fontSize: 18),
                             ),
                           ),
-                          Builder(
-                            builder: (context) {
-                              return GestureDetector(
-                                onTap: () => Scaffold.of(context).openDrawer(),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
+                        ],
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    "Hello, $kidName${widget.familyName != null ? ' from ${widget.familyName}' : ''}",
+                                    style: GoogleFonts.fredoka(
+                                      fontSize: 44,
+                                      fontWeight: FontWeight.w700,
                                       color: Colors.black,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'assets/hamburger_icon.png',
-                                      height: 50,
-                                      width: 50,
-                                      fit: BoxFit.cover,
                                     ),
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFAEDDFF),
-                          borderRadius: BorderRadius.circular(50),
-                          border: Border.all(color: Colors.black, width: 3),
-                        ),
-                        child: Column(
-                          children: [
-                            Image.asset('assets/piggy_bank.png', height: 100),
-                            const SizedBox(height: 10),
-                            Text(
-                              "\$${balance.toStringAsFixed(2)}",
-                              style: GoogleFonts.fredoka(
-                                fontSize: 50,
-                                fontWeight: FontWeight.w700,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              navigator.pushReplacementNamed(
-                                "/kids-chores-page",
-                                arguments: {
-                                  "kid-id": widget.kidId,
-                                  "family-user-id": widget.familyUserId,
-                                },
-                              );
-                              UtilitiesKidsDashboardNavigation
-                                      .currentPageIndex =
-                                  1;
-                              UtilitiesKidsDashboardNavigation.selectedPage =
-                                  "chores";
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF927BD9),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 15,
-                                vertical: 20,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                side: const BorderSide(
-                                  color: Colors.black,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              "Chores",
-                              style: GoogleFonts.fredoka(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: balance <= 0 ? null : _showWithdrawModal,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: balance <= 0
-                                  ? Colors.grey
-                                  : const Color(0xFFFD6327),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 65,
-                                vertical: 20,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                side: const BorderSide(
-                                  color: Colors.black,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              "Withdraw",
-                              style: GoogleFonts.fredoka(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Chores",
-                        style: GoogleFonts.fredoka(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: StreamBuilder<List<Map<String, dynamic>>>(
-                          stream: getChoresStream(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-                            if (snapshot.hasError) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Error loading chores: ${snapshot.error}',
-                                      style: GoogleFonts.fredoka(
-                                        fontSize: 20,
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    ElevatedButton(
-                                      onPressed: () => setState(() {}),
-                                      child: Text(
-                                        'Retry',
-                                        style: GoogleFonts.fredoka(
-                                          fontSize: 18,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return Center(
-                                child: Text(
-                                  "No chores assigned yet!",
-                                  style: GoogleFonts.fredoka(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            final chores = snapshot.data!;
-                            final pendingChores = chores
-                                .where((c) => c['status'] == 'pending')
-                                .toList();
-
-                            if (pendingChores.isEmpty) {
-                              return Center(
-                                child: Text(
-                                  "No pending chores!",
-                                  style: GoogleFonts.fredoka(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return ListView.builder(
-                              itemCount: pendingChores.length,
-                              itemBuilder: (context, index) {
-                                final chore = pendingChores[index];
-                                return GestureDetector(
-                                  onTap: () => markChoreAsCompleted(
-                                    chore['id'],
-                                    chore['title'],
-                                  ),
-                                  child: SizedBox(
-                                    height: 90,
-                                    child: Card(
-                                      color: const Color(0xFFEFE6E8),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        side: const BorderSide(
+                              Builder(
+                                builder: (context) {
+                                  return GestureDetector(
+                                    onTap: () => Scaffold.of(context).openDrawer(),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
                                           color: Colors.black,
                                           width: 2,
                                         ),
                                       ),
-                                      margin: const EdgeInsets.symmetric(
-                                        vertical: 6,
-                                      ),
-                                      child: ListTile(
-                                        leading: const Icon(
-                                          Icons.task_alt,
-                                          color: Colors.green,
-                                          size: 30,
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          'assets/hamburger_icon.png',
+                                          height: 50,
+                                          width: 50,
+                                          fit: BoxFit.cover,
                                         ),
-                                        title: Text(
-                                          chore['title'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFAEDDFF),
+                              borderRadius: BorderRadius.circular(50),
+                              border: Border.all(color: Colors.black, width: 3),
+                            ),
+                            child: Column(
+                              children: [
+                                Image.asset('assets/piggy_bank.png', height: 100),
+                                const SizedBox(height: 10),
+                                StreamBuilder<QuerySnapshot>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('kids_payment_info')
+                                      .where('kid_id', isEqualTo: widget.kidId)
+                                      .limit(1)
+                                      .snapshots(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState == ConnectionState.waiting) {
+                                      return const CircularProgressIndicator();
+                                    }
+
+                                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                      return Text(
+                                        "\$0.00",
+                                        style: GoogleFonts.fredoka(
+                                          fontSize: 50,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      );
+                                    }
+
+                                    final doc = snapshot.data!.docs.first;
+                                    final data = doc.data() as Map<String, dynamic>;
+                                    final balance = (data['total_amount_left'] ?? 0).toDouble();
+
+                                    return Text(
+                                      "\$${balance.toStringAsFixed(2)}",
+                                      style: GoogleFonts.fredoka(
+                                        fontSize: 50,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  navigator.pushReplacementNamed(
+                                    "/kids-chores-page",
+                                    arguments: {
+                                      "kid-id": widget.kidId,
+                                      "family-user-id": widget.familyUserId,
+                                    },
+                                  );
+                                  UtilitiesKidsDashboardNavigation
+                                      .currentPageIndex = 1;
+                                  UtilitiesKidsDashboardNavigation.selectedPage =
+                                      "chores";
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF927BD9),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 15,
+                                    vertical: 20,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: const BorderSide(
+                                      color: Colors.black,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  "Chores",
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+StreamBuilder<QuerySnapshot>(
+  stream: FirebaseFirestore.instance
+      .collection('kids_payment_info')
+      .where('kid_id', isEqualTo: widget.kidId)
+      .limit(1)
+      .snapshots(),
+  builder: (context, snapshot) {
+    double liveBalance = 0.0;
+
+    if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+      final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+      liveBalance = (data['total_amount_left'] ?? 0).toDouble();
+    }
+
+    return ElevatedButton(
+      onPressed: liveBalance <= 0
+          ? null
+          : () => _showWithdrawModal(snapshot.data!.docs.first),
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            liveBalance <= 0 ? Colors.grey : const Color(0xFFFD6327),
+        padding: const EdgeInsets.symmetric(horizontal: 65, vertical: 20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Colors.black, width: 2),
+        ),
+      ),
+      child: Text(
+        "Withdraw",
+        style: GoogleFonts.fredoka(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  },
+),
+
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Chores",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: StreamBuilder<List<Map<String, dynamic>>>(
+                              stream: getChoresStream(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                                if (snapshot.hasError) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'Error loading chores: ${snapshot.error}',
                                           style: GoogleFonts.fredoka(
                                             fontSize: 20,
+                                            color: Colors.red,
                                             fontWeight: FontWeight.bold,
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
-                                        subtitle: Text(
-                                          chore['description'],
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        trailing: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 5,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFAEDDFF),
-                                            borderRadius: BorderRadius.circular(
-                                              10,
+                                        const SizedBox(height: 20),
+                                        ElevatedButton(
+                                          onPressed: () => setState(() {}),
+                                          child: Text(
+                                            'Retry',
+                                            style: GoogleFonts.fredoka(
+                                              fontSize: 18,
                                             ),
-                                            border: Border.all(
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                if (!snapshot.hasData ||
+                                    snapshot.data!.isEmpty) {
+                                  return Center(
+                                    child: Text(
+                                      "No chores assigned yet!",
+                                      style: GoogleFonts.fredoka(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final chores = snapshot.data!;
+                                final pendingChores = chores
+                                    .where((c) => c['status'] == 'pending')
+                                    .toList();
+
+                                if (pendingChores.isEmpty) {
+                                  return Center(
+                                    child: Text(
+                                      "No pending chores!",
+                                      style: GoogleFonts.fredoka(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                return ListView.builder(
+                                  itemCount: pendingChores.length,
+                                  itemBuilder: (context, index) {
+                                    final chore = pendingChores[index];
+                                    return GestureDetector(
+                                      onTap: () => markChoreAsCompleted(
+                                        chore['id'],
+                                        chore['title'],
+                                      ),
+                                      child: SizedBox(
+                                        height: 90,
+                                        child: Card(
+                                          color: const Color(0xFFEFE6E8),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            side: const BorderSide(
                                               color: Colors.black,
                                               width: 2,
                                             ),
                                           ),
-                                          child: Text(
-                                            "\$${chore['price'].toStringAsFixed(2)}",
-                                            style: GoogleFonts.fredoka(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black,
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
+                                          child: ListTile(
+                                            leading: const Icon(
+                                              Icons.task_alt,
+                                              color: Colors.green,
+                                              size: 30,
+                                            ),
+                                            title: Text(
+                                              chore['title'],
+                                              style: GoogleFonts.fredoka(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            subtitle: Text(
+                                              chore['description'],
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            trailing: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 20,
+                                                vertical: 5,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    const Color(0xFFAEDDFF),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                border: Border.all(
+                                                  color: Colors.black,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                "\$${chore['price'].toStringAsFixed(2)}",
+                                                style: GoogleFonts.fredoka(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  },
                                 );
                               },
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
         ),
       ),
     );

@@ -6,9 +6,8 @@ import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsLoginPage extends StatefulWidget {
- final String user_id;
+final String user_id;
 final String kid_id;
-
 
   const KidsLoginPage({
     super.key,
@@ -127,6 +126,7 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
         arguments: {
           "kid-id": widget.kid_id,
           "family-user-id": widget.user_id,
+          "there-are-parent-in-family": false, // Assuming no parents for kids login
         },
       );
     } catch (e) {

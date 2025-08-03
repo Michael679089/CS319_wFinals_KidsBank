@@ -127,7 +127,7 @@ class UtilityTopSnackBar {
 }
 
 class UtilitiesKidsDashboardNavigation {
-  static var selectedPage = "";
+  static var selectedPage = "dashboard";
   static var currentPageIndex = 0;
 
   static final WidgetStateProperty<TextStyle?> labelTextStyle =
@@ -177,10 +177,15 @@ class UtilitiesKidsDashboardNavigation {
           selectedPage = "dashboard";
           navigator.pushReplacementNamed(
             "/kids-dashboard-page",
-            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
+            arguments: {
+              "kid-id": kidId,
+              "family-user-id": familyUserId,
+              "there-are-parent-in-family": true
+            },
           );
         }
         break;
+
       case 1:
         if (selectedPage != "chores") {
           selectedPage = "chores";
@@ -190,6 +195,7 @@ class UtilitiesKidsDashboardNavigation {
           );
         }
         break;
+
       case 2:
         if (selectedPage != "notifications") {
           selectedPage = "notifications";
@@ -199,12 +205,53 @@ class UtilitiesKidsDashboardNavigation {
           );
         }
         break;
-      case 3:
+
+      case 3: // Logout
         if (selectedPage != "logout") {
           selectedPage = "logout";
-          navigator.pushReplacementNamed(
-            "/account-selector-page",
-            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
+
+          showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text(
+                  "Log Out",
+                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
+                ),
+                content: Text(
+                  "Are you sure you want to log out?",
+                  style: GoogleFonts.fredoka(),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(
+                      "Cancel",
+                      style: GoogleFonts.fredoka(color: Colors.grey[600]),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      navigator.pushReplacementNamed(
+                        "/account-selector-page",
+                        arguments: {
+                          "user-id": familyUserId,
+                          "there-are-parent-in-family": true,
+                        },
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    child: Text(
+                      "Log Out",
+                      style: GoogleFonts.fredoka(color: Colors.white),
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         }
         break;

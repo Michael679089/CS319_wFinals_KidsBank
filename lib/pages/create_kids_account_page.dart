@@ -7,6 +7,7 @@ import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'package:wfinals_kidsbank/database/models/kid_payment_info_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
+import 'package:flutter/services.dart';
 
 class CreateKidAccountPage extends StatefulWidget {
   final String user_id;
@@ -22,6 +23,40 @@ class CreateKidAccountPage extends StatefulWidget {
 
   @override
   State<CreateKidAccountPage> createState() => _CreateKidAccountPageState();
+}
+
+class PhonePrefixFormatter extends TextInputFormatter {
+  final String prefix;
+  final int maxDigits;
+
+  PhonePrefixFormatter({required this.prefix, required this.maxDigits});
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    // Always keep the prefix at the start
+    if (!newValue.text.startsWith(prefix)) {
+      return oldValue;
+    }
+
+    // Extract digits after prefix
+    final digitsAfterPrefix = newValue.text.substring(prefix.length);
+
+    // Allow only numbers after prefix
+    final onlyNumbers = digitsAfterPrefix.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Limit to maxDigits
+    final limitedNumbers = onlyNumbers.length > maxDigits
+        ? onlyNumbers.substring(0, maxDigits)
+        : onlyNumbers;
+
+    // Build final text
+    final finalText = prefix + limitedNumbers;
+
+    return TextEditingValue(
+      text: finalText,
+      selection: TextSelection.collapsed(offset: finalText.length),
+    );
+  }
 }
 
 class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
@@ -41,6 +76,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
   @override
   void initState() {
     super.initState();
+    phoneNumController.text = "+639";  // Default phone number format
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadParentInfo();
     });
@@ -56,9 +92,13 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
       }
       var newParentId = widget.parent_id;
 
+      var familyData = await FirestoreService.readFamily(widget.user_id);
+      var familyLastName = familyData?.family_name ?? "";
+
       setState(() {
         parentId = newParentId;
         _didUserCameFromParentDashboard = widget.didUserCameFromDashboard;
+        lastNameController.text = familyLastName;
       });
     }
     debugPrint("createKidsAccountPage - successfully load parent info");
@@ -333,6 +373,9 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
                     _buildField(
                       phoneNumController,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                          PhonePrefixFormatter(prefix: "+639", maxDigits: 9),
+                        ],
                     ),
                     const SizedBox(height: 20),
                     _buildLabel('4-Digit Pincode'), // Changed label
@@ -390,6 +433,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
     int? maxLength,
     TextInputType? keyboardType,
     void Function()? onTap,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -403,6 +447,7 @@ class _CreateKidAccountPageState extends State<CreateKidAccountPage> {
         readOnly: readOnly,
         maxLength: maxLength,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         onTap: onTap,
         obscuringCharacter: '*',
         style: TextStyle(

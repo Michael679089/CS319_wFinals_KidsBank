@@ -845,33 +845,24 @@ Widget build(BuildContext context) {
                       // Live total deposited
                       StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
-                            .collection('kids_payment_info')
+                            .collection('kids_notifications')
                             .where('family_id', isEqualTo: familyId)
+                            .where('type', isEqualTo: 'deposit')
                             .snapshots(),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
-                            return Text(
-                              "\$0.00",
-                              style: GoogleFonts.fredoka(
-                                fontSize: 46,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            );
+                            return Text("\$0.00", style: GoogleFonts.fredoka(fontSize: 46, fontWeight: FontWeight.bold));
                           }
 
-                          double totalAmountLeft = 0;
-                          for (var doc in snapshot.data!.docs) {
-                            totalAmountLeft += (doc['total_amount_left'] ?? 0).toDouble();
-                          }
+                          double totalDepositedFunds = snapshot.data!.docs.fold(0.0, (total, doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final amount = (data['amount'] ?? 0).toDouble();
+                            return total + amount;
+                          });
 
                           return Text(
-                            "\$${totalAmountLeft.toStringAsFixed(2)}",
-                            style: GoogleFonts.fredoka(
-                              fontSize: 46,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
+                            "\$${totalDepositedFunds.toStringAsFixed(2)}",
+                            style: GoogleFonts.fredoka(fontSize: 46, fontWeight: FontWeight.bold),
                           );
                         },
                       ),
