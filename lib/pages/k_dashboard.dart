@@ -312,6 +312,7 @@ class _KidsDashboardState extends State<KidsDashboard> {
                                         notification_message: desc,
                                         type: 'withdrawal',
                                         created_at: DateTime.now(),
+                                        amount: withdrawAmount, 
                                       );
                                   FirestoreService.createNotification(
                                     withdrawalKidNotification,

@@ -105,7 +105,7 @@ class ParentDrawer extends StatelessWidget {
                   arguments: {
                     "parent-id": parentId,
                     "family-name": familyName,
-                    "family-user-id": user_id,
+                    "user-id": user_id,
                   },
                 );
               }

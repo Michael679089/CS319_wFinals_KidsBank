@@ -6,13 +6,13 @@ import 'package:wfinals_kidsbank/database/models/kid_model.dart';
 import 'package:wfinals_kidsbank/database/models/kid_payment_info_model.dart';
 import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
 import 'package:wfinals_kidsbank/pages/p_dashboard_drawer.dart';
-import 'package:flutter/services.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ParentDashboard extends StatefulWidget {
   final String user_id;
   final String parent_id;
+ 
 
   const ParentDashboard({
     super.key,
@@ -30,6 +30,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
   // The Kids_Data Example: [{"kid_id": "abc123", "first_name": "Joshua", "balance": 25.50}];
   List<Map<String, dynamic>> Kids_Data = [];
   int totalChildren = 0;
+  String? familyId;
   final List<Color> tileColors = [
     const Color.fromARGB(255, 252, 193, 220),
     const Color.fromARGB(255, 209, 241, 212),
@@ -125,44 +126,72 @@ class _ParentDashboardState extends State<ParentDashboard> {
   }
 
 void _handleAddChoreSubmission(
+  BuildContext context,
   String kidId,
   TextEditingController titleController,
   TextEditingController descriptionController,
+  TextEditingController amountController,
+  void Function(double) updateRewardMoney,
   double rewardMoney,
-  ScaffoldMessengerState messenger,
 ) async {
+  final title = titleController.text.trim();
+  final description = descriptionController.text.trim();
+
+  // Validation
+  if (title.isEmpty || description.isEmpty) {
+    UtilityTopSnackBar.show(
+      context: context,
+      message: 'Please fill in all fields.',
+      isError: true,
+    );
+    return;
+  }
+
+  if (rewardMoney <= 0) {
+    UtilityTopSnackBar.show(
+      context: context,
+      message: 'Reward must be greater than 0.',
+      isError: true,
+    );
+    return;
+  }
+
   try {
     final chore = ChoreModel(
       kid_id: kidId,
-      chore_title: titleController.text.trim(),
-      chore_description: descriptionController.text.trim(),
+      chore_title: title,
+      chore_description: description,
       reward_money: rewardMoney,
       status: 'pending',
       created_at: DateTime.now(),
     );
 
-    await FirebaseFirestore.instance
-        .collection('chores')
-        .add(chore.toMap());
+    await FirebaseFirestore.instance.collection('chores').add(chore.toMap());
 
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('✅ Chore added successfully!'),
-        backgroundColor: Colors.green,
-      ),
+    UtilityTopSnackBar.show(
+      context: context,
+      message: 'Chore added successfully!',
+      isError: false,
     );
+
+    //Clear the fields
+    titleController.clear();
+    descriptionController.clear();
+
+    //Reset reward money
+    updateRewardMoney(0.00);
+    amountController.text = "0.00";
+
   } catch (e) {
-    debugPrint("Error adding chore: $e");
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('❌ Failed to add chore.'),
-        backgroundColor: Colors.red,
-      ),
+    UtilityTopSnackBar.show(
+      context: context,
+      message: 'Failed to add chore.',
+      isError: true,
     );
   }
 }
 
-  void showChoresModal(
+void showChoresModal(
     BuildContext context,
     String kidName,
     String kidId,
@@ -357,11 +386,17 @@ void _handleAddChoreSubmission(
                             // Set Button
                             ElevatedButton(
                               onPressed: () => _handleAddChoreSubmission(
+                                context,
                                 kidId,
                                 titleController,
                                 descriptionController,
+                                amountController, 
+                                (newValue){
+                                  setModalState(() {
+                                    rewardMoney = newValue;
+                                  });
+                                },
                                 rewardMoney,
-                                messenger,
                               ),
                               style: Utilities.ourButtonStyle4(),
                               
@@ -395,16 +430,37 @@ void showManageFundsModal(
   String kidAvatar,
 ) async {
   final firestore = FirebaseFirestore.instance;
+
+  // Fetch kids_payment_info document using `where`
+  final paymentQuery = await firestore
+      .collection('kids_payment_info')
+      .where('kid_id', isEqualTo: kidId)
+      .limit(1)
+      .get();
+
+  if (paymentQuery.docs.isEmpty) {
+    UtilityTopSnackBar.show(
+      context: context,
+      message: "No payment info found for this kid.",
+      isError: true,
+    );
+    return;
+  }
+
+  final paymentDoc = paymentQuery.docs.first;
+  final paymentDocId = paymentDoc.id;
+  final paymentData = paymentDoc.data();
+
+  // Fetch kid document
   final kidDoc = await firestore.collection('kids').doc(kidId).get();
-  final data = kidDoc.data();
-  if (data == null) return;
+  final kidData = kidDoc.data();
+  if (kidData == null) return;
 
-  double usableBalance = (data['balance'] ?? 0).toDouble();
-  double totalWithdrawn = (data['totalWithdrawn'] ?? 0).toDouble();
-  double totalDeposited = usableBalance + totalWithdrawn;
-  final familyId = data['family_id'];
+  double totalAmountLeft = (paymentData['total_amount_left'] ?? 0).toDouble();
+  final familyId = kidData['family_id'];
 
-  final TextEditingController amountController = TextEditingController(text: '1.00');
+  final TextEditingController amountController =
+      TextEditingController(text: '1.00');
   final TextEditingController messageController = TextEditingController();
   double fundAmount = 1.00;
 
@@ -433,6 +489,7 @@ void showManageFundsModal(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Header
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -469,11 +526,13 @@ void showManageFundsModal(
                         ],
                       ),
                       const SizedBox(height: 20),
+
+                      // Message Field
                       TextField(
                         controller: messageController,
                         maxLines: 2,
                         decoration: InputDecoration(
-                          labelText: "Message",
+                          labelText: "Message (required)",
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
@@ -482,14 +541,18 @@ void showManageFundsModal(
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Amount Label
                       Text(
-                        "Amount (₱)",
+                        "Amount (\$)",
                         style: GoogleFonts.fredoka(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 10),
+
+                      // Amount Input
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -498,7 +561,8 @@ void showManageFundsModal(
                               if (fundAmount > 1) {
                                 setModalState(() {
                                   fundAmount -= 1;
-                                  amountController.text = fundAmount.toStringAsFixed(2);
+                                  amountController.text =
+                                      fundAmount.toStringAsFixed(2);
                                 });
                               }
                             },
@@ -507,7 +571,8 @@ void showManageFundsModal(
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFFCA26),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.black, width: 2),
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
                               ),
                               child: const Icon(Icons.remove, size: 20),
                             ),
@@ -517,21 +582,23 @@ void showManageFundsModal(
                             width: 100,
                             child: TextField(
                               controller: amountController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               textAlign: TextAlign.center,
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                  borderSide: const BorderSide(color: Colors.black),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                              ),
                               onChanged: (value) {
                                 final parsed = double.tryParse(value);
                                 if (parsed != null && parsed >= 0) {
                                   fundAmount = parsed;
                                 }
                               },
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 5),
@@ -539,7 +606,8 @@ void showManageFundsModal(
                             onTap: () {
                               setModalState(() {
                                 fundAmount += 1;
-                                amountController.text = fundAmount.toStringAsFixed(2);
+                                amountController.text =
+                                    fundAmount.toStringAsFixed(2);
                               });
                             },
                             child: Container(
@@ -547,7 +615,8 @@ void showManageFundsModal(
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFFCA26),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.black, width: 2),
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
                               ),
                               child: const Icon(Icons.add, size: 20),
                             ),
@@ -555,96 +624,139 @@ void showManageFundsModal(
                         ],
                       ),
                       const SizedBox(height: 20),
+
+                      // Action Buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
+                          // Deposit
                           ElevatedButton(
+                            style: Utilities.depositButtonStyle(),
                             onPressed: () async {
+                              if (messageController.text.trim().isEmpty) {
+                                UtilityTopSnackBar.show(
+                                  context: context,
+                                  message: "Message is required",
+                                  isError: true,
+                                );
+                                return;
+                              }
                               if (fundAmount <= 0) {
                                 UtilityTopSnackBar.show(
                                   context: context,
-                                  message: "Enter a valid amount.",
+                                  message: "Enter a valid deposit amount",
                                   isError: true,
                                 );
                                 return;
                               }
 
-                              // Update kid doc
-                              await firestore.collection('kids').doc(kidId).update({
-                                'balance': usableBalance + fundAmount,
-                                'totalDeposited': totalDeposited + fundAmount,
+                              await firestore
+                                  .collection('kids_payment_info')
+                                  .doc(paymentDocId)
+                                  .update({
+                                'total_amount_left':
+                                    FieldValue.increment(fundAmount),
+                                'totalDeposited':
+                                    FieldValue.increment(fundAmount),
                               });
 
-                              // Notification
-                              await firestore.collection('kids_notifications').add({
+                              await firestore
+                                  .collection('kids_notifications')
+                                  .add({
                                 'family_id': familyId,
                                 'kid_id': kidId,
                                 'notification_title': 'Funds Deposited',
-                                'notification_message': messageController.text.trim().isEmpty
-                                    ? '₱${fundAmount.toStringAsFixed(2)} has been deposited to your account.'
-                                    : messageController.text.trim(),
+                                'notification_message':
+                                    messageController.text.trim(),
                                 'type': 'deposit',
+                                'amount': fundAmount,
                                 'created_at': FieldValue.serverTimestamp(),
                               });
 
-                              Navigator.pop(context);
                               UtilityTopSnackBar.show(
                                 context: context,
-                                message: "Deposited ₱${fundAmount.toStringAsFixed(2)}!",
+                                message:
+                                    "\$${fundAmount.toStringAsFixed(2)} deposited successfully",
                               );
+
+                              Navigator.pop(context);
                             },
-                            style: Utilities.depositButtonStyle(),
                             child: Text(
                               "Deposit",
                               style: GoogleFonts.fredoka(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: Colors.black,
                               ),
                             ),
                           ),
+
+                          // Withdraw
                           ElevatedButton(
+                            style: Utilities.withdrawButtonStyle(),
                             onPressed: () async {
-                              if (fundAmount <= 0 || fundAmount > usableBalance) {
+                              if (messageController.text.trim().isEmpty) {
                                 UtilityTopSnackBar.show(
                                   context: context,
-                                  message: "Invalid or insufficient balance.",
+                                  message: "Message is required",
+                                  isError: true,
+                                );
+                                return;
+                              }
+                              if (fundAmount <= 0) {
+                                UtilityTopSnackBar.show(
+                                  context: context,
+                                  message: "Enter a valid withdrawal amount",
+                                  isError: true,
+                                );
+                                return;
+                              }
+                              if (fundAmount > totalAmountLeft) {
+                                UtilityTopSnackBar.show(
+                                  context: context,
+                                  message: "Insufficient balance",
                                   isError: true,
                                 );
                                 return;
                               }
 
-                              // Update kid doc
-                              await firestore.collection('kids').doc(kidId).update({
-                                'balance': usableBalance - fundAmount,
-                                'totalWithdrawn': totalWithdrawn + fundAmount,
+                              await firestore
+                                  .collection('kids_payment_info')
+                                  .doc(paymentDocId)
+                                  .update({
+                                'total_amount_left':
+                                    FieldValue.increment(-fundAmount),
+                                'totalWithdrawn':
+                                    FieldValue.increment(fundAmount),
                               });
 
-                              // Notification
-                              await firestore.collection('kids_notifications').add({
+                              await firestore
+                                  .collection('kids_notifications')
+                                  .add({
                                 'family_id': familyId,
                                 'kid_id': kidId,
                                 'notification_title': 'Funds Withdrawn',
-                                'notification_message': messageController.text.trim().isEmpty
-                                    ? '₱${fundAmount.toStringAsFixed(2)} has been withdrawn from your account.'
-                                    : messageController.text.trim(),
+                                'notification_message':
+                                    messageController.text.trim(),
                                 'type': 'withdraw',
+                                'amount': fundAmount,
                                 'created_at': FieldValue.serverTimestamp(),
                               });
 
-                              Navigator.pop(context);
                               UtilityTopSnackBar.show(
                                 context: context,
-                                message: "Withdrew ₱${fundAmount.toStringAsFixed(2)}!",
+                                message:
+                                    "\$${fundAmount.toStringAsFixed(2)} withdrawn successfully",
                               );
+
+                              Navigator.pop(context);
                             },
-                            style: Utilities.withdrawButtonStyle(),
                             child: Text(
                               "Withdraw",
                               style: GoogleFonts.fredoka(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: Colors.black,
                               ),
                             ),
                           ),
@@ -662,333 +774,315 @@ void showManageFundsModal(
   );
 }
   // BUILD Function:
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false, // Prevent back navigation
-      onPopInvokedWithResult: (didPop, result) async {
-        // Do nothing when back is pressed
-      },
-      child: Scaffold(
-        drawer: ParentDrawer(
-          selectedPage: 'dashboard',
-          familyName: myFamilyName,
-          user_id: widget.user_id,
-          parentId: widget.parent_id,
-        ),
+@override
+Widget build(BuildContext context) {
+  return PopScope(
+    canPop: false, // Prevent back navigation
+    onPopInvokedWithResult: (didPop, result) async {
+      // Do nothing when back is pressed
+    },
+    child: Scaffold(
+      drawer: ParentDrawer(
+        selectedPage: 'dashboard',
+        familyName: myFamilyName,
+        user_id: widget.user_id,
+        parentId: widget.parent_id,
+      ),
+      backgroundColor: const Color(0xFFFFCA26),
+      appBar: AppBar(
         backgroundColor: const Color(0xFFFFCA26),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFFCA26),
-          elevation: 0,
-          title: Text(
-            "KidsBank",
-            style: GoogleFonts.fredoka(
-              fontSize: 44,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
+        elevation: 0,
+        title: Text(
+          "KidsBank",
+          style: GoogleFonts.fredoka(
+            fontSize: 44,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
-          centerTitle: true,
-          leading: Builder(
-            builder: (context) => Padding(
-              padding: const EdgeInsets.only(
-                left: 12,
-                right: 4,
-                top: 5,
-                bottom: 10,
-              ),
-              child: InkWell(
-                onTap: () {
-                  Scaffold.of(context).openDrawer(); // Opens drawer if added
-                },
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black, // Black circle background
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: const Icon(
-                    Icons.menu,
-                    color: Color(
-                      0xFFFFCA26,
-                    ), // Yellow icon (same as background)
-                  ),
+        ),
+        centerTitle: true,
+        leading: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.only(left: 12, right: 4, top: 5, bottom: 10),
+            child: InkWell(
+              onTap: () {
+                Scaffold.of(context).openDrawer();
+              },
+              child: Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black,
                 ),
+                padding: const EdgeInsets.all(8),
+                child: const Icon(Icons.menu, color: Color(0xFFFFCA26)),
               ),
             ),
           ),
         ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              // TOP - Overview Card
-              Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 300,
-                    margin: const EdgeInsets.only(top: 20),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFCA26),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black, width: 2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 160), // space for image
-                        Text(
-                          "\$${totalDepositedFunds.toStringAsFixed(2)}", // Static placeholder
-                          style: GoogleFonts.fredoka(
-                            fontSize: 46,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        Text(
-                          "Total Deposited Funds",
-                          style: GoogleFonts.fredoka(
-                            fontSize: 17.3,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 50,
-                    left: 12,
-                    child: Image.asset('assets/pig.png', width: 150),
-                  ),
-                  Positioned(
-                    top: 60,
-                    right: 70,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          "Children",
-                          style: GoogleFonts.fredoka(
-                            fontSize: 18,
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          "$totalChildren",
-                          style: GoogleFonts.fredoka(
-                            fontSize: 90.2,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // KIDS INFO Section
-              Expanded(
-                child: Container(
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            // TOP - Overview Card
+            Stack(
+              children: [
+                Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  height: 300,
+                  margin: const EdgeInsets.only(top: 20),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFE6E8),
+                    color: const Color(0xFFFFCA26),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.black, width: 2),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // The Title
-                      Text(
-                        "Kid's Info",
-                        style: GoogleFonts.fredoka(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // The Kid's List
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: Kids_Data.length,
-                          itemBuilder: (context, index) {
-                            debugPrint("PDashboardPage - loading kid $index");
-                            final kid = Kids_Data[index];
-                            final kidId = kid['kid_id'];
-                            final kidName = kid['first_name'];
-                            final kidAvatar = kid['avatar'];
-                            final tileColor =
-                                tileColors[index % tileColors.length];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 14),
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: tileColor,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundImage: AssetImage(kid['avatar']),
-                                    radius: 24,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          kid['first_name'],
-                                          style: GoogleFonts.fredoka(
-                                            fontSize: 23,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          "\$${kid['total_amount_left'].toStringAsFixed(2)}",
-                                          style: GoogleFonts.fredoka(
-                                            fontSize: 23,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    children: [
-                                      ElevatedButton(
-                                        onPressed: () async {
-                                          if (kidId == null ||
-                                              kidName == null ||
-                                              kidAvatar == null) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  "Missing kid information",
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          } 
-                                          else {
-                                            showManageFundsModal(
-                                              context,
-                                              kidName,
-                                              kidId,
-                                              kidAvatar,
-                                            );
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(
-                                            0xFFFFCA26,
-                                          ),
-                                          foregroundColor: Colors.black,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 15,
-                                            vertical: 2,
-                                          ),
-                                          side: const BorderSide(
-                                            color: Colors.black,
-                                            width: 2,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          "Manage Funds",
-                                          style: GoogleFonts.fredoka(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      OutlinedButton(
-                                        onPressed: () {
-                                          if (kidId == null ||
-                                              kidName == null ||
-                                              kidAvatar == null) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  "Missing kid information",
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          showChoresModal(
-                                            context,
-                                            kidName,
-                                            kidId,
-                                            kidAvatar,
-                                          );
-                                        },
-                                        style: OutlinedButton.styleFrom(
-                                          backgroundColor: Colors.white,
-                                          side: const BorderSide(
-                                            color: Colors.black,
-                                            width: 2,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 33,
-                                            vertical: 1,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          "Chores",
-                                          style: GoogleFonts.fredoka(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                      const SizedBox(height: 160), // space for image
+                      
+                      // Live total deposited
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('kids_payment_info')
+                            .where('family_id', isEqualTo: familyId)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return Text(
+                              "\$0.00",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 46,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
                             );
-                          },
+                          }
+
+                          double totalAmountLeft = 0;
+                          for (var doc in snapshot.data!.docs) {
+                            totalAmountLeft += (doc['total_amount_left'] ?? 0).toDouble();
+                          }
+
+                          return Text(
+                            "\$${totalAmountLeft.toStringAsFixed(2)}",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 46,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          );
+                        },
+                      ),
+                      Text(
+                        "Total Deposited Funds",
+                        style: GoogleFonts.fredoka(fontSize: 17.3, color: Colors.black),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: 50,
+                  left: 12,
+                  child: Image.asset('assets/pig.png', width: 150),
+                ),
+                Positioned(
+                  top: 60,
+                  right: 70,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        "Children",
+                        style: GoogleFonts.fredoka(
+                          fontSize: 18,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "$totalChildren",
+                        style: GoogleFonts.fredoka(
+                          fontSize: 90.2,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
                       ),
                     ],
                   ),
                 ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // KIDS INFO Section
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFE6E8),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.black, width: 2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      "Kid's Info",
+                      style: GoogleFonts.fredoka(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Kid's List
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: Kids_Data.length,
+                        itemBuilder: (context, index) {
+                          final kid = Kids_Data[index];
+                          final kidId = kid['kid_id'];
+                          final kidName = kid['first_name'];
+                          final kidAvatar = kid['avatar'];
+                          final tileColor = tileColors[index % tileColors.length];
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: tileColor,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.black, width: 2),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Avatar
+                                CircleAvatar(
+                                  backgroundImage: AssetImage(kidAvatar),
+                                  radius: 24,
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Name & Balance
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        kidName,
+                                        style: GoogleFonts.fredoka(
+                                          fontSize: 23,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      StreamBuilder<QuerySnapshot>(
+                                        stream: FirebaseFirestore.instance
+                                            .collection('kids_payment_info')
+                                            .where('kid_id', isEqualTo: kidId)
+                                            .snapshots(),
+                                        builder: (context, snapshot) {
+                                          double currentBalance = 0.0;
+
+                                          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                                            final doc = snapshot.data!.docs.first;
+                                            final paymentData = doc.data() as Map<String, dynamic>;
+                                            currentBalance = (paymentData['total_amount_left'] ?? 0.0).toDouble();
+                                          }
+
+                                          return Text(
+                                            "\$${currentBalance.toStringAsFixed(2)}",
+                                            style: GoogleFonts.fredoka(
+                                              fontSize: 23,
+                                              color: Colors.black87,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(width: 12),
+
+                                // Buttons
+                                Column(
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        if (kidId == null || kidName == null || kidAvatar == null) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("Missing kid information")),
+                                          );
+                                          return;
+                                        }
+                                        showManageFundsModal(context, kidName, kidId, kidAvatar);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFFFFCA26),
+                                        foregroundColor: Colors.black,
+                                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 2),
+                                        side: const BorderSide(color: Colors.black, width: 2),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "Manage Funds",
+                                        style: GoogleFonts.fredoka(fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    OutlinedButton(
+                                      onPressed: () {
+                                        if (kidId == null || kidName == null || kidAvatar == null) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("Missing kid information")),
+                                          );
+                                          return;
+                                        }
+                                        showChoresModal(context, kidName, kidId, kidAvatar);
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        side: const BorderSide(color: Colors.black, width: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 33, vertical: 1),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "Chores",
+                                        style: GoogleFonts.fredoka(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -9,6 +9,7 @@ class NotificationModel {
   String notification_title;
   String notification_message;
   String type;
+  double amount; //added the amount for each transaction
   DateTime? created_at;
 
   NotificationModel({
@@ -18,6 +19,7 @@ class NotificationModel {
     required this.notification_title,
     required this.notification_message,
     required this.type,
+    required this.amount,
     this.created_at,
   });
 
@@ -34,6 +36,7 @@ class NotificationModel {
       notification_title: data['notification_title'] as String,
       notification_message: data['notification_message'] as String,
       type: data['type'] as String,
+      amount: (data['amount'] ?? 0).toDouble(),
       created_at: data["created_at"],
     );
   }
@@ -47,6 +50,7 @@ class NotificationModel {
       'notification_title': notification_title,
       'notification_message': notification_message,
       'type': type,
+      'amount': amount,
       'created_at': created_at,
     };
   }
