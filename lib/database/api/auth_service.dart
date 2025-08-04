@@ -13,12 +13,30 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // my private functions
-  static void _invokeErrorSnackBar(ScaffoldMessengerState messengerState, String err) {
-    messengerState.showSnackBar(SnackBar(content: Text(err), backgroundColor: Colors.red, duration: const Duration(seconds: 3)));
+  static void _invokeErrorSnackBar(
+    ScaffoldMessengerState messengerState,
+    String err,
+  ) {
+    messengerState.showSnackBar(
+      SnackBar(
+        content: Text(err),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
-  static void _invokeSuccessSnackBar(ScaffoldMessengerState messengerState, String successMessage) {
-    messengerState.showSnackBar(SnackBar(content: Text(successMessage), backgroundColor: Colors.green, duration: Duration(seconds: 3)));
+  static void _invokeSuccessSnackBar(
+    ScaffoldMessengerState messengerState,
+    String successMessage,
+  ) {
+    messengerState.showSnackBar(
+      SnackBar(
+        content: Text(successMessage),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   // My PUBLIC actions:
@@ -32,91 +50,154 @@ class AuthService {
   }
 
   // Create Firebase Auth account and send verification email
-  static Future<Map<String, String>> registerEmailAndPasswordWithEmailVerification(String email, String password, BuildContext context) async {
+  static Future<Map<String, String>>
+  registerEmailAndPasswordWithEmailVerification(
+    String email,
+    String password,
+    BuildContext context,
+  ) async {
     debugPrint("createAccountToFirebaseAuth is called");
 
     // Step 1: Check if email exists in Firestore
-    var doesFamilyCollectionExist = (await FirestoreService.doesFirestoreCollectionExist("family"));
+    var doesFamilyCollectionExist =
+        (await FirestoreService.doesFirestoreCollectionExist("family"));
 
     if (doesFamilyCollectionExist == false) {
       // Step 1: check if email exist in fire_auth
       var doesEmailExistInFireAuth = false;
       try {
-        await _auth.createUserWithEmailAndPassword(email: email, password: password);
+        await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
       } catch (e) {
         doesEmailExistInFireAuth = true;
       }
 
       if (doesEmailExistInFireAuth == true) {
         debugPrint("no family connection, but have fireauth account");
-        await _auth.signInWithEmailAndPassword(email: email, password: password);
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
         var user = AuthService.getCurrentUser();
         if (user != null) {
           user.sendEmailVerification();
           debugPrint("user is logged in-but not verified");
-          return {"status": "no-family-collection-and-unverified", "message": "user must redo register and verify email page"};
+          return {
+            "status": "no-family-collection-and-unverified",
+            "message": "user must redo register and verify email page",
+          };
         } else {
           debugPrint("error connection 1");
-          return {"status": "connection-error", "message": "user needs better connection"};
+          return {
+            "status": "connection-error",
+            "message": "user needs better connection",
+          };
         }
       } else {
         debugPrint("no family collection and no fireauth account");
-        await _auth.createUserWithEmailAndPassword(email: email, password: password);
-        await _auth.signInWithEmailAndPassword(email: email, password: password);
+        await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
         var user = AuthService.getCurrentUser();
         if (user != null) {
           user.sendEmailVerification();
           debugPrint("user is logged in-but not verified");
-          return {"status": "no-family-collection-and-no-acount", "message": "user needs to finish register page and go to verify email page"};
+          return {
+            "status": "no-family-collection-and-no-acount",
+            "message":
+                "user needs to finish register page and go to verify email page",
+          };
         } else {
           debugPrint("error connection 2");
-          return {"status": "connection-error", "message": "user needs better connection"};
+          return {
+            "status": "connection-error",
+            "message": "user needs better connection",
+          };
         }
       }
     } else {
       debugPrint("family collection exist");
       // Step 1: find the email inside firestore
-      var emailHasBeenFound = await FirestoreService.does_family_account_exist_in_firestore(email);
+      var emailHasBeenFound =
+          await FirestoreService.does_family_account_exist_in_firestore(email);
 
       if (emailHasBeenFound) {
-        debugPrint("account already verified, can't register with that account anymore");
-        return {"status": "account-already-verified", "message": "account already verified, can't register with that account anymore"};
+        debugPrint(
+          "account already verified, can't register with that account anymore",
+        );
+        return {
+          "status": "account-already-verified",
+          "message":
+              "account already verified, can't register with that account anymore",
+        };
       } else {
         debugPrint("no family collection 3");
         debugPrint("no email found in firestore, continue with registration");
 
         // Step 1: Sign up on fireAuth, if failed, return email-unverified;
         try {
-          await _auth.createUserWithEmailAndPassword(email: email, password: password);
+          await _auth.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
           var user = getCurrentUser();
           if (user != null) {
             user.sendEmailVerification();
             debugPrint("email verification sent");
-            return {"status": "success", "message": "successfully register and email send verification"};
+            return {
+              "status": "success",
+              "message": "successfully register and email send verification",
+            };
           } else {
             debugPrint("error conncetion");
-            return {"status": "connection-error", "message": "user needs better connection"};
+            return {
+              "status": "connection-error",
+              "message": "user needs better connection",
+            };
           }
         } catch (e) {
           debugPrint("an error occured $e");
-          return {"status": "email-unverified", "message": "email is unverified, proceed with registration"};
+          return {
+            "status": "email-unverified",
+            "message": "email is unverified, proceed with registration",
+          };
         }
       }
     }
   }
 
-  static Future<Map<String, Object>> loginAccount(String email, String password) async {
+  static Future<Map<String, Object>> loginAccount(
+    String email,
+    String password,
+  ) async {
     try {
-      final UserCredential loginResult = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final UserCredential loginResult = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
       if (!loginResult.user!.emailVerified) {
         debugPrint("unverified email users can't log in");
         await loginResult.user!.sendEmailVerification();
-        return {"status": "unverified", "message": "Verification email re-sent. Please check your inbox."};
+        return {
+          "status": "unverified",
+          "message": "Verification email re-sent. Please check your inbox.",
+        };
       }
       return {"status": "success", "userCredential": loginResult};
     } on FirebaseAuthException catch (e) {
-      return {"status": "error", "code": e.code, "message": e.message ?? "Login failed"};
+      return {
+        "status": "error",
+        "code": e.code,
+        "message": e.message ?? "Login failed",
+      };
     } catch (e) {
       return {"status": "error", "message": "Unexpected error occurred: $e"};
     }
@@ -149,7 +230,9 @@ class AuthService {
 
   static Future<void> sendPasswordResetEmail(String emailText) async {
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: emailText.trim());
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: emailText.trim(),
+      );
     } on FirebaseAuthException catch (e) {
       String errorMessage;
       switch (e.code) {

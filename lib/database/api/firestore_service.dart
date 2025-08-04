@@ -30,9 +30,15 @@ class FirestoreService {
       final family_id = collection.doc().id;
 
       // Step 2: Add the server timestamp & id
-      await collection.doc(family_id).set({...family.toFirestore(), 'id': family_id, 'created_at': FieldValue.serverTimestamp()});
+      await collection.doc(family_id).set({
+        ...family.toFirestore(),
+        'id': family_id,
+        'created_at': FieldValue.serverTimestamp(),
+      });
 
-      debugPrint("family.add - added family to family collection [$family_id, ${family.family_name}]");
+      debugPrint(
+        "family.add - added family to family collection [$family_id, ${family.family_name}]",
+      );
       return family_id;
     } catch (e) {
       throw Exception('ERROR: Adding family to "family" collection: $e');
@@ -46,7 +52,10 @@ class FirestoreService {
           .collection('family')
           .where('user_id', isEqualTo: user_id)
           .limit(1)
-          .withConverter<FamilyModel>(fromFirestore: FamilyModel.fromFirestore, toFirestore: (model, _) => model.toFirestore());
+          .withConverter<FamilyModel>(
+            fromFirestore: FamilyModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
 
       debugPrint("family.read - query loaded");
       final snapshot = await query.get();
@@ -67,7 +76,10 @@ class FirestoreService {
   static void updateFamily(FamilyModel new_family) async {
     var target_user_id = new_family.user_id;
 
-    var query = await db.collection("family").where("user_id", isEqualTo: target_user_id).get();
+    var query = await db
+        .collection("family")
+        .where("user_id", isEqualTo: target_user_id)
+        .get();
     var doesDocRefExists = query.docs.isNotEmpty;
 
     if (doesDocRefExists) {
@@ -82,7 +94,10 @@ class FirestoreService {
   }
 
   static void deleteFamily(String user_id_of_family) async {
-    var query = await db.collection("family").where("user_id", isEqualTo: user_id_of_family).get();
+    var query = await db
+        .collection("family")
+        .where("user_id", isEqualTo: user_id_of_family)
+        .get();
     var doesDocRefExists = query.docs.isNotEmpty;
 
     if (doesDocRefExists) {
@@ -101,7 +116,9 @@ class FirestoreService {
   // FAMILY CARD INFO | crud for family_payment_info_model
   ///
 
-  static Future<String> createFamilyPaymentInfo(FamilyPaymentInfoModel family_payment_info) async {
+  static Future<String> createFamilyPaymentInfo(
+    FamilyPaymentInfoModel family_payment_info,
+  ) async {
     // Step 1: Query
     try {
       final collection = db.collection('family_payment_info');
@@ -114,14 +131,18 @@ class FirestoreService {
         'created_at': FieldValue.serverTimestamp(),
       });
 
-      debugPrint("family.add - added family to family collection [$family_payment_info_id, ${family_payment_info.card_name}]");
+      debugPrint(
+        "family.add - added family to family collection [$family_payment_info_id, ${family_payment_info.card_name}]",
+      );
       return family_payment_info_id;
     } catch (e) {
       throw Exception('ERROR: Adding family to "family" collection: $e');
     }
   }
 
-  static Future<FamilyPaymentInfoModel?> readFamilyPaymentInfo(String user_id) async {
+  static Future<FamilyPaymentInfoModel?> readFamilyPaymentInfo(
+    String user_id,
+  ) async {
     debugPrint("FirestoreService@readFamilyPaymentInfo = Function START");
 
     try {
@@ -129,9 +150,15 @@ class FirestoreService {
       var query = collection
           .where("user_id", isEqualTo: user_id)
           .limit(1)
-          .withConverter<FamilyPaymentInfoModel>(fromFirestore: FamilyPaymentInfoModel.fromFirestore, toFirestore: (model, _) => model.toFirestore());
+          .withConverter<FamilyPaymentInfoModel>(
+            fromFirestore: FamilyPaymentInfoModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
       var querySnapShot = await query.get();
-      FamilyPaymentInfoModel send_family_payment_info_model = querySnapShot.docs.first.data();
+      FamilyPaymentInfoModel send_family_payment_info_model = querySnapShot
+          .docs
+          .first
+          .data();
       return send_family_payment_info_model;
     } catch (e) {
       debugPrint("readFamilyPaymentInfo failed: $e");
@@ -163,7 +190,9 @@ class FirestoreService {
         'created_at': FieldValue.serverTimestamp(),
       });
 
-      debugPrint("parent.add - added parent to parent collection [$parent_id, ${parent_model.first_name}]");
+      debugPrint(
+        "parent.add - added parent to parent collection [$parent_id, ${parent_model.first_name}]",
+      );
       return parent_id;
     } catch (e) {
       throw Exception('ERROR: Adding parent to "parent" collection: $e');
@@ -178,7 +207,10 @@ class FirestoreService {
           .collection('parents')
           .where('family_id', isEqualTo: family_id)
           .limit(1)
-          .withConverter<ParentModel>(fromFirestore: ParentModel.fromFirestore, toFirestore: (model, _) => model.toFirestore());
+          .withConverter<ParentModel>(
+            fromFirestore: ParentModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
       debugPrint("parent.read - query is loaded");
 
       final snapshot = await query.get();
@@ -200,7 +232,10 @@ class FirestoreService {
           .collection('kids')
           .where('family_id', isEqualTo: family_id)
           .limit(1)
-          .withConverter<KidModel>(fromFirestore: KidModel.fromFirestore, toFirestore: (model, _) => model.toFirestore());
+          .withConverter<KidModel>(
+            fromFirestore: KidModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
       final snapshot = await query.get();
       final kid_model = snapshot.docs.first.data();
       return kid_model; // Returns null if empty
@@ -222,9 +257,15 @@ class FirestoreService {
       FamilyModel myFamily = await readFamily(user_id!) as FamilyModel;
 
       // Step 3: Add the server timestamp & link family id
-      await collection.doc(kid_id).set({...kid_model.toFirestore(), 'family_id': myFamily.id, 'created_at': FieldValue.serverTimestamp()});
+      await collection.doc(kid_id).set({
+        ...kid_model.toFirestore(),
+        'family_id': myFamily.id,
+        'created_at': FieldValue.serverTimestamp(),
+      });
 
-      debugPrint("kid.add - added kid to kids collection [${myFamily.id}, ${myFamily.family_name}]");
+      debugPrint(
+        "kid.add - added kid to kids collection [${myFamily.id}, ${myFamily.family_name}]",
+      );
       return kid_id;
     } catch (e) {
       throw Exception('ERROR: Adding kids to "kids" collection: $e');
@@ -237,32 +278,52 @@ class FirestoreService {
   // NOTIFICATION MODEL | CRUD
   ///
 
-  static Future<String> createNotification(NotificationModel notification_model) async {
+  static Future<String> createNotification(
+    NotificationModel notification_model,
+  ) async {
     try {
-      // Step 1: Query for a new Collection
-      final collection = db.collection('collection');
-      final notification_id = collection.doc().id;
+      // Validate required fields
+      if (notification_model.kid_id.isEmpty ||
+          notification_model.family_id.isEmpty) {
+        throw Exception('Missing required fields');
+      }
 
-      // Step 2: Get the link of the current family id
-      final user_id = AuthService.getCurrentUser()?.uid;
-      FamilyModel myFamily = await readFamily(user_id!) as FamilyModel;
-      var family_id = myFamily.id;
-
-      // Step 3: Add the server timestamp & link family id
-      await collection.doc(notification_id).set({...notification_model.toFirestore(), 'family_id': family_id, 'created_at': FieldValue.serverTimestamp()});
-
-      debugPrint("family.add - added family to notification collection [${notification_model.id}]");
-      return notification_id;
+      final collection = db.collection('kids_notifications');
+      final docRef = await collection.add({
+        ...notification_model.toFirestore(),
+        'created_at': FieldValue.serverTimestamp(),
+      });
+      return docRef.id;
     } catch (e) {
-      throw Exception('ERROR: Adding family to "notification" collection: $e');
+      debugPrint('Error creating notification: $e');
+      rethrow;
     }
+  }
+
+  Stream<List<NotificationModel>> getKidNotifications(String kidId) {
+    return FirebaseFirestore.instance
+        .collection('kids_notifications')
+        .where('kid_id', isEqualTo: kidId) // Filter only (no sorting)
+        .snapshots()
+        .map((snapshot) {
+          // Sort manually in memory
+          final notifications = snapshot.docs
+              .map((doc) => NotificationModel.fromFirestore(doc, null))
+              .toList();
+          notifications.sort(
+            (a, b) => b.created_at!.compareTo(a.created_at!),
+          ); // Newest first
+          return notifications;
+        });
   }
 
   ///
   /// KID PAYMENT INFO MODEL | CRUD
   ///
 
-  static Future<String> createKidPaymentInfo(KidsPaymentInfoModel kid_payment_info) async {
+  static Future<String> createKidPaymentInfo(
+    KidsPaymentInfoModel kid_payment_info,
+  ) async {
     try {
       // Step 1: Query for a new Collection
       final collection = db.collection('kids_payment_info');
@@ -286,7 +347,9 @@ class FirestoreService {
         'created_at': FieldValue.serverTimestamp(),
       });
 
-      debugPrint("family.add - added kid payment info to kids_payment_info collection [${kid_payment_info.id}]");
+      debugPrint(
+        "family.add - added kid payment info to kids_payment_info collection [${kid_payment_info.id}]",
+      );
       return kid_payment_info_id;
     } catch (e) {
       throw Exception('ERROR: Adding family to "notification" collection: $e');
@@ -301,9 +364,15 @@ class FirestoreService {
       var query = collection
           .where("family_id", isEqualTo: family_id)
           .limit(1)
-          .withConverter<KidsPaymentInfoModel>(fromFirestore: KidsPaymentInfoModel.fromFirestore, toFirestore: (model, _) => model.toFirestore());
+          .withConverter<KidsPaymentInfoModel>(
+            fromFirestore: KidsPaymentInfoModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
       var querySnapShot = await query.get();
-      KidsPaymentInfoModel send_family_payment_info_model = querySnapShot.docs.first.data();
+      KidsPaymentInfoModel send_family_payment_info_model = querySnapShot
+          .docs
+          .first
+          .data();
       return send_family_payment_info_model;
     } catch (e) {
       debugPrint("KidsPaymentInfoModel failed: $e");
@@ -317,7 +386,9 @@ class FirestoreService {
   /// TRANSACTIONS MODEL | CRUD
   ///
 
-  static Future<String> createTransaction(TransactionsModel transaction_model) async {
+  static Future<String> createTransaction(
+    TransactionsModel transaction_model,
+  ) async {
     try {
       debugPrint("adding transaction FUNCTION START");
       // Step 1: Query for a new Collection
@@ -330,12 +401,20 @@ class FirestoreService {
       var family_id = myFamily.id;
 
       // Step 3: Add the server timestamp & link family id
-      await collection.doc(transaction_id).set({...transaction_model.toFirestore(), 'family_id': family_id, 'created_at': FieldValue.serverTimestamp()});
+      await collection.doc(transaction_id).set({
+        ...transaction_model.toFirestore(),
+        'family_id': family_id,
+        'created_at': FieldValue.serverTimestamp(),
+      });
 
-      debugPrint("family.add - added transactions to 'transactions' collection [${transaction_model.id}]");
+      debugPrint(
+        "family.add - added transactions to 'transactions' collection [${transaction_model.id}]",
+      );
       return transaction_id;
     } catch (e) {
-      throw Exception('ERROR: Adding transactions to "transactions" collection: $e');
+      throw Exception(
+        'ERROR: Adding transactions to "transactions" collection: $e',
+      );
     } finally {
       debugPrint("adding transaction FUNCTION END");
     }
@@ -349,9 +428,13 @@ class FirestoreService {
       var query = collection
           .where("family_id", isEqualTo: family_id)
           .limit(1)
-          .withConverter<TransactionsModel>(fromFirestore: TransactionsModel.fromFirestore, toFirestore: (model, _) => model.toFirestore());
+          .withConverter<TransactionsModel>(
+            fromFirestore: TransactionsModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
       var querySnapShot = await query.get();
-      TransactionsModel send_transaction_model = querySnapShot.docs.first.data();
+      TransactionsModel send_transaction_model = querySnapShot.docs.first
+          .data();
       return send_transaction_model;
     } catch (e) {
       debugPrint("Read TransactionsModel failed: $e");
@@ -366,7 +449,9 @@ class FirestoreService {
   ////////////////////////
   ////////////////////////
 
-  static Future<bool> doesFirestoreCollectionExist(String target_collection) async {
+  static Future<bool> doesFirestoreCollectionExist(
+    String target_collection,
+  ) async {
     try {
       final collectionRef = db.collection(target_collection);
       final snapshot = await collectionRef.limit(1).get();
@@ -376,8 +461,13 @@ class FirestoreService {
     }
   }
 
-  static Future<bool> does_family_account_exist_in_firestore(String family_email) async {
-    var query = await db.collection("family").where("email", isEqualTo: family_email).get();
+  static Future<bool> does_family_account_exist_in_firestore(
+    String family_email,
+  ) async {
+    var query = await db
+        .collection("family")
+        .where("email", isEqualTo: family_email)
+        .get();
 
     var doesFamilyAccountExist = query.docs.isNotEmpty;
 
@@ -394,11 +484,15 @@ class FirestoreService {
 
     try {
       var family_collection = db.collection("family");
-      var query = await family_collection.where("user_id", isEqualTo: user_id).get();
+      var query = await family_collection
+          .where("user_id", isEqualTo: user_id)
+          .get();
       var docRef = query.docs.first;
 
       family_name = docRef["family_name"];
-      debugPrint("FirestoreService@fetch_family_name - fetched family name $family_name");
+      debugPrint(
+        "FirestoreService@fetch_family_name - fetched family name $family_name",
+      );
     } catch (e) {
       debugPrint("ERROR: Connection failed");
     }
@@ -407,21 +501,24 @@ class FirestoreService {
     return family_name;
   }
 
-  static Future<List<KidModel>> fetch_all_kids_by_family_id(String family_id) async {
-    List<KidModel> kids_list = [];
-
+  static Future<List<KidModel>> fetch_all_kids_by_family_id(
+    String family_id,
+  ) async {
     try {
-      final querySnapshot = await db.collection("kids").where("family_id", isEqualTo: family_id).get();
+      final query = db
+          .collection("kids")
+          .where("family_id", isEqualTo: family_id)
+          .withConverter<KidModel>(
+            fromFirestore: KidModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
 
-      // Convert each document to a KidModel and add to list
-      kids_list = querySnapshot.docs.map((doc) {
-        return KidModel.fromFirestore(doc, null); // Pass the document snapshot
-      }).toList();
+      final snapshot = await query.get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      debugPrint("ERROR: Connection error (fetching kids): $e");
+      debugPrint('Error fetching kids: $e');
+      throw Exception('Failed to load kids. Please check connection');
     }
-
-    return kids_list;
   }
 
   static Future<String?> fetch_family_id(String user_id) async {
@@ -431,13 +528,18 @@ class FirestoreService {
     return family_id;
   }
 
-  static Future<ParentModel?> fetch_parent_by_parent_id(String parent_id) async {
+  static Future<ParentModel?> fetch_parent_by_parent_id(
+    String parent_id,
+  ) async {
     debugPrint("fetch_parent_by_family_id START");
     try {
       var parentsCollection = db.collection("parents");
       final docRef = parentsCollection
           .doc(parent_id)
-          .withConverter<ParentModel>(fromFirestore: ParentModel.fromFirestore, toFirestore: (model, _) => model.toFirestore());
+          .withConverter<ParentModel>(
+            fromFirestore: ParentModel.fromFirestore,
+            toFirestore: (model, _) => model.toFirestore(),
+          );
       final docSnap = await docRef.get();
       ParentModel? send_parent_model = docSnap.data();
       return send_parent_model; // Returns null if empty
@@ -449,15 +551,22 @@ class FirestoreService {
     }
   }
 
-  static Future<List<ChoreModel>> fetch_all_chores_by_kid_id(String selected_kid_id) async {
+  static Future<List<ChoreModel>> fetch_all_chores_by_kid_id(
+    String selected_kid_id,
+  ) async {
     List<ChoreModel> chores_list = [];
     try {
       final chores = db.collection("chores");
-      final choresSnapshot = await chores.where("kid_id", isEqualTo: selected_kid_id).get();
+      final choresSnapshot = await chores
+          .where("kid_id", isEqualTo: selected_kid_id)
+          .get();
 
       // Convert each document to a KidModel and add to list
       chores_list = choresSnapshot.docs.map((doc) {
-        return ChoreModel.fromFirestore(doc, null); // Pass the document snapshot
+        return ChoreModel.fromFirestore(
+          doc,
+          null,
+        ); // Pass the document snapshot
       }).toList();
     } catch (e) {
       debugPrint("ERROR: Connection error (fetching kids): $e");
@@ -466,16 +575,26 @@ class FirestoreService {
     return chores_list;
   }
 
-  static Future<List<TransactionsModel>> fetch_all_transactions_by_family_id_and_type(String selected_family_id, String target_type) async {
+  static Future<List<TransactionsModel>>
+  fetch_all_transactions_by_family_id_and_type(
+    String selected_family_id,
+    String target_type,
+  ) async {
     debugPrint("fetch_all_transactions_by_family_id - Function START");
     List<TransactionsModel> transactions_list = [];
     try {
       final chores = db.collection("transactions");
-      final choresSnapshot = await chores.where("family_id", isEqualTo: selected_family_id).where("type", isEqualTo: target_type).get();
+      final choresSnapshot = await chores
+          .where("family_id", isEqualTo: selected_family_id)
+          .where("type", isEqualTo: target_type)
+          .get();
 
       // Convert each document to a KidModel and add to list
       transactions_list = choresSnapshot.docs.map((doc) {
-        return TransactionsModel.fromFirestore(doc, null); // Pass the document snapshot
+        return TransactionsModel.fromFirestore(
+          doc,
+          null,
+        ); // Pass the document snapshot
       }).toList();
     } catch (e) {
       debugPrint("ERROR: Connection error (fetching kids): $e");

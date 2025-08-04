@@ -67,83 +67,33 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    debugPrint("parentLoginPage - attempt to login");
-
-    // The Login Function
-    final pincode = passwordController.text.trim();
-    final cardDigits = cardController.text.trim();
-    var navigator = Navigator.of(context);
-
-    // Step 1: Cleaning the input
-    if (pincode.isEmpty) {
-      UtilityTopSnackBar.show(message: "Password cannot be empty.", context: context, isError: true);
-      return;
-    }
-
-    if (cardDigits.length != 4 || int.tryParse(cardDigits) == null) {
-      UtilityTopSnackBar.show(message: "Card digits must be 4 numbers.", context: context, isError: true);
-      return;
-    }
-
-    // Step 2: Password Input Done - Now Get the real passcode from Firestore and Verify it.
-    try {
-      final parentCollection = FirebaseFirestore.instance.collection("parents");
-      final parentDoc = await parentCollection.doc(widget.parent_id).get();
-
-      if (parentDoc['pincode'] != pincode) {
-        UtilityTopSnackBar.show(message: "Incorrect password.", context: context, isError: true);
-        debugPrint("parentLoginPage - ERROR: User input Wrong Password.");
-        return;
+  debugPrint("parentLoginPage - Bypassing login for troubleshooting");
+  
+  var navigator = Navigator.of(context);
+  user_id = widget.user_id;
+  
+  // Bypass all checks and proceed directly to dashboard
+  UtilityTopSnackBar.show(message: "Login bypassed for troubleshooting", context: context, isError: false);
+  
+  var family_id = await FirestoreService.fetch_family_id(user_id);
+  List<KidModel> kidsList = await FirestoreService.fetch_all_kids_by_family_id(family_id!);
+  
+  if (kidsList.isEmpty) {
+    navigator.pushNamed(
+      "/create-kids-account-page",
+      arguments: {"parent-id": widget.parent_id, "user-id": widget.user_id, "came-from-parent-dashboard": false},
+    );
+  } else {
+    navigator.pushReplacementNamed(
+      '/parent-dashboard-page', 
+      arguments: {
+        "family-name": familyName, 
+        "user-id": user_id, 
+        "parent-id": widget.parent_id
       }
-
-      // Step 3: Now for card digits verify if correct.
-      user_id = widget.user_id;
-      debugPrint(user_id);
-      FamilyPaymentInfoModel? familyPaymentDoc = await FirestoreService.readFamilyPaymentInfo(user_id);
-
-      if (familyPaymentDoc != null) {
-        var cardNumber = familyPaymentDoc.card_number;
-
-        if (cardNumber.length >= 4) {
-          if (cardNumber.endsWith(cardDigits)) {
-            debugPrint("parentLoginPage - Card Digits Verified");
-          }
-        } else {
-          debugPrint("parentLoginPage - ERROR: cardNumber isn't more than 4 numbers");
-          UtilityTopSnackBar.show(message: "Card not found.", context: context, isError: true);
-          return;
-        }
-      } else {
-        debugPrint("PLoginPage - family payment info was found null. Throwing Error");
-        throw Error;
-      }
-
-      // Step 4: CardDigits is verified, user can proceed to Parent Dashboard Page.
-      UtilityTopSnackBar.show(message: "Login successful!", context: context, isError: false);
-
-      // Step 5: Hold on, let's check if there's kids.
-      var family_id = await FirestoreService.fetch_family_id(user_id);
-      List<KidModel> kidsList = await FirestoreService.fetch_all_kids_by_family_id(family_id!);
-      if (kidsList.isEmpty) {
-        if (mounted) {
-          UtilityTopSnackBar.show(
-            message: "Hold on, you can't go to parent dashboard just yet, you need to have at least one kid account",
-            context: context,
-            isError: true,
-          );
-        }
-        navigator.pushNamed(
-          "/create-kids-account-page",
-          arguments: {"parent-id": widget.parent_id, "user-id": widget.user_id, "came-from-parent-dashboard": false},
-        );
-      } else {
-        debugPrint("parentLoginPage - Parent Login Successful. Redirecting to Parent-Dashboard-Page $user_id");
-        navigator.pushReplacementNamed('/parent-dashboard-page', arguments: {"family-name": familyName, "user-id": user_id, "parent-id": widget.parent_id});
-      }
-    } catch (e) {
-      UtilityTopSnackBar.show(message: "Error checking pincode == password: ${e.toString()}", context: context, isError: true);
-    }
+    );
   }
+}
 
   // BUILD
 

@@ -6,14 +6,10 @@ import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsLoginPage extends StatefulWidget {
-final String user_id;
-final String kid_id;
+  final String user_id;
+  final String kid_id;
 
-  const KidsLoginPage({
-    super.key,
-    required this.user_id,
-    required this.kid_id,
-  });
+  const KidsLoginPage({super.key, required this.user_id, required this.kid_id});
 
   @override
   State<KidsLoginPage> createState() => _KidsLoginPageState();
@@ -34,111 +30,58 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
   }
 
   Future<void> _fetchKidData() async {
-  debugPrint("KidsLoginPage - Fetching data for kid_id: ${widget.kid_id}");
-  try {
-    final kidDoc = await FirebaseFirestore.instance
-        .collection('kids')
-        .doc(widget.kid_id)
-        .get();
-
-    if (kidDoc.exists) {
-      final data = kidDoc.data()!;
-      debugPrint("Firestore kid data: $data");
-
-      setState(() {
-        kidName = data['first_name'] ?? '';
-        kidAvatar = data['avatar_file_path'] ?? 'assets/default_avatar.png';
-      });
-    } else {
-      UtilityTopSnackBar.show(
-        context: context,
-        message: "Kid account not found",
-        isError: true,
-      );
-    }
-  } catch (e) {
-    debugPrint("KidsLoginPage - ERROR fetching kid: $e");
-  }
-}
-  Future<void> _login() async {
-    if (widget.kid_id.isEmpty) {
-      UtilityTopSnackBar.show(
-        context: context,
-        message: "Error: No kid account selected",
-        isError: true,
-      );
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-      hasError = false;
-    });
-
-    final pincode = pincodeController.text.trim();
-    if (pincode.isEmpty) {
-      UtilityTopSnackBar.show(
-        context: context,
-        message: "Pincode cannot be empty",
-        isError: true,
-      );
-      setState(() => isLoading = false);
-      return;
-    }
-
+    debugPrint("KidsLoginPage - Fetching data for kid_id: ${widget.kid_id}");
     try {
       final kidDoc = await FirebaseFirestore.instance
           .collection('kids')
           .doc(widget.kid_id)
           .get();
 
-      if (!kidDoc.exists) {
+      if (kidDoc.exists) {
+        final data = kidDoc.data()!;
+        debugPrint("Firestore kid data: $data");
+
+        setState(() {
+          kidName = data['first_name'] ?? '';
+          kidAvatar = data['avatar_file_path'] ?? 'assets/default_avatar.png';
+        });
+      } else {
         UtilityTopSnackBar.show(
           context: context,
           message: "Kid account not found",
           isError: true,
         );
-        setState(() => isLoading = false);
-        return;
       }
-
-      final kidData = kidDoc.data();
-      if (kidData == null || kidData['pincode'] != pincode) {
-        UtilityTopSnackBar.show(
-          context: context,
-          message: "Incorrect pincode",
-          isError: true,
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-
-      UtilityTopSnackBar.show(
-        context: context,
-        message: "Login successful!",
-        isError: false,
-      );
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        "/kids-dashboard-page",
-        arguments: {
-          "kid-id": widget.kid_id,
-          "family-user-id": widget.user_id,
-          "there-are-parent-in-family": false, // Assuming no parents for kids login
-        },
-      );
     } catch (e) {
-      UtilityTopSnackBar.show(
-        context: context,
-        message: "Error: ${e.toString()}",
-        isError: true,
-      );
-      debugPrint("Login error: $e");
-    } finally {
-      if (mounted) setState(() => isLoading = false);
+      debugPrint("KidsLoginPage - ERROR fetching kid: $e");
     }
+  }
+
+  Future<void> _login() async {
+    debugPrint("KidsLoginPage - Bypassing login for troubleshooting");
+
+    setState(() => isLoading = true);
+
+    // Bypass all checks and proceed directly to dashboard
+    UtilityTopSnackBar.show(
+      context: context,
+      message: "Login bypassed for troubleshooting",
+      isError: false,
+    );
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed(
+      "/kids-dashboard-page",
+      arguments: {
+        "kid-id": widget.kid_id,
+        "family-user-id": widget.user_id,
+        "there-are-parent-in-family": false,
+      },
+    );
+
+    setState(() => isLoading = false);
   }
 
   @override
@@ -160,7 +103,9 @@ class _KidsLoginPageState extends State<KidsLoginPage> {
                     // Avatar
                     CircleAvatar(
                       backgroundImage: AssetImage(
-                        kidAvatar.isNotEmpty ? kidAvatar : 'assets/default_avatar.png',
+                        kidAvatar.isNotEmpty
+                            ? kidAvatar
+                            : 'assets/default_avatar.png',
                       ),
                       radius: 70,
                       backgroundColor: const Color(0xFF4E88CF),

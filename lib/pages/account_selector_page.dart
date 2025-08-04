@@ -82,22 +82,22 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         var the_main_parent = await FirestoreService.readParent(family_id);
         //Fetch kids from Firestore using family_id and include doc.id
         var kidsSnapshot = await FirebaseFirestore.instance
-                .collection('kids')
-                .where('family_id', isEqualTo: family_id)
-                .get();
+            .collection('kids')
+            .where('family_id', isEqualTo: family_id)
+            .get();
 
-            Kids_List = kidsSnapshot.docs.map((doc) {
-              var data = doc.data();
-              return KidModel(
-                id: doc.id,
-                first_name: data['first_name'],
-                last_name: data['last_name'],
-                avatar_file_path: data['avatar_file_path'],
-                pincode: data['pincode'],
-                date_of_birth: (data['date_of_birth'] as Timestamp).toDate(),
-                family_id: data['family_id'],
-              );
-            }).toList();
+        Kids_List = kidsSnapshot.docs.map((doc) {
+          var data = doc.data();
+          return KidModel(
+            id: doc.id,
+            first_name: data['first_name'],
+            last_name: data['last_name'],
+            avatar_file_path: data['avatar_file_path'],
+            pincode: data['pincode'],
+            date_of_birth: (data['date_of_birth'] as Timestamp).toDate(),
+            family_id: data['family_id'],
+          );
+        }).toList();
         var is_there_a_parent = (the_main_parent != null);
 
         if (is_there_a_parent == false) {
@@ -123,8 +123,8 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         }
 
         if (Kids_List.isEmpty) {
-            debugPrint("AccountSelectorPage - Kids_List is empty");
-          }
+          debugPrint("AccountSelectorPage - Kids_List is empty");
+        }
 
         setState(() {
           Parent = the_main_parent;
@@ -161,48 +161,45 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   }
 
   void _handleLoginButton() {
-  debugPrint("AccSelectPage - Login Button START");
+    debugPrint("AccSelectPage - Login Button START");
 
-  var navigator = Navigator.of(context);
+    var navigator = Navigator.of(context);
 
-  debugPrint(
-    "accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName",
-  );
-
-  if (selectedName == null || selectedRole == null) {
-    UtilityTopSnackBar.show(
-      context: context,
-      message: "Please select a user above first",
+    debugPrint(
+      "accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName",
     );
-    return;
-  }
 
-  if (selectedRole == 'Parent') {
-    debugPrint("AccSelectPage - selected user is a parent");
-    String? my_parent_id = selectedId as String;
-    if (my_parent_id.isNotEmpty) {
-      navigator.pushNamed(
-        "/parent-login-page",
-        arguments: {"user-id": user_id, "parent-id": my_parent_id},
+    if (selectedName == null || selectedRole == null) {
+      UtilityTopSnackBar.show(
+        context: context,
+        message: "Please select a user above first",
       );
+      return;
     }
-  } else if (selectedRole == 'Kid') {
-  debugPrint("AccSelectPage - selected user is a kid");
 
-  String my_kid_id = selectedId ?? '';
+    if (selectedRole == 'Parent') {
+      debugPrint("AccSelectPage - selected user is a parent");
+      String? my_parent_id = selectedId as String;
+      if (my_parent_id.isNotEmpty) {
+        navigator.pushNamed(
+          "/parent-login-page",
+          arguments: {"user-id": user_id, "parent-id": my_parent_id},
+        );
+      }
+    } else if (selectedRole == 'Kid') {
+      debugPrint("AccSelectPage - selected user is a kid");
 
-  if (my_kid_id.isNotEmpty) {
-    navigator.pushNamed(
-      "/kids-login-page",
-      arguments: {
-        "user-id": user_id,
-        "kid-id": my_kid_id,
-      },
-    );
+      String my_kid_id = selectedId ?? '';
+
+      if (my_kid_id.isNotEmpty) {
+        navigator.pushNamed(
+          "/kids-login-page",
+          arguments: {"user-id": user_id, "kid-id": my_kid_id},
+        );
+      }
+    }
+    debugPrint("AccSelectPage - Login Button END");
   }
-}
-  debugPrint("AccSelectPage - Login Button END");
-}
 
   void _handleLogOutFromFamily() async {
     var navigator = Navigator.of(context);
@@ -370,12 +367,13 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                       itemCount: Kids_List.length,
                       scrollDirection: Axis.vertical,
                       physics: const BouncingScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.85,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.85,
+                          ),
                       itemBuilder: (context, index) {
                         final kid = Kids_List[index];
                         final isSelected = selectedId == kid.id;
@@ -393,10 +391,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(40),
                                   border: isSelected
-                                      ? Border.all(
-                                          color: Colors.blue,
-                                          width: 3,
-                                        )
+                                      ? Border.all(color: Colors.blue, width: 3)
                                       : null,
                                 ),
                                 child: ClipRRect(
@@ -417,7 +412,9 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.blue : Colors.black,
+                                  color: isSelected
+                                      ? Colors.blue
+                                      : Colors.black,
                                 ),
                               ),
                             ],

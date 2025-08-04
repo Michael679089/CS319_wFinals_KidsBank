@@ -30,28 +30,30 @@ class NotificationModel {
   ) {
     final data = snapshot.data()!;
     return NotificationModel(
-      id: snapshot.id, // Get the document ID here
-      family_id: data['family_id'] as String,
-      kid_id: data['kid_id'] as String,
-      notification_title: data['notification_title'] as String,
-      notification_message: data['notification_message'] as String,
-      type: data['type'] as String,
-      amount: (data['amount'] ?? 0).toDouble(),
-      created_at: data["created_at"],
+      id: snapshot.id,
+      family_id:
+          data['family_id'] as String? ?? '', // Provide default empty string
+      kid_id: data['kid_id'] as String? ?? '', // Provide default empty string
+      notification_title: data['notification_title'] as String? ?? 'No Title',
+      notification_message: data['notification_message'] as String? ?? '',
+      type: data['type'] as String? ?? 'general',
+      amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+      created_at: (data['created_at'] as Timestamp?)?.toDate(),
     );
   }
 
   // sending to firestore
   Map<String, dynamic> toFirestore() {
     return {
-      'id': id,
       'family_id': family_id,
       'kid_id': kid_id,
       'notification_title': notification_title,
       'notification_message': notification_message,
       'type': type,
       'amount': amount,
-      'created_at': created_at,
+      'created_at': created_at != null
+          ? Timestamp.fromDate(created_at!)
+          : FieldValue.serverTimestamp(),
     };
   }
 }

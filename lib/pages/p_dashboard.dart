@@ -127,7 +127,7 @@ Future<void> _loadKidsData() async {
   debugPrint("PDashboardPage: KID's DATA: ${Kids_Data.toList().toString()}");
 }
 
-void _handleAddChoreSubmission(
+Future<void> _handleAddChoreSubmission(
   BuildContext context,
   String kidId,
   TextEditingController titleController,
@@ -159,6 +159,12 @@ void _handleAddChoreSubmission(
   }
 
   try {
+    // Get family ID first
+    final userId = widget.user_id;
+    final familyId = await FirestoreService.fetch_family_id(userId);
+    if (familyId == null) throw Exception('Family not found');
+
+    // Create the chore
     final chore = ChoreModel(
       kid_id: kidId,
       chore_title: title,
@@ -168,7 +174,7 @@ void _handleAddChoreSubmission(
       created_at: DateTime.now(),
     );
 
-    // Add the chore document to the "chores" collection
+    // Add the chore to Firestore
     await FirebaseFirestore.instance.collection('chores').add(chore.toMap());
 
     UtilityTopSnackBar.show(
@@ -180,15 +186,19 @@ void _handleAddChoreSubmission(
     // Clear the fields
     titleController.clear();
     descriptionController.clear();
-
-    // Reset reward money
     updateRewardMoney(0.00);
     amountController.text = "0.00";
 
+    // Refresh the kids data
+    if (mounted) {
+      await _loadKidsData();
+    }
+
   } catch (e) {
+    debugPrint('Error adding chore: $e');
     UtilityTopSnackBar.show(
       context: context,
-      message: 'Failed to add chore.',
+      message: 'Failed to add chore: ${e.toString()}',
       isError: true,
     );
   }
@@ -663,14 +673,11 @@ void showManageFundsModal(
                                     FieldValue.increment(fundAmount),
                               });
 
-                              await firestore
-                                  .collection('kids_notifications')
-                                  .add({
+                              await firestore.collection('kids_notifications').add({
                                 'family_id': familyId,
                                 'kid_id': kidId,
                                 'notification_title': 'Funds Deposited',
-                                'notification_message':
-                                    messageController.text.trim(),
+                                'notification_message': messageController.text.trim(),
                                 'type': 'deposit',
                                 'amount': fundAmount,
                                 'created_at': FieldValue.serverTimestamp(),
@@ -733,15 +740,13 @@ void showManageFundsModal(
                                     FieldValue.increment(fundAmount),
                               });
 
-                              await firestore
-                                  .collection('kids_notifications')
-                                  .add({
+                              // For WITHDRAWAL (FIX THIS PART)
+                              await firestore.collection('kids_notifications').add({
                                 'family_id': familyId,
                                 'kid_id': kidId,
-                                'notification_title': 'Funds Withdrawn',
-                                'notification_message':
-                                    messageController.text.trim(),
-                                'type': 'withdraw',
+                                'notification_title': 'Funds Withdrawn', // Changed title
+                                'notification_message': messageController.text.trim(),
+                                'type': 'withdrawal', // CHANGED FROM 'deposit' to 'withdrawal'
                                 'amount': fundAmount,
                                 'created_at': FieldValue.serverTimestamp(),
                               });

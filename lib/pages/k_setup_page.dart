@@ -45,257 +45,274 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
   //
 
   void _showEditKidModal(KidModel kid) {
-  final firstNameController = TextEditingController(text: kid.first_name);
-  final lastNameController = TextEditingController(text: kid.last_name);
-  final dobController = TextEditingController(
-    text: "${kid.date_of_birth.year}-${kid.date_of_birth.month.toString().padLeft(2, '0')}-${kid.date_of_birth.day.toString().padLeft(2, '0')}"
-  );
-  final pincodeController = TextEditingController(text: kid.pincode);
+    final firstNameController = TextEditingController(text: kid.first_name);
+    final lastNameController = TextEditingController(text: kid.last_name);
+    final dobController = TextEditingController(
+      text:
+          "${kid.date_of_birth.year}-${kid.date_of_birth.month.toString().padLeft(2, '0')}-${kid.date_of_birth.day.toString().padLeft(2, '0')}",
+    );
+    final pincodeController = TextEditingController(text: kid.pincode);
 
-  String selectedAvatar = kid.avatar_file_path;
-  final avatars = [
-    'assets/avatar1.png',
-    'assets/avatar2.png',
-    'assets/avatar3.png',
-    'assets/avatar4.png',
-    'assets/avatar5.png',
-    'assets/avatar6.png',
-  ];
+    String selectedAvatar = kid.avatar_file_path;
+    final avatars = [
+      'assets/avatar1.png',
+      'assets/avatar2.png',
+      'assets/avatar3.png',
+      'assets/avatar4.png',
+      'assets/avatar5.png',
+      'assets/avatar6.png',
+    ];
 
-  final formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
 
-  void showAvatarPickerModal(Function(void Function()) setModalState) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 20,
-              runSpacing: 20,
-              children: avatars.map((avatar) {
-                return GestureDetector(
-                  onTap: () {
-                    setModalState(() {
-                      selectedAvatar = avatar;
-                    });
-                    Navigator.of(context).pop();
-                  },
-                  child: CircleAvatar(
-                    backgroundImage: AssetImage(avatar),
-                    radius: 30,
-                  ),
-                );
-              }).toList(),
+    void showAvatarPickerModal(Function(void Function()) setModalState) {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 20,
+                runSpacing: 20,
+                children: avatars.map((avatar) {
+                  return GestureDetector(
+                    onTap: () {
+                      setModalState(() {
+                        selectedAvatar = avatar;
+                      });
+                      Navigator.of(context).pop();
+                    },
+                    child: CircleAvatar(
+                      backgroundImage: AssetImage(avatar),
+                      radius: 30,
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  showDialog(
-    context: context,
-    barrierDismissible: true,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Edit Kid Account',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: GoogleFonts.fredoka().fontFamily,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Avatar
-                      Center(
-                        child: GestureDetector(
-                          onTap: () => showAvatarPickerModal(setModalState),
-                          child: CircleAvatar(
-                            radius: 40,
-                            backgroundImage: AssetImage(selectedAvatar),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Center(
-                        child: Text(
-                          'Tap avatar to change',
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Edit Kid Account',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                             fontFamily: GoogleFonts.fredoka().fontFamily,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 20),
 
-                      // First Name
-                      TextFormField(
-                        controller: firstNameController,
-                        decoration: _inputDecoration('First Name'),
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Last Name
-                      TextFormField(
-                        controller: lastNameController,
-                        decoration: _inputDecoration('Last Name'),
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Date of Birth
-                      TextFormField(
-                        controller: dobController,
-                        decoration: _inputDecoration('Date of Birth'),
-                        readOnly: true,
-                        onTap: () async {
-                          FocusScope.of(context).unfocus();
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: kid.date_of_birth,
-                            firstDate: DateTime(2005),
-                            lastDate: DateTime.now(),
-                          );
-                          if (picked != null) {
-                            dobController.text =
-                                "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-                            setModalState(() {});
-                          }
-                        },
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Pincode
-                      TextFormField(
-                        controller: pincodeController,
-                        decoration: _inputDecoration('Pincode'),
-                        keyboardType: TextInputType.number,
-                        maxLength: 4,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Required';
-                          } else if (value.length != 4) {
-                            return 'Pincode must be 4 digits';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Save Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (!formKey.currentState!.validate()) return;
-
-                            try {
-                              await FirebaseFirestore.instance
-                                  .collection('kids')
-                                  .doc(kid.id)
-                                  .update({
-                                'first_name': firstNameController.text.trim(),
-                                'last_name': lastNameController.text.trim(),
-                                'date_of_birth': DateTime.parse(dobController.text),
-                                'pincode': pincodeController.text.trim(),
-                                'avatar_file_path': selectedAvatar,
-                              });
-
-                              Navigator.of(context).pop();
-                              setState(() {});
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Kid updated successfully.'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to update: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4E88CF),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                        // Avatar
+                        Center(
+                          child: GestureDetector(
+                            onTap: () => showAvatarPickerModal(setModalState),
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundImage: AssetImage(selectedAvatar),
                             ),
-                            side: const BorderSide(color: Colors.black, width: 2),
                           ),
+                        ),
+                        const SizedBox(height: 10),
+                        Center(
                           child: Text(
-                            'Save Changes',
+                            'Tap avatar to change',
                             style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              fontSize: 14,
                               fontFamily: GoogleFonts.fredoka().fontFamily,
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+
+                        // First Name
+                        TextFormField(
+                          controller: firstNameController,
+                          decoration: _inputDecoration('First Name'),
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Required'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Last Name
+                        TextFormField(
+                          controller: lastNameController,
+                          decoration: _inputDecoration('Last Name'),
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Required'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Date of Birth
+                        TextFormField(
+                          controller: dobController,
+                          decoration: _inputDecoration('Date of Birth'),
+                          readOnly: true,
+                          onTap: () async {
+                            FocusScope.of(context).unfocus();
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: kid.date_of_birth,
+                              firstDate: DateTime(2005),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              dobController.text =
+                                  "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                              setModalState(() {});
+                            }
+                          },
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Required'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Pincode
+                        TextFormField(
+                          controller: pincodeController,
+                          decoration: _inputDecoration('Pincode'),
+                          keyboardType: TextInputType.number,
+                          maxLength: 4,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Required';
+                            } else if (value.length != 4) {
+                              return 'Pincode must be 4 digits';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Save Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (!formKey.currentState!.validate()) return;
+
+                              try {
+                                await FirebaseFirestore.instance
+                                    .collection('kids')
+                                    .doc(kid.id)
+                                    .update({
+                                      'first_name': firstNameController.text
+                                          .trim(),
+                                      'last_name': lastNameController.text
+                                          .trim(),
+                                      'date_of_birth': DateTime.parse(
+                                        dobController.text,
+                                      ),
+                                      'pincode': pincodeController.text.trim(),
+                                      'avatar_file_path': selectedAvatar,
+                                    });
+
+                                Navigator.of(context).pop();
+                                setState(() {});
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Kid updated successfully.'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to update: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4E88CF),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              side: const BorderSide(
+                                color: Colors.black,
+                                width: 2,
+                              ),
+                            ),
+                            child: Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                                fontFamily: GoogleFonts.fredoka().fontFamily,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-InputDecoration _inputDecoration(String label) {
-  return InputDecoration(
-    labelText: label,
-    labelStyle: TextStyle(
-      fontFamily: GoogleFonts.fredoka().fontFamily,
-      fontWeight: FontWeight.w500,
-      color: Colors.black87,
-    ),
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(20),
-      borderSide: const BorderSide(color: Colors.black, width: 2),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(20),
-      borderSide: const BorderSide(color: Colors.black, width: 2),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(20),
-      borderSide: const BorderSide(color: Colors.blue, width: 2),
-    ),
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(
+        fontFamily: GoogleFonts.fredoka().fontFamily,
+        fontWeight: FontWeight.w500,
+        color: Colors.black87,
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Colors.black, width: 2),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Colors.black, width: 2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: Colors.blue, width: 2),
+      ),
+    );
+  }
+
   // loading information functions:
   Future<void> _loadParentInfo() async {
     debugPrint("KSetupPage - loadParentInfo Function START");
@@ -413,9 +430,7 @@ InputDecoration _inputDecoration(String label) {
         if (widget.cameFromParentDashboard) {
           navigator.pushReplacementNamed(
             "/parent-dashboard-page",
-            arguments: {
-              "user-id": widget.user_id, "parent-id": parentId
-              },
+            arguments: {"user-id": widget.user_id, "parent-id": parentId},
           );
           debugPrint(
             "kidsSetupPage - User that came from parent dashboard pressed back on phone - redirected to Parent-Dashbaord-Page",
@@ -633,40 +648,38 @@ InputDecoration _inputDecoration(String label) {
   // Function to confirm deletion of a kid
   Future<void> deleteKid(String kidId) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('kids')
-          .doc(kidId)
-          .delete();
+      await FirebaseFirestore.instance.collection('kids').doc(kidId).delete();
       debugPrint("Kid with ID $kidId deleted successfully");
     } catch (e) {
       debugPrint("Error deleting kid: $e");
       rethrow;
     }
   }
-  void _confirmDeleteKid(KidModel kid) async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Delete Kid'),
-      content: Text('Are you sure you want to delete ${kid.first_name}?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Delete'),
-        ),
-      ],
-    ),
-  );
 
-if (confirm == true) {
- await deleteKid(kid.id!);
-  setState(() {}); // Refresh UI
-}
-}
+  void _confirmDeleteKid(KidModel kid) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Kid'),
+        content: Text('Are you sure you want to delete ${kid.first_name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await deleteKid(kid.id!);
+      setState(() {}); // Refresh UI
+    }
+  }
 
   Widget _buildKidTile(KidModel kid) {
     return Container(
@@ -704,7 +717,7 @@ if (confirm == true) {
                     .doc(kid.id)
                     .get();
 
-               if (doc.exists) {
+                if (doc.exists) {
                   final kidModel = KidModel.fromFirestore(doc, null);
                   _showEditKidModal(kidModel);
                 }
@@ -714,7 +727,7 @@ if (confirm == true) {
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => _confirmDeleteKid(kid),
             ),
-          ]
+          ],
         ],
       ),
     );
