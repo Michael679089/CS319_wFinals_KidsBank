@@ -7,9 +7,10 @@ import 'p_dashboard_drawer.dart';
 import 'package:flutter/services.dart';
 
 class ParentNotificationsPage extends StatefulWidget {
-  final String familyUserId;
+  final String user_id;
+  final String parent_id;
 
-  const ParentNotificationsPage({super.key, required this.familyUserId, required parentId});
+  const ParentNotificationsPage({super.key, required this.user_id, required this.parent_id});
 
   @override
   State<ParentNotificationsPage> createState() => _ParentNotificationsPageState();
@@ -70,10 +71,13 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
 
   @override
   void initState() {
+    debugPrint("PDNotificationPage - loading Page");
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint("PDNotificationPage - loading family data");
       _loadMyFamilyData();
+      debugPrint("PDNotificationPage - family data loaded");
     });
   }
 
@@ -85,10 +89,14 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
       return;
     }
     final args = myModalRoute.settings.arguments as Map<String, String?>;
+    var new_family_name = await FirestoreService.fetch_family_name(familyUserId);
+    parentId = widget.parent_id;
+
     setState(() {
-      familyName = args['family-name'] as String;
-      familyUserId = args["family-user-id"] as String;
+      familyUserId = widget.user_id;
+      familyName = new_family_name;
       parentId = args["parent-id"] as String;
+      debugPrint("PDashboardNotifsPage - loaded family data");
     });
   }
 

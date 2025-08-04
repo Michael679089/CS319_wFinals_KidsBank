@@ -367,13 +367,17 @@ class FirestoreService {
   ////////////////////////
 
   static Future<bool> doesFirestoreCollectionExist(String target_collection) async {
+    debugPrint("firestoreService- verifying if collection exist Function START");
     try {
       final collectionRef = db.collection(target_collection);
+      debugPrint("collectionRef ${collectionRef.toString()}");
       final snapshot = await collectionRef.limit(1).get();
       return snapshot.docs.isNotEmpty;
     } catch (e) {
+      e;
+      debugPrint("error: $e");
       return false;
-    }
+    } finally {}
   }
 
   static Future<bool> does_family_account_exist_in_firestore(String family_email) async {
@@ -483,5 +487,16 @@ class FirestoreService {
 
     debugPrint("fetch_all_transactions_by_family_id - Function END");
     return transactions_list;
+  }
+
+  static Future<List<NotificationModel>> fetch_all_notifications_by_family_id_and_type(String selected_family_id, String target_notification_type) async {
+    debugPrint("firestoreService@fetching_all_notifications");
+    var notifications = db.collection("notifications");
+    var query = await notifications.where("family_id", isEqualTo: selected_family_id).where("type", isEqualTo: target_notification_type).get();
+    var list_of_notifications = query.docs.map((doc) {
+      return NotificationModel.fromFirestore(doc, null); // Pass the document snapshot
+    }).toList();
+
+    return list_of_notifications;
   }
 }

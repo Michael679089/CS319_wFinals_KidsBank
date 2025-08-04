@@ -14,11 +14,7 @@ class AccountSelectorPage extends StatefulWidget {
   final String user_id;
   final bool there_are_parents_in_family;
 
-  const AccountSelectorPage({
-    super.key,
-    required this.user_id,
-    required this.there_are_parents_in_family,
-  });
+  const AccountSelectorPage({super.key, required this.user_id, required this.there_are_parents_in_family});
 
   @override
   State<AccountSelectorPage> createState() => _AccountSelectorPageState();
@@ -81,50 +77,38 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       try {
         var the_main_parent = await FirestoreService.readParent(family_id);
         //Fetch kids from Firestore using family_id and include doc.id
-        var kidsSnapshot = await FirebaseFirestore.instance
-                .collection('kids')
-                .where('family_id', isEqualTo: family_id)
-                .get();
+        var kidsSnapshot = await FirebaseFirestore.instance.collection('kids').where('family_id', isEqualTo: family_id).get();
 
-            Kids_List = kidsSnapshot.docs.map((doc) {
-              var data = doc.data();
-              return KidModel(
-                id: doc.id,
-                first_name: data['first_name'],
-                last_name: data['last_name'],
-                avatar_file_path: data['avatar_file_path'],
-                pincode: data['pincode'],
-                date_of_birth: (data['date_of_birth'] as Timestamp).toDate(),
-                family_id: data['family_id'],
-              );
-            }).toList();
+        Kids_List = kidsSnapshot.docs.map((doc) {
+          var data = doc.data();
+          return KidModel(
+            id: doc.id,
+            first_name: data['first_name'],
+            last_name: data['last_name'],
+            avatar_file_path: data['avatar_file_path'],
+            pincode: data['pincode'],
+            date_of_birth: (data['date_of_birth'] as Timestamp).toDate(),
+            family_id: data['family_id'],
+          );
+        }).toList();
         var is_there_a_parent = (the_main_parent != null);
 
         if (is_there_a_parent == false) {
-          debugPrint(
-            "accountSelectorPage - the main parent is not found - will redirect to /parent-setup-page in 5 seconds",
-          );
-          debugPrint(
-            "accountSelectorPage - user needs to add a single parent for the app to work.",
-          );
+          debugPrint("accountSelectorPage - the main parent is not found - will redirect to /parent-setup-page in 5 seconds");
+          debugPrint("accountSelectorPage - user needs to add a single parent for the app to work.");
 
           Future.delayed(const Duration(seconds: 5), () {
             if (mounted) {
-              navigator.pushNamed(
-                "/parent-setup-page",
-                arguments: {"first-time-user": true},
-              );
-              debugPrint(
-                "accountSelectorPage - redirected to /parent-setup-page",
-              );
+              navigator.pushNamed("/parent-setup-page", arguments: {"first-time-user": true});
+              debugPrint("accountSelectorPage - redirected to /parent-setup-page");
             }
           });
           return;
         }
 
         if (Kids_List.isEmpty) {
-            debugPrint("AccountSelectorPage - Kids_List is empty");
-          }
+          debugPrint("AccountSelectorPage - Kids_List is empty");
+        }
 
         setState(() {
           Parent = the_main_parent;
@@ -144,12 +128,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     }
   }
 
-  void _handleSelectingAccount(
-    String id,
-    String name,
-    String role,
-    String avatar,
-  ) {
+  void _handleSelectingAccount(String id, String name, String role, String avatar) {
     debugPrint("AccSelectPage - Handle Account Selection START");
     setState(() {
       selectedId = id;
@@ -161,48 +140,34 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
   }
 
   void _handleLoginButton() {
-  debugPrint("AccSelectPage - Login Button START");
+    debugPrint("AccSelectPage - Login Button START");
 
-  var navigator = Navigator.of(context);
+    var navigator = Navigator.of(context);
 
-  debugPrint(
-    "accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName",
-  );
+    debugPrint("accountSelectorPage - LoginBTN pressed: $selectedRole - $selectedName");
 
-  if (selectedName == null || selectedRole == null) {
-    UtilityTopSnackBar.show(
-      context: context,
-      message: "Please select a user above first",
-    );
-    return;
-  }
-
-  if (selectedRole == 'Parent') {
-    debugPrint("AccSelectPage - selected user is a parent");
-    String? my_parent_id = selectedId as String;
-    if (my_parent_id.isNotEmpty) {
-      navigator.pushNamed(
-        "/parent-login-page",
-        arguments: {"user-id": user_id, "parent-id": my_parent_id},
-      );
+    if (selectedName == null || selectedRole == null) {
+      UtilityTopSnackBar.show(context: context, message: "Please select a user above first");
+      return;
     }
-  } else if (selectedRole == 'Kid') {
-  debugPrint("AccSelectPage - selected user is a kid");
 
-  String my_kid_id = selectedId ?? '';
+    if (selectedRole == 'Parent') {
+      debugPrint("AccSelectPage - selected user is a parent");
+      String? my_parent_id = selectedId as String;
+      if (my_parent_id.isNotEmpty) {
+        navigator.pushNamed("/parent-login-page", arguments: {"user-id": user_id, "parent-id": my_parent_id});
+      }
+    } else if (selectedRole == 'Kid') {
+      debugPrint("AccSelectPage - selected user is a kid");
 
-  if (my_kid_id.isNotEmpty) {
-    navigator.pushNamed(
-      "/kids-login-page",
-      arguments: {
-        "user-id": user_id,
-        "kid-id": my_kid_id,
-      },
-    );
+      String my_kid_id = selectedId ?? '';
+
+      if (my_kid_id.isNotEmpty) {
+        navigator.pushNamed("/kids-login-page", arguments: {"user-id": user_id, "kid-id": my_kid_id});
+      }
+    }
+    debugPrint("AccSelectPage - Login Button END");
   }
-}
-  debugPrint("AccSelectPage - Login Button END");
-}
 
   void _handleLogOutFromFamily() async {
     var navigator = Navigator.of(context);
@@ -232,22 +197,11 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
     fetchUsers();
   }
 
-  Text _buildText(
-    String text,
-    double size, {
-    bool isTextAlignmentCenter = false,
-    Color textColor = Colors.black,
-    FontWeight fontWeight = FontWeight.w600,
-  }) {
+  Text _buildText(String text, double size, {bool isTextAlignmentCenter = false, Color textColor = Colors.black, FontWeight fontWeight = FontWeight.w600}) {
     return Text(
       text,
       textAlign: isTextAlignmentCenter ? TextAlign.center : null,
-      style: TextStyle(
-        fontSize: size,
-        fontWeight: fontWeight,
-        fontFamily: GoogleFonts.fredoka().fontFamily,
-        color: textColor,
-      ),
+      style: TextStyle(fontSize: size, fontWeight: fontWeight, fontFamily: GoogleFonts.fredoka().fontFamily, color: textColor),
     );
   }
 
@@ -258,11 +212,11 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
 
   @override
   Widget build(BuildContext context) {
-    Image myOwlImage = Image.asset(
-      'assets/owl.png',
-      height: 150,
-      width: 240,
-      alignment: Alignment.centerRight,
+    Widget myOwlImage = ClipRect(
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Image.asset('assets/owl.png', fit: BoxFit.cover),
+      ),
     );
 
     Row Top_Title_Display = Row(
@@ -270,10 +224,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       children: [
         Flexible(
           flex: 2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [title, subTitle],
-          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, subTitle]),
         ),
         Flexible(flex: 1, child: myOwlImage),
       ],
@@ -281,9 +232,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
 
     Widget InnerDisplayContainer(bool isLoading) {
       final isFirstTimeUser = widget.there_are_parents_in_family == false;
-      final selectedNameText = selectedName != null
-          ? "Log in as $selectedName"
-          : "Log in as";
+      final selectedNameText = selectedName != null ? "Log in as $selectedName" : "Log in as";
 
       if (isLoading) {
         debugPrint("Showing loading indicator");
@@ -294,11 +243,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
         debugPrint("Redirecting first-time user");
         return Padding(
           padding: const EdgeInsets.all(20),
-          child: _buildText(
-            "First-time user - redirecting to parent setup...",
-            30,
-            isTextAlignmentCenter: true,
-          ),
+          child: _buildText("First-time user - redirecting to parent setup...", 30, isTextAlignmentCenter: true),
         );
       }
 
@@ -310,38 +255,18 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(color: Colors.black, width: 1.0),
-                ),
+                border: Border(bottom: BorderSide(color: Colors.black, width: 1.0)),
               ),
               padding: const EdgeInsets.fromLTRB(40, 20, 40, 20),
               child: TextButton(
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: () => _handleSelectingAccount(
-                  Parent!.id as String,
-                  Parent!.first_name,
-                  "Parent",
-                  Parent!.avatar_file_path,
-                ),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                onPressed: () => _handleSelectingAccount(Parent!.id as String, Parent!.first_name, "Parent", Parent!.avatar_file_path),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      Parent!.avatar_file_path,
-                      width: 80,
-                      height: 80,
-                    ),
+                    Image.asset(Parent!.avatar_file_path, width: 80, height: 80),
                     const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildText(Parent!.first_name, 20),
-                        _buildText("[Main Parent]", 20),
-                      ],
-                    ),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_buildText(Parent!.first_name, 20), _buildText("[Main Parent]", 20)]),
                   ],
                 ),
               ),
@@ -349,13 +274,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
 
           // Kids Container
           Container(
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black, width: 2),
-              borderRadius: BorderRadius.circular(12),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -374,39 +293,24 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                         crossAxisCount: 3,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio: 0.85,
+                        childAspectRatio: 0.5,
                       ),
                       itemBuilder: (context, index) {
                         final kid = Kids_List[index];
                         final isSelected = selectedId == kid.id;
                         return GestureDetector(
-                          onTap: () => _handleSelectingAccount(
-                            kid.id as String,
-                            kid.first_name,
-                            "Kid",
-                            kid.avatar_file_path,
-                          ),
+                          onTap: () => _handleSelectingAccount(kid.id as String, kid.first_name, "Kid", kid.avatar_file_path),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(40),
-                                  border: isSelected
-                                      ? Border.all(
-                                          color: Colors.blue,
-                                          width: 3,
-                                        )
-                                      : null,
+                                  border: isSelected ? Border.all(color: Colors.blue, width: 3) : null,
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(40),
-                                  child: Image.asset(
-                                    kid.avatar_file_path,
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: Image.asset(kid.avatar_file_path, width: 60, height: 60, fit: BoxFit.cover),
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -414,11 +318,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                                 kid.first_name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.blue : Colors.black,
-                                ),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? Colors.blue : Colors.black),
                               ),
                             ],
                           ),
@@ -435,11 +335,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
           Container(
             padding: const EdgeInsets.all(20),
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _handleLoginButton,
-              style: Utilities.ourButtonStyle2(),
-              child: _buildText(selectedNameText, 25),
-            ),
+            child: ElevatedButton(onPressed: _handleLoginButton, style: Utilities.ourButtonStyle2(), child: _buildText(selectedNameText, 25)),
           ),
         ],
       );
@@ -461,11 +357,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
                   ),
                   child: ClipRRect(
                     borderRadius: parentBorderRadius,
-                    child: Container(
-                      width: double.infinity,
-                      constraints: BoxConstraints(maxWidth: 700),
-                      child: InnerDisplayContainer(isLoading),
-                    ),
+                    child: Container(width: double.infinity, constraints: BoxConstraints(maxWidth: 700), child: InnerDisplayContainer(isLoading)),
                   ),
                 );
               },
@@ -478,10 +370,7 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
               child: ElevatedButton(
                 onPressed: _handleLogOutFromFamily,
                 style: Utilities.ourButtonStyle3(),
-                child: Text(
-                  "Log out from Family",
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: Text("Log out from Family", style: TextStyle(color: Colors.white)),
               ),
             ),
           ],
@@ -489,22 +378,17 @@ class _AccountSelectorPageState extends State<AccountSelectorPage> {
       );
     }
 
+    ////////////
+    ////////////
+    ////////////
+    ////////////
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
-        debugPrint(
-          "accountSelectorPage - User attempted to go back through phone btns",
-        );
+        debugPrint("accountSelectorPage - User attempted to go back through phone btns");
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFFFCA26),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFFCA26),
-          title: const Text(" "),
-          automaticallyImplyLeading: false,
-        ),
-        body: MainDisplay(isLoading),
-      ),
+      child: Scaffold(backgroundColor: const Color(0xFFFFCA26), body: MainDisplay(isLoading)),
     );
   }
 }

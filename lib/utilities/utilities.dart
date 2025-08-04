@@ -19,7 +19,7 @@ class Utilities {
   static ButtonStyle ourButtonStyle2() {
     return ElevatedButton.styleFrom(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       side: const BorderSide(color: Colors.black, width: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
@@ -36,12 +36,12 @@ class Utilities {
 
   static ButtonStyle ourButtonStyle4() {
     return ElevatedButton.styleFrom(
-     backgroundColor: const Color(0xFF60C56F),
+      backgroundColor: const Color(0xFF60C56F),
       padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 12),
       shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                                side: const BorderSide(color: Colors.black, width: 2),
-                              ),
+        borderRadius: BorderRadius.circular(15),
+        side: const BorderSide(color: Colors.black, width: 2),
+      ),
     );
   }
 
@@ -59,7 +59,7 @@ class Utilities {
   static ButtonStyle withdrawButtonStyle() {
     return ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFFFEB40D), // yellow-orange
-      padding: const EdgeInsets.symmetric(horizontal: 25,vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
         side: const BorderSide(color: Colors.black, width: 2),
@@ -68,20 +68,12 @@ class Utilities {
   }
 }
 
-
-
-
 class UtilityTopSnackBar {
   static OverlayEntry? _overlayEntry;
 
   UtilityTopSnackBar(String s, BuildContext context);
 
-  static void show({
-    required BuildContext context,
-    required String message,
-    bool isError = false,
-    Duration duration = const Duration(seconds: 3),
-  }) {
+  static void show({required BuildContext context, required String message, bool isError = false, Duration duration = const Duration(seconds: 3)}) {
     // Remove any existing snackbar before showing a new one
     _overlayEntry?.remove();
     _overlayEntry = null;
@@ -99,18 +91,10 @@ class UtilityTopSnackBar {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
             child: Text(
               message,
-              style: TextStyle(
-                fontFamily: GoogleFonts.fredoka().fontFamily,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
+              style: TextStyle(fontFamily: GoogleFonts.fredoka().fontFamily, color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
             ),
           ),
         ),
@@ -130,14 +114,9 @@ class UtilitiesKidsDashboardNavigation {
   static var selectedPage = "dashboard";
   static var currentPageIndex = 0;
 
-  static final WidgetStateProperty<TextStyle?> labelTextStyle =
-      WidgetStateProperty.all(TextStyle(color: Colors.white));
+  static final WidgetStateProperty<TextStyle?> labelTextStyle = WidgetStateProperty.all(TextStyle(color: Colors.white));
 
-  static final _myHamburgerIcon = SizedBox(
-    height: 24,
-    width: 24,
-    child: Image.asset('assets/hamburger_icon.png'),
-  );
+  static final _myHamburgerIcon = SizedBox(height: 24, width: 24, child: Image.asset('assets/hamburger_icon.png'));
 
   static final List<NavigationDestination> myDestinations = [
     NavigationDestination(
@@ -162,12 +141,7 @@ class UtilitiesKidsDashboardNavigation {
     ),
   ];
 
-  static void handleKidDashboardNavigationBottomBar({
-    required int index,
-    required String kidId,
-    required String familyUserId,
-    required BuildContext context,
-  }) {
+  static void handleKidDashboardNavigationBottomBar({required int index, required String kidId, required String familyUserId, required BuildContext context}) {
     var navigator = Navigator.of(context);
     currentPageIndex = index;
 
@@ -177,11 +151,7 @@ class UtilitiesKidsDashboardNavigation {
           selectedPage = "dashboard";
           navigator.pushReplacementNamed(
             "/kids-dashboard-page",
-            arguments: {
-              "kid-id": kidId,
-              "family-user-id": familyUserId,
-              "there-are-parent-in-family": true
-            },
+            arguments: {"kid-id": kidId, "family-user-id": familyUserId, "there-are-parent-in-family": true},
           );
         }
         break;
@@ -189,20 +159,14 @@ class UtilitiesKidsDashboardNavigation {
       case 1:
         if (selectedPage != "chores") {
           selectedPage = "chores";
-          navigator.pushReplacementNamed(
-            "/kids-chores-page",
-            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
-          );
+          navigator.pushReplacementNamed("/kids-chores-page", arguments: {"kid-id": kidId, "family-user-id": familyUserId});
         }
         break;
 
       case 2:
         if (selectedPage != "notifications") {
           selectedPage = "notifications";
-          navigator.pushReplacementNamed(
-            "/kids-notifications-page",
-            arguments: {"kid-id": kidId, "family-user-id": familyUserId},
-          );
+          navigator.pushReplacementNamed("/kids-notifications-page", arguments: {"kid-id": kidId, "family-user-id": familyUserId});
         }
         break;
 
@@ -214,40 +178,20 @@ class UtilitiesKidsDashboardNavigation {
             context: context,
             builder: (context) {
               return AlertDialog(
-                title: Text(
-                  "Log Out",
-                  style: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
-                ),
-                content: Text(
-                  "Are you sure you want to log out?",
-                  style: GoogleFonts.fredoka(),
-                ),
+                title: Text("Log Out", style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                content: Text("Are you sure you want to log out?", style: GoogleFonts.fredoka()),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      "Cancel",
-                      style: GoogleFonts.fredoka(color: Colors.grey[600]),
-                    ),
+                    child: Text("Cancel", style: GoogleFonts.fredoka(color: Colors.grey[600])),
                   ),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context); // Close dialog
-                      navigator.pushReplacementNamed(
-                        "/account-selector-page",
-                        arguments: {
-                          "user-id": familyUserId,
-                          "there-are-parent-in-family": true,
-                        },
-                      );
+                      navigator.pushReplacementNamed("/account-selector-page", arguments: {"user-id": familyUserId, "there-are-parent-in-family": true});
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    child: Text(
-                      "Log Out",
-                      style: GoogleFonts.fredoka(color: Colors.white),
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: Text("Log Out", style: GoogleFonts.fredoka(color: Colors.white)),
                   ),
                 ],
               );
