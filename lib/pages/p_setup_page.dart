@@ -143,7 +143,7 @@ class _ParentSetupPageState extends State<ParentSetupPage> {
         );
         var parentId = await FirestoreService.createParent(newParent);
         UtilityTopSnackBar.show(message: 'Parent added successfully', context: context, isError: false);
-        navigator.pushNamed('/kids-setup-page', arguments: {"user-id": user_id, "parent-id": parentId, "came-from-parent-dashboard": false});
+        navigator.pushNamed('/kids-setup-page', arguments: {"user-id": user_id, "parent-id": parentId, "came-from-parent-dashboard": false, "family_id": family_id});
       }
     } catch (e) {
       debugPrint("parentSetupPage - failed to add a parent: $e");

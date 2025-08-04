@@ -8,8 +8,9 @@ import 'p_dashboard_drawer.dart';
 class ParentChoresPage extends StatefulWidget {
   final String user_id;
   final String parentId;
+  final String family_id; 
 
-  const ParentChoresPage({super.key, required this.user_id, required this.parentId});
+  const ParentChoresPage({super.key, required this.user_id, required this.parentId, required this.family_id});
 
   @override
   State<ParentChoresPage> createState() => _ParentChoresPageState();
@@ -78,7 +79,7 @@ class _ParentChoresPageState extends State<ParentChoresPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {},
       child: Scaffold(
-        drawer: ParentDrawer(selectedPage: 'chores', familyName: familyName, user_id: widget.user_id, parentId: widget.parentId),
+        drawer: ParentDrawer(selectedPage: 'chores', familyName: familyName, user_id: widget.user_id, parentId: widget.parentId, family_id: widget.family_id),
         backgroundColor: const Color(0xFFFFCA26),
         appBar: AppBar(
           backgroundColor: const Color(0xFFFFCA26),

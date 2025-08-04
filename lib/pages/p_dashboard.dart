@@ -8,11 +8,13 @@ import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
 import 'package:wfinals_kidsbank/pages/p_dashboard_drawer.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart'; 
 
 class ParentDashboard extends StatefulWidget {
   final String user_id;
   final String parent_id;
   final List<Map<String, dynamic>> kidsData;
+  final String family_id;
  
 
   const ParentDashboard({
@@ -20,6 +22,7 @@ class ParentDashboard extends StatefulWidget {
     required this.user_id,
     required this.parent_id,
     required this.kidsData,
+    required this.family_id,
   });
 
   @override
@@ -115,7 +118,7 @@ Future<void> _loadKidsData() async {
     totalDeposited += totalAmountLeft;
   }
 
-  // ✅ Prevent crash if widget is disposed
+  //Prevent crash if widget is disposed
   if (!mounted) return;
 
   setState(() {
@@ -139,7 +142,6 @@ void _handleAddChoreSubmission(
   final title = titleController.text.trim();
   final description = descriptionController.text.trim();
 
-  // Validation
   if (title.isEmpty || description.isEmpty) {
     UtilityTopSnackBar.show(
       context: context,
@@ -159,7 +161,11 @@ void _handleAddChoreSubmission(
   }
 
   try {
+    var uuid = Uuid();
+    String customChoreId = uuid.v4();
+
     final chore = ChoreModel(
+      id: customChoreId,
       kid_id: kidId,
       chore_title: title,
       chore_description: description,
@@ -168,8 +174,33 @@ void _handleAddChoreSubmission(
       created_at: DateTime.now(),
     );
 
-    // Add the chore document to the "chores" collection
-    await FirebaseFirestore.instance.collection('chores').add(chore.toMap());
+    final docRef = await FirebaseFirestore.instance
+        .collection('chores')
+        .add(chore.toMap());
+
+    await FirebaseFirestore.instance
+        .collection('chores')
+        .doc(docRef.id)
+        .update({'id': customChoreId});
+
+    //Increment totalDeposited to reflect locked reward
+    final paymentQuery = await FirebaseFirestore.instance
+    .collection('kids_payment_info')
+    .where('kid_id', isEqualTo: kidId)
+    .limit(1)
+    .get();
+
+    //Add locked_reward-type notification
+    await FirebaseFirestore.instance.collection('kids_notifications').add({
+      'type': 'locked_reward',
+      'amount': rewardMoney,
+      'kid_id': kidId,
+      'family_id': widget.family_id, // ← access it from your state
+      'notification_title': 'Pending Chore Reward',
+      'notification_message':
+          'Chore "$title" was set with a reward of \$${rewardMoney.toStringAsFixed(2)}.',
+      'timestamp': Timestamp.now(),
+    });
 
     UtilityTopSnackBar.show(
       context: context,
@@ -177,11 +208,8 @@ void _handleAddChoreSubmission(
       isError: false,
     );
 
-    // Clear the fields
     titleController.clear();
     descriptionController.clear();
-
-    // Reset reward money
     updateRewardMoney(0.00);
     amountController.text = "0.00";
 
@@ -193,7 +221,6 @@ void _handleAddChoreSubmission(
     );
   }
 }
-
 void showChoresModal(
     BuildContext context,
     String kidName,
@@ -388,21 +415,22 @@ void showChoresModal(
 
                             // Set Button
                             ElevatedButton(
-                              onPressed: () => _handleAddChoreSubmission(
-                                context,
-                                kidId,
-                                titleController,
-                                descriptionController,
-                                amountController, 
-                                (newValue){
-                                  setModalState(() {
-                                    rewardMoney = newValue;
-                                  });
-                                },
-                                rewardMoney,
-                              ),
+                              onPressed: () {
+                                _handleAddChoreSubmission(
+                                  context,
+                                  kidId,  // Using kidId directly now
+                                  titleController,
+                                  descriptionController,
+                                  amountController,
+                                  (newValue) {
+                                    setModalState(() {
+                                      rewardMoney = newValue;
+                                    });
+                                  },
+                                  rewardMoney,
+                                );
+                              },
                               style: Utilities.ourButtonStyle4(),
-                              
                               child: Text(
                                 "Set",
                                 style: GoogleFonts.fredoka(
@@ -790,6 +818,7 @@ Widget build(BuildContext context) {
         familyName: myFamilyName,
         user_id: widget.user_id,
         parentId: widget.parent_id,
+        family_id: widget.family_id,
       ),
       backgroundColor: const Color(0xFFFFCA26),
       appBar: AppBar(
@@ -850,11 +879,14 @@ Widget build(BuildContext context) {
                         stream: FirebaseFirestore.instance
                             .collection('kids_notifications')
                             .where('family_id', isEqualTo: familyId)
-                            .where('type', isEqualTo: 'deposit')
+                            .where('type', whereIn: ['locked_reward', 'deposit']) // COMBINED TYPES
                             .snapshots(),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
-                            return Text("\$0.00", style: GoogleFonts.fredoka(fontSize: 46, fontWeight: FontWeight.bold));
+                            return Text(
+                              "\$0.00",
+                              style: GoogleFonts.fredoka(fontSize: 46, fontWeight: FontWeight.bold),
+                            );
                           }
 
                           double totalDepositedFunds = snapshot.data!.docs.fold(0.0, (total, doc) {

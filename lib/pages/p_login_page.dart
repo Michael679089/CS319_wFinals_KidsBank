@@ -138,7 +138,7 @@ class _ParentLoginPageState extends State<ParentLoginPage> {
         );
       } else {
         debugPrint("parentLoginPage - Parent Login Successful. Redirecting to Parent-Dashboard-Page $user_id");
-        navigator.pushReplacementNamed('/parent-dashboard-page', arguments: {"family-name": familyName, "user-id": user_id, "parent-id": widget.parent_id});
+        navigator.pushReplacementNamed('/parent-dashboard-page', arguments: {"family-name": familyName, "user-id": user_id, "parent-id": widget.parent_id, "family_id": family_id,});
       }
     } catch (e) {
       UtilityTopSnackBar.show(message: "Error checking pincode == password: ${e.toString()}", context: context, isError: true);

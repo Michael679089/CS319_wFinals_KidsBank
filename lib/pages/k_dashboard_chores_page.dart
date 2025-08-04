@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wfinals_kidsbank/database/models/chores_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
+import 'package:wfinals_kidsbank/utilities/utilities.dart';
 
 class KidsChoresPage extends StatefulWidget {
   final String kid_id;
@@ -80,7 +81,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
         });
   }
 
-  Future<void> handleChoreTap(
+    Future<void> handleChoreTap(
     String choreId,
     String title,
     bool isLocked,
@@ -123,40 +124,32 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
 
     if (!confirmed) return;
 
-    await FirebaseFirestore.instance.collection('chores').doc(choreId).update({
-      'status': 'completed',
-    });
+    try {
+      await FirebaseFirestore.instance.collection('chores').doc(choreId).update({
+        'status': 'completed',
+      });
 
-    await FirebaseFirestore.instance.collection('notifications').add({
-      'type': 'chore_completed',
-      'KidId': widget.kid_id,
-      'firstName': kidName,
-      'choreTitle': title,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'type': 'chore_completed',
+        'KidId': widget.kid_id,
+        'firstName': kidName,
+        'choreTitle': title,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-    showCustomSnackBar(
-      "\u2714\uFE0F \"$title\" marked as completed!",
-      Colors.green,
-    );
-  }
-
-  void showCustomSnackBar(String message, Color bgColor) {
-    final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: GoogleFonts.fredoka(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: bgColor,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 50, left: 16, right: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      duration: const Duration(seconds: 2),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      UtilityTopSnackBar.show(
+        context: context,
+        message: '✅ "$title" marked as completed!',
+        isError: false,
+      );
+    } catch (e) {
+      UtilityTopSnackBar.show(
+        context: context,
+        message: '❌ Failed to mark "$title" as completed.',
+        isError: true,
+      );
+      debugPrint('Error updating chore or sending notification: $e');
+    }
   }
 
   Color getTileColor(String status) {
@@ -297,7 +290,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
 
                                 return GestureDetector(
                                   onTap: () => handleChoreTap(
-                                    chore.kid_id, // Access the chore id correctly
+                                    chore.id!, // Access the chore id correctly
                                     chore.chore_title,
                                     isLocked,
                                   ),

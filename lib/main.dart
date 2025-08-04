@@ -88,8 +88,8 @@ class MyApp extends StatelessWidget {
               page = KidsLoginPage(user_id: args['user-id'] as String, kid_id: args['kid-id'] as String);
               break;
             case '/kids-setup-page':
-              validateArgs('/kids-setup-page', ['user-id', 'came-from-parent-dashboard']);
-              page = KidsSetupPage(user_id: args['user-id'], cameFromParentDashboard: args['came-from-parent-dashboard'] ?? false);
+              validateArgs('/kids-setup-page', ['user-id', 'came-from-parent-dashboard', 'family_id']);
+              page = KidsSetupPage(user_id: args['user-id'], cameFromParentDashboard: args['came-from-parent-dashboard'] ?? false, family_id: args['family_id'] ?? '');
               break;
             case '/kids-dashboard-page':
               validateArgs('/kids-dashboard-page', ['kid-id', 'family-user-id', 'there-are-parent-in-family']);
@@ -122,16 +122,16 @@ class MyApp extends StatelessWidget {
               page = ParentLoginPage(parent_id: args["parent-id"], user_id: args["user-id"]);
               break;
             case '/parent-dashboard-page':
-              validateArgs('/parent-dashboard-page', ['user-id', 'parent-id']);
-              page = ParentDashboard(user_id: args['user-id'], parent_id: args['parent-id'], kidsData: args['kids-data'] as List<Map<String, dynamic>>? ?? []);
+              validateArgs('/parent-dashboard-page', ['user-id', 'parent-id', 'family_id']);
+              page = ParentDashboard(user_id: args['user-id'], parent_id: args['parent-id'], kidsData: args['kids-data'] as List<Map<String, dynamic>>? ?? [], family_id: args['family_id'],);
               break;
             case '/parent-notifications-page':
-              validateArgs('/parent-notifications-page', ['family-name', 'user-id', 'parent-id']);
-              page = ParentNotificationsPage(user_id: args['user-id'] as String, parent_id: args['parent-id'] as String);
+              validateArgs('/parent-notifications-page', ['family_id', 'user-id', 'parent-id']);
+              page = ParentNotificationsPage(user_id: args['user-id'] as String, parent_id: args['parent-id'] as String, family_id: args['family_id'],);
               break;
             case '/parent-chores-page':
-              validateArgs('/parent-chores-page', ['family-user-id', 'parent-id']);
-              page = ParentChoresPage(user_id: args['family-user-id'], parentId: args['parent-id']);
+              validateArgs('/parent-chores-page', ['family-user-id', 'parent-id', 'family_id']);
+              page = ParentChoresPage(user_id: args['family-user-id'], parentId: args['parent-id'], family_id: args['family_id']);
               break;
             default:
               page = Scaffold(

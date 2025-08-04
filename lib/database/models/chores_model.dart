@@ -3,6 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChoreModel {
+  String? id;
   String kid_id;
   String chore_title;
   String chore_description;
@@ -11,6 +12,7 @@ class ChoreModel {
   DateTime? created_at;
 
   ChoreModel({
+    required this.id,
     required this.kid_id,
     required this.chore_title,
     required this.chore_description,
@@ -26,6 +28,7 @@ class ChoreModel {
   ) {
     final data = snapshot.data()!;
     return ChoreModel(
+      id: snapshot.id,
       kid_id: data['kid_id'] as String,
       chore_title: data['chore_title'] as String,
       chore_description: data['chore_description'] as String,

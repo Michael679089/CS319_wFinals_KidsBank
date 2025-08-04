@@ -92,7 +92,7 @@ Future<void> fetchKidInfo() async {
       errorMessage = 'Failed to load kid info: $e';
     });
     debugPrint("Error: $e");
-    showCustomSnackBar('Error: $e', isError: true);
+     UtilityTopSnackBar.show( context: context, message:'Error: $e', isError: true);
   }
 }
   Stream<List<Map<String, dynamic>>> getChoresStream() {
@@ -126,32 +126,18 @@ Future<void> fetchKidInfo() async {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      showCustomSnackBar("✅ \"$title\" marked as completed!", isError: false);
+       UtilityTopSnackBar.show(
+          context: context,
+          message: "✔️ \"$title\" marked as completed!",
+          isError: false,
+        );
     } catch (e) {
-      showCustomSnackBar(
-        "Failed to mark chore as completed: $e",
+      UtilityTopSnackBar.show(
+        context: context,
+        message:"Failed to mark chore as completed: $e",
         isError: true,
       );
     }
-  }
-
-  void showCustomSnackBar(String message, {bool isError = false}) {
-    final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: GoogleFonts.fredoka(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: isError ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 50, left: 16, right: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      duration: const Duration(seconds: 3),
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
 void _showWithdrawModal(QueryDocumentSnapshot paymentDoc) {

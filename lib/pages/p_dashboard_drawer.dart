@@ -5,12 +5,13 @@ class ParentDrawer extends StatelessWidget {
   final String selectedPage;
 
   // Saved credentials
-  final String familyName;
+  final String family_id;
   final String user_id;
   final String parentId;
+  final String familyName;
 
   // Constructor of our drawer navbar page
-  const ParentDrawer({super.key, required this.selectedPage, required this.familyName, required this.user_id, required this.parentId});
+  const ParentDrawer({super.key, required this.selectedPage, required this.familyName, required this.user_id, required this.parentId, required this.family_id});
 
   void _handleConfirmLogOut(BuildContext context) {
     var navigator = Navigator.of(context);
@@ -76,7 +77,7 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'dashboard',
             onTap: () {
               if (selectedPage != 'dashboard') {
-                navigator.pushReplacementNamed("/parent-dashboard-page", arguments: {"parent-id": parentId, "family-name": familyName, "user-id": user_id});
+                navigator.pushReplacementNamed("/parent-dashboard-page", arguments: {"parent-id": parentId, "family-name": familyName, "user-id": user_id, "family_id": family_id});
               }
             },
           ),
@@ -86,7 +87,7 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'notifications',
             onTap: () {
               if (selectedPage != 'notifications') {
-                navigator.pushReplacementNamed("/parent-notifications-page", arguments: {"family-name": familyName, "user-id": user_id, "parent-id": parentId});
+                navigator.pushReplacementNamed("/parent-notifications-page", arguments: {"family_id": family_id, "user-id": user_id, "parent-id": parentId,});
                 debugPrint("parentDashboardDrawer - redirected to notifications - check: $parentId");
               }
             },
@@ -97,7 +98,7 @@ class ParentDrawer extends StatelessWidget {
             isSelected: selectedPage == 'chores',
             onTap: () {
               if (selectedPage != 'chores') {
-                navigator.pushReplacementNamed("/parent-chores-page", arguments: {"parent-id": parentId, "family-name": familyName, "family-user-id": user_id});
+                navigator.pushReplacementNamed("/parent-chores-page", arguments: {"parent-id": parentId, "family-name": familyName, "family-user-id": user_id, "family_id": family_id});
               }
             },
           ),
@@ -111,7 +112,7 @@ class ParentDrawer extends StatelessWidget {
                 debugPrint("PDashboard@Drawer - parent id: $parentId");
                 navigator.pushNamed(
                   "/kids-setup-page",
-                  arguments: {"family-name": familyName, "user-id": user_id, "came-from-parent-dashboard": true, "parent-id": parentId},
+                  arguments: {"family-name": familyName, "user-id": user_id, "came-from-parent-dashboard": true, "parent-id": parentId, "family_id": family_id},
                 );
               }
             },

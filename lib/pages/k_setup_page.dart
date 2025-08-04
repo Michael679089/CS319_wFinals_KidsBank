@@ -12,11 +12,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class KidsSetupPage extends StatefulWidget {
   final bool cameFromParentDashboard;
   final String user_id;
+  final String family_id; 
 
   const KidsSetupPage({
     super.key,
     required this.cameFromParentDashboard,
     required this.user_id,
+    required this.family_id,
   });
 
   @override
@@ -356,7 +358,7 @@ InputDecoration _inputDecoration(String label) {
     if (widget.cameFromParentDashboard == true) {
       Navigator.of(context).pushReplacementNamed(
         "/parent-dashboard-page",
-        arguments: {"user-id": user_id, "parent-id": parentId},
+        arguments: {"user-id": user_id, "parent-id": parentId, "family_id": widget.family_id},
       );
       debugPrint(
         "kidsSetupPage - user from dashboard. user pressed continue. Redirected to parent-dashboard-page",
@@ -414,7 +416,7 @@ InputDecoration _inputDecoration(String label) {
           navigator.pushReplacementNamed(
             "/parent-dashboard-page",
             arguments: {
-              "user-id": widget.user_id, "parent-id": parentId
+              "user-id": widget.user_id, "parent-id": parentId, "family_id": widget.family_id
               },
           );
           debugPrint(
