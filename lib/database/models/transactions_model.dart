@@ -6,8 +6,9 @@ class TransactionsModel {
   final double amount;
   final DateTime created_at;
   final String family_id;
+  final String kid_id;
 
-  TransactionsModel({this.id, required this.type, required this.amount, required this.family_id, required this.created_at});
+  TransactionsModel({this.id, required this.type, required this.amount, required this.family_id, required this.created_at, required this.kid_id,});
 
   // FACTORY CONSTRUCTOR FOR FIRESTORE
 
@@ -21,6 +22,7 @@ class TransactionsModel {
       amount: data['amount'],
       family_id: data["family_id"],
       created_at: (data["created_at"] as Timestamp).toDate(),
+      kid_id: data['kid_id'] ?? '', // Ensure kid_id is not null
     );
   }
 

@@ -3,7 +3,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChoreModel {
-  String? id;
   String kid_id;
   String chore_title;
   String chore_description;
@@ -12,7 +11,6 @@ class ChoreModel {
   DateTime? created_at;
 
   ChoreModel({
-    this.id,
     required this.kid_id,
     required this.chore_title,
     required this.chore_description,
@@ -21,16 +19,13 @@ class ChoreModel {
     this.created_at,
   });
 
-  // receiving data from firestore:
-  // Solution:
-  // receiving from firestore
+  // receiving data from Firestore
   factory ChoreModel.fromFirestore(
     DocumentSnapshot<Map<String, dynamic>> snapshot,
     SnapshotOptions? options,
   ) {
     final data = snapshot.data()!;
     return ChoreModel(
-      id: snapshot.id, // Get the document ID here
       kid_id: data['kid_id'] as String,
       chore_title: data['chore_title'] as String,
       chore_description: data['chore_description'] as String,
@@ -40,10 +35,9 @@ class ChoreModel {
     );
   }
 
-  // sending data to firestore:
+  // sending data to Firestore
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'kid_id': kid_id,
       'chore_title': chore_title,
       'chore_description': chore_description,

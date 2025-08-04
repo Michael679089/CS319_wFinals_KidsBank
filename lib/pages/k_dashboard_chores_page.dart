@@ -59,14 +59,13 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
         .snapshots()
         .handleError((error) {
           debugPrint('Error fetching chores: $error');
-          return const Stream<
-            List<ChoreModel>
-          >.empty(); // Return empty stream on error
+          return const Stream<List<ChoreModel>>.empty(); // Return empty stream on error
         })
         .map((snapshot) {
           return snapshot.docs
               .map((doc) {
                 try {
+                  // Return ChoreModel instances directly
                   return ChoreModel.fromFirestore(
                     doc, // Pass the DocumentSnapshot directly
                     null, // Or provide SnapshotOptions if needed
@@ -271,11 +270,8 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                         child: StreamBuilder<List<ChoreModel>>(
                           stream: getChoresStream(widget.kid_id),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
                             }
                             if (!snapshot.hasData || snapshot.data!.isEmpty) {
                               return Center(
@@ -289,6 +285,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                 ),
                               );
                             }
+
                             final chores = snapshot.data!;
                             return ListView.builder(
                               itemCount: chores.length,
@@ -300,21 +297,16 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
 
                                 return GestureDetector(
                                   onTap: () => handleChoreTap(
-                                    chore.id as String,
+                                    chore.kid_id, // Access the chore id correctly
                                     chore.chore_title,
                                     isLocked,
                                   ),
                                   child: Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                    ),
+                                    margin: const EdgeInsets.symmetric(vertical: 8),
                                     decoration: BoxDecoration(
                                       color: getTileColor(chore.status),
                                       borderRadius: BorderRadius.circular(15),
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: 2,
-                                      ),
+                                      border: Border.all(color: Colors.black, width: 2),
                                     ),
                                     child: ListTile(
                                       leading: Icon(
@@ -330,8 +322,7 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                         ),
                                       ),
                                       subtitle: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             chore.chore_description,
@@ -344,8 +335,8 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                             chore.status == 'pending'
                                                 ? "\uD83D\uDFE0 Pending"
                                                 : chore.status == 'completed'
-                                                ? "\uD83D\uDFE2 Completed! Waiting for Parent"
-                                                : "\uD83D\uDD35 Rewarded",
+                                                    ? "\uD83D\uDFE2 Completed! Waiting for Parent"
+                                                    : "\uD83D\uDD35 Rewarded",
                                             style: GoogleFonts.fredoka(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
@@ -355,19 +346,11 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
                                         ],
                                       ),
                                       trailing: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 5,
-                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.black,
-                                            width: 2,
-                                          ),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: Colors.black, width: 2),
                                         ),
                                         child: Text(
                                           "\$${chore.reward_money.toStringAsFixed(2)}",
@@ -394,3 +377,4 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
     );
   }
 }
+

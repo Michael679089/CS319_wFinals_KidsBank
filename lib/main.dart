@@ -194,16 +194,22 @@
                 page = ParentDashboard(
                   user_id: args['user-id'],
                   parent_id: args['parent-id'],
+                  kidsData: args['kids-data'] as List<Map<String, dynamic>>? ?? [],
                 );
                 break;
               case '/parent-notifications-page':
                 validateArgs('/parent-notifications-page', [
-                  'family-user-id',
+                  'family-name',
+                  'user-id',
                   'parent-id',
+                  'familyUserId',
+                  'kids-data',
+                  'family-id',
                 ]);
                 page = ParentNotificationsPage(
-                  familyUserId: args['family-user-id'],
-                  parentId: args['parent-id'],
+                  familyUserId: args['familyUserId'] as String? ?? '',
+                  parentId: args['parent-id']as String? ?? '',
+
                 );
                 break;
               case '/parent-chores-page':

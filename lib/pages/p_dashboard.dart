@@ -12,12 +12,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ParentDashboard extends StatefulWidget {
   final String user_id;
   final String parent_id;
+  final List<Map<String, dynamic>> kidsData;
  
 
   const ParentDashboard({
     super.key,
     required this.user_id,
     required this.parent_id,
+    required this.kidsData,
   });
 
   @override
@@ -65,65 +67,65 @@ class _ParentDashboardState extends State<ParentDashboard> {
     });
   }
 
-  Future<void> _loadKidsData() async {
-    // In this function it looks like we need to get the name, the avatar path, and the available balance the user has.
-    debugPrint("parentDashboard - loading kids data");
-    var user_id = widget.user_id;
-    var family_id = await FirestoreService.fetch_family_id(user_id) as String;
+Future<void> _loadKidsData() async {
+  debugPrint("parentDashboard - loading kids data");
 
-    // Step 1: Get list of kid models
-    List<KidModel> KidsList =
-        await FirestoreService.fetch_all_kids_by_family_id(family_id);
-    debugPrint("PDashboardPage - KidsList: ${KidsList.toList().toString()}");
-    List<Map<String, dynamic>> tempKidsData = [];
-    double runningTotal = 0.0;
+  final userId = widget.user_id;
+  final familyId = await FirestoreService.fetch_family_id(userId) as String;
 
-    // Step 2: Get the balance in each kid. - Example: [{"kid_id": "abc123", "first_name": "Joshua", "balance": 25.50}];
-    for (var kid in KidsList) {
-      // Step 1: Listing the things I need to fill
-      var new_kid_name = kid.first_name;
-      final new_kid_id = kid.id;
+  // Step 1: Fetch all kids in the family
+  final kidsList = await FirestoreService.fetch_all_kids_by_family_id(familyId);
+  debugPrint("PDashboardPage - KidsList: ${kidsList.toList().toString()}");
 
-      // Step 2: Get the total_amount_left of kid
-      double total_amount_left = 0.0;
-      var kid_payment_info = await FirestoreService.readKidPaymentInfo(
-        family_id,
-      );
-      total_amount_left = kid_payment_info!.total_amount_left;
-      debugPrint(
-        "parentDashboardPage - $new_kid_name - ${kid_payment_info.total_amount_left}",
-      );
+  final List<Map<String, dynamic>> tempKidsData = [];
+  double totalDeposited = 0.0;
 
-      // Step 3: Get the total_withdraw of kid
-      double total_withdrawn = 0.0;
-      final withdrawalsSnapshot =
-          await FirestoreService.fetch_all_transactions_by_family_id_and_type(
-            family_id,
-            "withdrawal",
-          );
-      for (var withdrawalDoc in withdrawalsSnapshot) {
-        total_withdrawn += (withdrawalDoc.amount);
+  // Step 2: For each kid, fetch balance and withdrawal info
+  for (var kid in kidsList) {
+    final kidId = kid.id;
+    final kidName = kid.first_name;
+    final avatarPath = kid.avatar_file_path;
+
+    // Fetch current balance
+    final paymentInfo = await FirestoreService.readKidPaymentInfo(familyId);
+    final totalAmountLeft = paymentInfo?.total_amount_left ?? 0.0;
+
+    debugPrint("parentDashboardPage - $kidName - $totalAmountLeft");
+
+    // Fetch all withdrawals
+    double totalWithdrawn = 0.0;
+    final withdrawals = await FirestoreService.fetch_all_transactions_by_family_id_and_type(
+      familyId,
+      "withdrawal",
+    );
+    for (var withdrawal in withdrawals) {
+      if (withdrawal.kid_id == kidId) {
+        totalWithdrawn += withdrawal.amount;
       }
-
-      debugPrint("checking");
-
-      tempKidsData.add({
-        "kid_id": new_kid_id,
-        "first_name": new_kid_name,
-        "avatar": kid.avatar_file_path,
-        "total_amount_left": kid_payment_info.total_amount_left,
-        "total_withdrawn": total_withdrawn,
-      });
     }
 
-    setState(() {
-      Kids_Data = tempKidsData;
-      totalChildren = tempKidsData.length;
-      totalDepositedFunds = runningTotal;
+    tempKidsData.add({
+      "kid_id": kidId,
+      "first_name": kidName,
+      "avatar": avatarPath,
+      "total_amount_left": totalAmountLeft,
+      "total_withdrawn": totalWithdrawn,
     });
 
-    debugPrint("PDashboardPage: KID's DATA: ${Kids_Data.toList().toString()}");
+    totalDeposited += totalAmountLeft;
   }
+
+  // ✅ Prevent crash if widget is disposed
+  if (!mounted) return;
+
+  setState(() {
+    Kids_Data = tempKidsData;
+    totalChildren = tempKidsData.length;
+    totalDepositedFunds = totalDeposited;
+  });
+
+  debugPrint("PDashboardPage: KID's DATA: ${Kids_Data.toList().toString()}");
+}
 
 void _handleAddChoreSubmission(
   BuildContext context,
@@ -166,6 +168,7 @@ void _handleAddChoreSubmission(
       created_at: DateTime.now(),
     );
 
+    // Add the chore document to the "chores" collection
     await FirebaseFirestore.instance.collection('chores').add(chore.toMap());
 
     UtilityTopSnackBar.show(
@@ -174,11 +177,11 @@ void _handleAddChoreSubmission(
       isError: false,
     );
 
-    //Clear the fields
+    // Clear the fields
     titleController.clear();
     descriptionController.clear();
 
-    //Reset reward money
+    // Reset reward money
     updateRewardMoney(0.00);
     amountController.text = "0.00";
 
