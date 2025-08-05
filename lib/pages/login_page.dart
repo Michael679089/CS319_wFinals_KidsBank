@@ -59,7 +59,11 @@ class _LoginPageState extends State<LoginPage> {
         ),
         title: Text(
           "Reset Password",
-          style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+          style: GoogleFonts.fredoka(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
           textAlign: TextAlign.center,
         ),
         content: Column(
@@ -83,7 +87,10 @@ class _LoginPageState extends State<LoginPage> {
                   hintStyle: GoogleFonts.fredoka(color: Colors.grey),
                   filled: true,
                   fillColor: const Color(0xFFAEDDFF),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -95,7 +102,11 @@ class _LoginPageState extends State<LoginPage> {
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               "Cancel",
-              style: GoogleFonts.fredoka(fontSize: 18, color: Colors.red, fontWeight: FontWeight.bold),
+              style: GoogleFonts.fredoka(
+                fontSize: 18,
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           ElevatedButton(
@@ -104,7 +115,11 @@ class _LoginPageState extends State<LoginPage> {
                 : () async {
                     final email = _resetEmailController.text.trim();
                     if (email.isEmpty) {
-                      UtilityTopSnackBar.show(message: "Please enter an email address", context: context, isError: false);
+                      UtilityTopSnackBar.show(
+                        message: "Please enter an email address",
+                        context: context,
+                        isError: false,
+                      );
                       return;
                     }
                     setState(() {
@@ -113,7 +128,11 @@ class _LoginPageState extends State<LoginPage> {
                     try {
                       await AuthService.sendPasswordResetEmail(email);
                       Navigator.pop(ctx, true); // Close dialog on success
-                      UtilityTopSnackBar.show(message: "Password reset email sent successfully!", context: context, isError: false);
+                      UtilityTopSnackBar.show(
+                        message: "Password reset email sent successfully!",
+                        context: context,
+                        isError: false,
+                      );
                     } on FirebaseAuthException catch (e) {
                       String errorMessage;
                       switch (e.code) {
@@ -124,13 +143,24 @@ class _LoginPageState extends State<LoginPage> {
                           errorMessage = "No account found for this email";
                           break;
                         default:
-                          errorMessage = "Error sending password reset email: ${e.message}";
+                          errorMessage =
+                              "Error sending password reset email: ${e.message}";
                       }
-                      UtilityTopSnackBar.show(message: errorMessage, context: context, isError: true);
+                      UtilityTopSnackBar.show(
+                        message: errorMessage,
+                        context: context,
+                        isError: true,
+                      );
                       debugPrint("loginPage.dart - Forgot Password error: $e");
                     } catch (e) {
-                      UtilityTopSnackBar.show(message: "Unexpected error: $e", context: context, isError: true);
-                      debugPrint("loginPage.dart - Unexpected Forgot Password error: $e");
+                      UtilityTopSnackBar.show(
+                        message: "Unexpected error: $e",
+                        context: context,
+                        isError: true,
+                      );
+                      debugPrint(
+                        "loginPage.dart - Unexpected Forgot Password error: $e",
+                      );
                     } finally {
                       setState(() {
                         _isLoadingIndicatorActive = false;
@@ -146,7 +176,11 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: Text(
               "Send",
-              style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+              style: GoogleFonts.fredoka(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
           ),
         ],
@@ -160,7 +194,9 @@ class _LoginPageState extends State<LoginPage> {
     // Do nothing if dialog was canceled
   }
 
-  Future<bool> check_if_there_is_at_least_one_parent_in_family(String user_id) async {
+  Future<bool> check_if_there_is_at_least_one_parent_in_family(
+    String user_id,
+  ) async {
     // Step 1: Check if a parent exist before navigation to account selector
     // this will be used to check if we should redirect user to parent-setup-page;
     var family_object = await FirestoreService.readFamily(user_id);
@@ -185,7 +221,8 @@ class _LoginPageState extends State<LoginPage> {
       keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
 
       if (keepLoggedIn) {
-        var doesFamilyCollectionExist = await FirestoreService.doesFirestoreCollectionExist("family");
+        var doesFamilyCollectionExist =
+            await FirestoreService.doesFirestoreCollectionExist("family");
 
         if (doesFamilyCollectionExist) {
           var user = AuthService.getCurrentUser();
@@ -196,8 +233,17 @@ class _LoginPageState extends State<LoginPage> {
             var user_Id = user.uid;
 
             if (user.emailVerified) {
-              var there_are_parents_in_family = await check_if_there_is_at_least_one_parent_in_family(user_Id);
-              navigator.pushNamed("/account-selector-page", arguments: {"user-id": user_Id, "there-are-parent-in-family": there_are_parents_in_family});
+              var there_are_parents_in_family =
+                  await check_if_there_is_at_least_one_parent_in_family(
+                    user_Id,
+                  );
+              navigator.pushNamed(
+                "/account-selector-page",
+                arguments: {
+                  "user-id": user_Id,
+                  "there-are-parent-in-family": there_are_parents_in_family,
+                },
+              );
               return;
             } else {
               debugPrint("loginPage - email not verified");
@@ -207,16 +253,25 @@ class _LoginPageState extends State<LoginPage> {
           }
         }
         debugPrint("loginPage - redirect to registerPage ");
-        navigator.pushNamed("/register-page", arguments: {"is-broken-register": true});
+        navigator.pushNamed(
+          "/register-page",
+          arguments: {"is-broken-register": true},
+        );
       } else {
         debugPrint("loginPage - keepLoggedIn is false");
 
         // Step 2 - send authenticated-unverified users to register page
         var user = AuthService.getCurrentUser();
         var is_user_authenticated_before_register = (user != null);
-        if (is_user_authenticated_before_register && user.emailVerified == false) {
-          debugPrint("loginPage - redirect user due to user being authenticated but not verified");
-          navigator.pushNamed("/register-page", arguments: {"is-broken-register": true});
+        if (is_user_authenticated_before_register &&
+            user.emailVerified == false) {
+          debugPrint(
+            "loginPage - redirect user due to user being authenticated but not verified",
+          );
+          navigator.pushNamed(
+            "/register-page",
+            arguments: {"is-broken-register": true},
+          );
         } else {
           debugPrint("loginPage - user is already verified");
         }
@@ -240,6 +295,14 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      UtilityTopSnackBar.show(
+        context: context,
+        message: 'Please fill in both email and password',
+        isError: true,
+      );
+      return; // Stop execution if fields are empty
+    }
     setState(() {
       _isLoadingIndicatorActive = true;
     });
@@ -257,17 +320,38 @@ class _LoginPageState extends State<LoginPage> {
       String user_id = user!.uid;
       final prefs = await SharedPreferences.getInstance();
       prefs.setBool('keepLoggedIn', keepLoggedIn);
-      var there_are_parents_in_family = await check_if_there_is_at_least_one_parent_in_family(user_id);
+      var there_are_parents_in_family =
+          await check_if_there_is_at_least_one_parent_in_family(user_id);
 
       debugPrint("LoginPage - successful login");
-      navigator.pushNamed("/account-selector-page", arguments: {"user-id": user_id, "there-are-parent-in-family": there_are_parents_in_family});
+      navigator.pushNamed(
+        "/account-selector-page",
+        arguments: {
+          "user-id": user_id,
+          "there-are-parent-in-family": there_are_parents_in_family,
+        },
+      );
     } else if (loginResponse["status"] == "unverified") {
-      debugPrint("loginPage - user is found unverified. Sending user to register page");
-      navigator.pushNamed("/register-page", arguments: {"is-broken-register": true});
-      UtilityTopSnackBar.show(message: "ERROR: user is found unverified. Sending user to register page", context: context, isError: false);
+      debugPrint(
+        "loginPage - user is found unverified. Sending user to register page",
+      );
+      navigator.pushNamed(
+        "/register-page",
+        arguments: {"is-broken-register": true},
+      );
+      UtilityTopSnackBar.show(
+        message:
+            "ERROR: user is found unverified. Sending user to register page",
+        context: context,
+        isError: false,
+      );
     } else {
       debugPrint("loginPage - an error occurred during login");
-      UtilityTopSnackBar.show(message: "ERROR: Logging In", context: context, isError: false);
+      UtilityTopSnackBar.show(
+        message: "Please fill in all fields to continue",
+        context: context,
+        isError: true,
+      );
     }
 
     setState(() {
@@ -285,7 +369,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // Custom widget variables
-  Widget _buildInputField(TextEditingController controller, {bool isPassword = false}) {
+  Widget _buildInputField(
+    TextEditingController controller, {
+    bool isPassword = false,
+  }) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.black, width: 3),
@@ -297,7 +384,10 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           filled: true,
           fillColor: const Color(0xFFAEDDFF),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
         ),
       ),
     );
@@ -314,12 +404,18 @@ class _LoginPageState extends State<LoginPage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4e88cf),
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           elevation: 0,
         ),
         child: Text(
           'Log In',
-          style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+          style: GoogleFonts.fredoka(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
         ),
       ),
     );
@@ -347,7 +443,11 @@ class _LoginPageState extends State<LoginPage> {
                     // Title Section
                     Text(
                       'KidsBank',
-                      style: GoogleFonts.fredoka(fontSize: 50, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: GoogleFonts.fredoka(
+                        fontSize: 50,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
                     const SizedBox(height: 30),
                     // Input Section
@@ -361,37 +461,67 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('E-Mail', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text(
+                            'E-Mail',
+                            style: GoogleFonts.fredoka(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           _buildInputField(_emailController),
                           const SizedBox(height: 16),
-                          Text('Password', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text(
+                            'Password',
+                            style: GoogleFonts.fredoka(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          _buildInputField(_passwordController, isPassword: true),
+                          _buildInputField(
+                            _passwordController,
+                            isPassword: true,
+                          ),
                           const SizedBox(height: 8),
                           Align(
                             alignment: Alignment.centerRight,
                             child: GestureDetector(
-                              onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isForgotPasswordPressed = true),
+                              onTapDown: _isLoadingIndicatorActive
+                                  ? null
+                                  : (_) => setState(
+                                      () => _isForgotPasswordPressed = true,
+                                    ),
                               onTapUp: _isLoadingIndicatorActive
                                   ? null
                                   : (_) {
-                                      setState(() => _isForgotPasswordPressed = false);
+                                      setState(
+                                        () => _isForgotPasswordPressed = false,
+                                      );
                                       _handleForgotPassword();
                                     },
-                              onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isForgotPasswordPressed = false),
+                              onTapCancel: _isLoadingIndicatorActive
+                                  ? null
+                                  : () => setState(
+                                      () => _isForgotPasswordPressed = false,
+                                    ),
                               child: Text(
                                 'Forgot Password?',
                                 style: GoogleFonts.fredoka(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: _isForgotPasswordPressed ? const Color(0xFF4E88CF) : Colors.black,
+                                  color: _isForgotPasswordPressed
+                                      ? const Color(0xFF4E88CF)
+                                      : Colors.black,
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(height: 20),
-                          SizedBox(width: double.infinity, child: _buildLoginButton()),
+                          SizedBox(
+                            width: double.infinity,
+                            child: _buildLoginButton(),
+                          ),
                           Row(
                             children: [
                               Checkbox(
@@ -400,11 +530,16 @@ class _LoginPageState extends State<LoginPage> {
                                     ? null
                                     : (val) {
                                         setState(() {
-                                          _updateKeepLoggedInValue(val ?? false);
+                                          _updateKeepLoggedInValue(
+                                            val ?? false,
+                                          );
                                         });
                                       },
                               ),
-                              Text('Keep us logged in', style: GoogleFonts.fredoka(fontSize: 16)),
+                              Text(
+                                'Keep us logged in',
+                                style: GoogleFonts.fredoka(fontSize: 16),
+                              ),
                             ],
                           ),
                         ],
@@ -416,7 +551,9 @@ class _LoginPageState extends State<LoginPage> {
                     // Register Button
                     Text('Need an account?', style: GoogleFonts.inter()),
                     GestureDetector(
-                      onTapDown: _isLoadingIndicatorActive ? null : (_) => setState(() => _isSignUpPressed = true),
+                      onTapDown: _isLoadingIndicatorActive
+                          ? null
+                          : (_) => setState(() => _isSignUpPressed = true),
                       onTapUp: _isLoadingIndicatorActive
                           ? null
                           : (_) {
@@ -424,16 +561,27 @@ class _LoginPageState extends State<LoginPage> {
                               navigator?.pushNamed(
                                 "/register-page",
                                 arguments: {
-                                  "email-text-value": _emailController.text.trim(),
-                                  "password-text-value": _passwordController.text.trim(),
+                                  "email-text-value": _emailController.text
+                                      .trim(),
+                                  "password-text-value": _passwordController
+                                      .text
+                                      .trim(),
                                   "is-broken-register": false,
                                 },
                               );
                             },
-                      onTapCancel: _isLoadingIndicatorActive ? null : () => setState(() => _isSignUpPressed = false),
+                      onTapCancel: _isLoadingIndicatorActive
+                          ? null
+                          : () => setState(() => _isSignUpPressed = false),
                       child: Text(
                         'Sign up',
-                        style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 18, color: _isSignUpPressed ? const Color(0xFF4E88CF) : Colors.black),
+                        style: GoogleFonts.fredoka(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: _isSignUpPressed
+                              ? const Color(0xFF4E88CF)
+                              : Colors.black,
+                        ),
                       ),
                     ),
                   ],
@@ -443,7 +591,13 @@ class _LoginPageState extends State<LoginPage> {
             if (_isLoadingIndicatorActive)
               Container(
                 color: Colors.black.withAlpha(150),
-                child: const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4e88cf)))),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF4e88cf),
+                    ),
+                  ),
+                ),
               ),
           ],
         ),

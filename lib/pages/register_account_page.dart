@@ -71,36 +71,137 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
+          // Semi-transparent background
           GestureDetector(
             onTap: () {
-              UtilityTopSnackBar.show(message: "WARNING: Can't remove overlay, please press a button to continue", context: context, isError: false);
+              UtilityTopSnackBar.show(
+                message: "Please select an option to continue",
+                context: context,
+                isError: false,
+              );
             },
             child: Container(color: Colors.black54),
           ),
+          // Main modal content
           Center(
             child: Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8.0)),
+              width: MediaQuery.of(context).size.width * 0.8,
+              padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.black, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("Question: Are you a Child or a Parent?:", style: GoogleFonts.fredoka(fontSize: 18)),
-                  ElevatedButton(
-                    onPressed: () {
-                      _removeAllOverlays();
-                      UtilityTopSnackBar.show(message: "Sorry, your parent needs to register first", context: context, isError: true);
-                      debugPrint("registerAccPage.dart - User selected role child");
-                      navigator.pop(context);
-                    },
-                    child: const Text("I'm a Child"),
+                  // Title
+                  Text(
+                    "Are you a Child or a Parent?",
+                    style: GoogleFonts.fredoka(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16.0),
-                  ElevatedButton(
-                    onPressed: () {
-                      _removeAllOverlays();
-                      debugPrint("registerAccPage.dart - User selected Parent - Parent confirmed");
-                    },
-                    child: const Text("I'm a Parent"),
+                  const SizedBox(height: 24),
+
+                  // Parent Button - New Design
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4e88cf), Color(0xFF3a6fb0)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          _removeAllOverlays();
+                          debugPrint("User selected Parent");
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          alignment: Alignment.center,
+                          child: Text(
+                            "I'm a Parent",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors
+                                  .white, // White text for better contrast
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Child Button - New Design
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFAEDDFF), Color(0xFF8cc5f1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          _removeAllOverlays();
+                          UtilityTopSnackBar.show(
+                            message: "Your parent needs to register first",
+                            context: context,
+                            isError: true,
+                          );
+                          debugPrint("User selected Child");
+                          navigator.pop(context);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          alignment: Alignment.center,
+                          child: Text(
+                            "I'm a Child",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -129,7 +230,12 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
 
     // Step 1: Create an authuser account
     try {
-      var create_auth_response = await AuthService.registerEmailAndPasswordWithEmailVerification(email, password, context);
+      var create_auth_response =
+          await AuthService.registerEmailAndPasswordWithEmailVerification(
+            email,
+            password,
+            context,
+          );
 
       if (create_auth_response["status"] == "success") {
         // Step 2: User is logged in we can now move on to verifying email.
@@ -142,33 +248,15 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
 
         var user_id = user.uid;
 
-        FamilyModel new_family_model = FamilyModel(user_id: user_id, family_name: family_name, email: email, password: password);
-
-        FamilyPaymentInfoModel new_family_payment_info_model = FamilyPaymentInfoModel(
+        FamilyModel new_family_model = FamilyModel(
           user_id: user_id,
-          card_name: card_name,
-          card_number: card_number,
-          ccv: ccv,
-          exp: parsed_exp,
+          family_name: family_name,
+          email: email,
+          password: password,
         );
 
-        debugPrint("registerPage - redirecting to verify email page");
-
-        navigator.pushNamed(
-          "/verify-email-page",
-          arguments: {"new-family-model": new_family_model, "new-family-payment-info-model": new_family_payment_info_model},
-        );
-      } else {
-        debugPrint("What's my message: ${create_auth_response['message']}");
-        debugPrint("What's my status: ${create_auth_response['status']}");
-
-        if (create_auth_response['status'] == "no-family-collection-and-unverified" || create_auth_response['status'] == "no-family-collection-and-no-acount") {
-          debugPrint("registerPage - user logged in due to createAuthResponse");
-          var user = AuthService.getCurrentUser();
-          if (user != null) {
-            var user_id = user.uid;
-            FamilyModel newFamily = FamilyModel(user_id: user_id, family_name: family_name, email: email, password: password);
-            FamilyPaymentInfoModel newFamilyPaymentInfo = FamilyPaymentInfoModel(
+        FamilyPaymentInfoModel new_family_payment_info_model =
+            FamilyPaymentInfoModel(
               user_id: user_id,
               card_name: card_name,
               card_number: card_number,
@@ -176,21 +264,75 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
               exp: parsed_exp,
             );
 
-            navigator.pushNamed("/verify-email-page", arguments: {"new-family-model": newFamily, "new-family-payment-info-model": newFamilyPaymentInfo});
+        debugPrint("registerPage - redirecting to verify email page");
+
+        navigator.pushNamed(
+          "/verify-email-page",
+          arguments: {
+            "new-family-model": new_family_model,
+            "new-family-payment-info-model": new_family_payment_info_model,
+          },
+        );
+      } else {
+        debugPrint("What's my message: ${create_auth_response['message']}");
+        debugPrint("What's my status: ${create_auth_response['status']}");
+
+        if (create_auth_response['status'] ==
+                "no-family-collection-and-unverified" ||
+            create_auth_response['status'] ==
+                "no-family-collection-and-no-acount") {
+          debugPrint("registerPage - user logged in due to createAuthResponse");
+          var user = AuthService.getCurrentUser();
+          if (user != null) {
+            var user_id = user.uid;
+            FamilyModel newFamily = FamilyModel(
+              user_id: user_id,
+              family_name: family_name,
+              email: email,
+              password: password,
+            );
+            FamilyPaymentInfoModel newFamilyPaymentInfo =
+                FamilyPaymentInfoModel(
+                  user_id: user_id,
+                  card_name: card_name,
+                  card_number: card_number,
+                  ccv: ccv,
+                  exp: parsed_exp,
+                );
+
+            navigator.pushNamed(
+              "/verify-email-page",
+              arguments: {
+                "new-family-model": newFamily,
+                "new-family-payment-info-model": newFamilyPaymentInfo,
+              },
+            );
           }
         } else {
           debugPrint("loginPage - unwanted statuses:");
           if (create_auth_response['status'] == "account-already-verified") {
-            UtilityTopSnackBar.show(message: create_auth_response['message'] as String, context: context, isError: true);
+            UtilityTopSnackBar.show(
+              message: create_auth_response['message'] as String,
+              context: context,
+              isError: true,
+            );
           } else {
             debugPrint("registerPage - unwanted status, return void");
-            UtilityTopSnackBar.show(message: "ERROR: Connecting to firebase", context: context, isError: true);
+            UtilityTopSnackBar.show(
+              message: "ERROR: Connecting to firebase",
+              context: context,
+              isError: true,
+            );
           }
         }
       }
     } catch (e) {
       debugPrint("registerPage - ERROR: Connection lost");
-      UtilityTopSnackBar.show(message: "ERROR: Connection: $e", context: context, isError: true);
+      UtilityTopSnackBar.show(
+        message: "ERROR: Connection: $e",
+        context: context,
+        isError: true,
+      );
     }
   }
 
@@ -202,7 +344,10 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
     }
 
     // Updated regex pattern:
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', caseSensitive: false);
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+      caseSensitive: false,
+    );
 
     if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email';
@@ -265,7 +410,8 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
 
       String newText = text.replaceAll('/', '');
       if (newText.length > 2) {
-        newText = '${newText.substring(0, 2)}/${newText.substring(2, newText.length)}';
+        newText =
+            '${newText.substring(0, 2)}/${newText.substring(2, newText.length)}';
       }
       return TextEditingValue(
         text: newText,
@@ -285,7 +431,8 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
     }
 
     if (widget.is_broken_register) {
-      formTitleText = "Broken Registered User detected. Please Register again (make sure email & pass are the same)";
+      formTitleText =
+          "Broken Registered User detected. Please Register again (make sure email & pass are the same)";
       emailAndPasswordFontSize = 20;
     }
 
@@ -311,7 +458,11 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                 children: [
                   Text(
                     'KidsBank',
-                    style: GoogleFonts.fredoka(fontSize: 50, fontWeight: FontWeight.bold, color: Colors.black),
+                    style: GoogleFonts.fredoka(
+                      fontSize: 50,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 30),
                   Container(
@@ -328,11 +479,21 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                         Text(
                           formTitleText,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.fredoka(fontSize: emailAndPasswordFontSize, fontWeight: FontWeight.bold, color: Colors.black),
+                          style: GoogleFonts.fredoka(
+                            fontSize: emailAndPasswordFontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         // Email
-                        Text('Email', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Email',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
@@ -346,13 +507,22 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFAEDDFF),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
                         // Password
-                        Text('Password', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Password',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
@@ -366,9 +536,16 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFAEDDFF),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide.none,
+                              ),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                ),
                                 onPressed: () {
                                   setState(() {
                                     _obscurePassword = !_obscurePassword;
@@ -380,7 +557,13 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                         ),
                         const SizedBox(height: 16),
                         // Family Name
-                        Text('Family Name', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Family Name',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
@@ -389,26 +572,45 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                           ),
                           child: TextFormField(
                             controller: _familyNameController,
-                            validator: (value) => value!.isEmpty ? 'Please enter a family name' : null,
+                            validator: (value) => value!.isEmpty
+                                ? 'Please enter a family name'
+                                : null,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFAEDDFF),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
                         // Divider to separate sections
-                        const Divider(color: Colors.black, thickness: 3, height: 30),
+                        const Divider(
+                          color: Colors.black,
+                          thickness: 3,
+                          height: 30,
+                        ),
                         // Credit Card Section Header
                         Text(
                           'Credit Card Section',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.fredoka(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.black),
+                          style: GoogleFonts.fredoka(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         // Name on Card
-                        Text('Name on Card', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Name on Card',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
@@ -417,17 +619,28 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                           ),
                           child: TextFormField(
                             controller: _nameController,
-                            validator: (value) => value!.isEmpty ? 'Please enter the name on card' : null,
+                            validator: (value) => value!.isEmpty
+                                ? 'Please enter the name on card'
+                                : null,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFAEDDFF),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
                         // Card Number
-                        Text('Card Number', style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Card Number',
+                          style: GoogleFonts.fredoka(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
@@ -439,16 +652,25 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                             keyboardType: TextInputType.number,
                             maxLength: 14,
                             onChanged: (value) {
-                              final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+                              final cleaned = value.replaceAll(
+                                RegExp(r'[^0-9]'),
+                                '',
+                              );
                               if (value != cleaned) {
                                 _cardNumberController.text = cleaned;
-                                _cardNumberController.selection = TextSelection.fromPosition(TextPosition(offset: cleaned.length));
+                                _cardNumberController.selection =
+                                    TextSelection.fromPosition(
+                                      TextPosition(offset: cleaned.length),
+                                    );
                               }
                             },
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFAEDDFF),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
@@ -460,11 +682,20 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Exp', style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    'Exp',
+                                    style: GoogleFonts.fredoka(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   Container(
                                     decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.black, width: 3),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 3,
+                                      ),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: TextFormField(
@@ -472,13 +703,22 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                       validator: _validateExp,
                                       keyboardType: TextInputType.datetime,
                                       maxLength: 5, // MM/YY
-                                      inputFormatters: [FilteringTextInputFormatter.digitsOnly, _expInputFormatter()],
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        _expInputFormatter(),
+                                      ],
                                       decoration: InputDecoration(
                                         filled: true,
                                         fillColor: const Color(0xFFAEDDFF),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
                                         hintText: 'MM/YY',
-                                        counterText: '', // Hide character counter
+                                        counterText:
+                                            '', // Hide character counter
                                       ),
                                     ),
                                   ),
@@ -490,11 +730,20 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('CCV', style: GoogleFonts.fredoka(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    'CCV',
+                                    style: GoogleFonts.fredoka(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   Container(
                                     decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.black, width: 3),
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 3,
+                                      ),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: TextFormField(
@@ -503,12 +752,20 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                       keyboardType: TextInputType.number,
                                       validator: _validateCcv,
                                       maxLength: 4, // 3 or 4 digits
-                                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
                                       decoration: InputDecoration(
                                         filled: true,
                                         fillColor: const Color(0xFFAEDDFF),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                        counterText: '', // Hide character counter
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        counterText:
+                                            '', // Hide character counter
                                       ),
                                     ),
                                   ),
@@ -531,18 +788,31 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                   _handleRegisterButtonFunction(context);
                                 } else {
                                   if (!mounted) return;
-                                  UtilityTopSnackBar.show(message: 'Please fill out all fields correctly!', context: context, isError: false);
+                                  UtilityTopSnackBar.show(
+                                    message:
+                                        'Please fill out all fields correctly!',
+                                    context: context,
+                                    isError: true,
+                                  );
                                 }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF4e88cf),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
                                 elevation: 0,
                               ),
                               child: Text(
                                 'Register',
-                                style: GoogleFonts.fredoka(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+                                style: GoogleFonts.fredoka(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
                               ),
                             ),
                           ),
@@ -554,7 +824,10 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Already have an account? ', style: GoogleFonts.fredoka()),
+                      Text(
+                        'Already have an account? ',
+                        style: GoogleFonts.fredoka(),
+                      ),
                       GestureDetector(
                         onTapDown: (_) {
                           setState(() {
@@ -565,7 +838,12 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                           setState(() {
                             _isLoginPressed = false;
                           });
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginPage()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginPage(),
+                            ),
+                          );
                         },
                         onTapCancel: () {
                           setState(() {
