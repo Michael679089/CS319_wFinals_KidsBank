@@ -58,43 +58,33 @@ class ParentNotificationListener extends StatefulWidget {
       _ParentNotificationListenerState();
 }
 
-class _ParentNotificationListenerState
-    extends State<ParentNotificationListener> {
-  StreamSubscription<List<UnifiedNotification>>? _subscription;
-  String? _lastNotifId;
-  DateTime? _lastNotifTime;
-  bool _isLoggingOut = false; 
-
-  String get _lastNotifKey => 'last_parent_notif_${widget.familyId}';
-  String get _lastNotifTimeKey =>
-      'last_parent_notif_time_${widget.familyId}';
-
+class _ParentNotificationListenerState extends State<ParentNotificationListener> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription<List<UnifiedNotification>>? _subscription;
+  bool _isLoggingOut = false;
+
+  /// Stores shown notification IDs so they don't repeat
+  final Set<String> _shownNotifIds = {};
+  String get _shownIdsKey => 'shown_notifs_${widget.familyId}';
 
   @override
   void initState() {
     super.initState();
-    _loadLastNotifData().then((_) => _listenToNotifications());
+    _loadShownNotifIds().then((_) => _listenToNotifications());
   }
 
-  Future<void> _loadLastNotifData() async {
+  Future<void> _loadShownNotifIds() async {
     final prefs = await SharedPreferences.getInstance();
-    _lastNotifId = prefs.getString(_lastNotifKey);
-    final ts = prefs.getString(_lastNotifTimeKey);
-    if (ts != null) {
-      _lastNotifTime = DateTime.tryParse(ts);
-    }
+    final savedIds = prefs.getStringList(_shownIdsKey) ?? [];
+    _shownNotifIds.addAll(savedIds);
   }
 
-  Future<void> _saveLastNotifData(String notifId, DateTime? notifTime) async {
+  Future<void> _saveShownNotifIds() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastNotifKey, notifId);
-    if (notifTime != null) {
-      await prefs.setString(_lastNotifTimeKey, notifTime.toIso8601String());
-    }
+    await prefs.setStringList(_shownIdsKey, _shownNotifIds.toList());
   }
 
-  /// Unified stream with Chores + Withdrawals
+  /// Combine chores + withdrawals stream
   Stream<List<UnifiedNotification>> getNotificationsStream() async* {
     final kidsSnapshot = await _firestore
         .collection('kids')
@@ -108,8 +98,7 @@ class _ParentNotificationListenerState
 
     final kidIds = kidsSnapshot.docs.map((doc) => doc.id).toList();
     final kidNames = {
-      for (var doc in kidsSnapshot.docs)
-        doc.id: doc['first_name'] ?? 'Kid'
+      for (var doc in kidsSnapshot.docs) doc.id: doc['first_name'] ?? 'Kid'
     };
     final kidAvatars = {
       for (var doc in kidsSnapshot.docs)
@@ -118,15 +107,19 @@ class _ParentNotificationListenerState
             : 'assets/avatar1.png'
     };
 
+    // Chores stream (all completed chores for family kids)
     final choresStream = _firestore
         .collection('chores')
-        .where('status', whereIn: ['completed', 'rewarded'])
+        .where('status', isEqualTo: 'completed')
+        .where('kid_id', whereIn: kidIds)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .where((doc) => kidIds.contains(doc['kid_id']))
-            .map((doc) {
+        .map((snapshot) => snapshot.docs.map((doc) {
               final data = doc.data();
               final kidId = data['kid_id'];
+              final timestamp = (data['completed_at'] as Timestamp?)?.toDate() ??
+                  (data['created_at'] as Timestamp?)?.toDate() ??
+                  DateTime.now();
+
               return UnifiedNotification(
                 id: doc.id,
                 kidId: kidId,
@@ -135,83 +128,73 @@ class _ParentNotificationListenerState
                 type: 'chore_completed',
                 title: 'Chore Completed',
                 message: '${kidNames[kidId]} completed a chore!',
-                choreTitle: data['chore_title'],
-                choreDesc: data['chore_description'],
-                createdAt: (data['created_at'] as Timestamp).toDate(),
-                status: data['status'],
+                choreTitle: data['chore_title']?.toString() ?? '',
+                choreDesc: data['chore_description']?.toString() ?? '',
+                createdAt: timestamp,
+                status: data['status']?.toString() ?? '',
                 chore: ChoreModel(
                   id: doc.id,
                   kid_id: kidId,
-                  chore_title: data['chore_title'],
-                  chore_description: data['chore_description'],
+                  chore_title: data['chore_title']?.toString() ?? '',
+                  chore_description: data['chore_description']?.toString() ?? '',
                   reward_money: (data['reward_money'] ?? 0).toDouble(),
-                  status: data['status'],
-                  created_at: (data['created_at'] as Timestamp).toDate(),
+                  status: data['status']?.toString() ?? '',
+                  created_at: timestamp,
                 ),
               );
-            })
-            .toList());
+            }).toList());
 
+    // Withdrawal stream (all withdrawals for family kids)
     final withdrawalStream = _firestore
         .collection('kids_notifications')
         .where('type', isEqualTo: 'withdrawal')
+        .where('kid_id', whereIn: kidIds)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .where((doc) => kidIds.contains(doc['kid_id']))
-            .map((doc) {
+        .map((snapshot) => snapshot.docs.map((doc) {
               final data = doc.data();
               final kidId = data['kid_id'];
+
               return UnifiedNotification(
                 id: doc.id,
                 kidId: kidId,
                 kidName: kidNames[kidId] ?? 'Kid',
                 avatar: kidAvatars[kidId] ?? 'assets/avatar1.png',
                 type: 'withdrawal',
-                title: data['notification_title'],
-                message: data['notification_message'],
+                title: data['notification_title']?.toString() ?? '',
+                message: data['notification_message']?.toString() ?? '',
                 amount: (data['amount'] ?? 0).toDouble(),
                 createdAt: (data['timestamp'] as Timestamp).toDate(),
-                status: data['status'],
+                status: data['status']?.toString() ?? '',
               );
-            })
-            .toList());
+            }).toList());
 
-    yield* Rx.combineLatest2(
-      choresStream,
-      withdrawalStream,
-      (List<UnifiedNotification> chores,
-          List<UnifiedNotification> withdrawals) {
-        final all = [...chores, ...withdrawals]
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return all;
-      },
-    );
+    // Merge streams
+    yield* Rx.combineLatest2(choresStream, withdrawalStream, (c, w) {
+      final all = [...c, ...w]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return all;
+    });
   }
 
   void _listenToNotifications() {
     _subscription = getNotificationsStream().listen((notifications) {
       if (!mounted || _isLoggingOut) return;
-      if (notifications.isEmpty) return;
-      final latest = notifications.first;
 
-      if (latest.id != _lastNotifId ||
-          (_lastNotifTime == null ||
-              latest.createdAt.isAfter(_lastNotifTime!))) {
-        _lastNotifId = latest.id;
-        _lastNotifTime = latest.createdAt;
-        _saveLastNotifData(_lastNotifId!, _lastNotifTime);
-        _showPopup(latest);
+      final newNotifs = notifications.where((n) => !_shownNotifIds.contains(n.id)).toList();
+
+      for (final notif in newNotifs) {
+        _shownNotifIds.add(notif.id);
+        _saveShownNotifIds();
+        _showPopup(notif);
       }
     });
   }
 
   Future<void> _showPopup(UnifiedNotification notif) async {
     if (!mounted || _isLoggingOut) return;
-    // Play sound
+
     final player = AudioPlayer();
     await player.play(AssetSource('sounds/ping.mp3'));
 
-    // Choose popup color
     Color bgColor;
     switch (notif.type) {
       case 'withdrawal':
@@ -224,18 +207,18 @@ class _ParentNotificationListenerState
         bgColor = Colors.orange;
     }
 
-    // Create proper display message
     String displayMessage;
     if (notif.type == 'chore_completed') {
-      displayMessage = "${notif.kidName} has completed a chore!";
+      displayMessage = notif.choreTitle?.isNotEmpty == true
+          ? "✅ ${notif.kidName} completed the chore: ${notif.choreTitle}"
+          : "✅ ${notif.kidName} completed a chore!";
     } else if (notif.type == 'withdrawal') {
       displayMessage =
-          "${notif.kidName} has withdrawn \$${notif.amount?.toStringAsFixed(2) ?? '0.00'}";
+          "💸 ${notif.kidName} has withdrawn \$${notif.amount?.toStringAsFixed(2) ?? '0.00'}";
     } else {
       displayMessage = notif.message;
     }
 
-    // Show popup
     showSimpleNotification(
       GestureDetector(
         onTap: () {
@@ -254,19 +237,15 @@ class _ParentNotificationListenerState
           children: [
             Text(
               notif.title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.white),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
-            Text(
-              displayMessage,
-              style: const TextStyle(color: Colors.white70),
-            ),
+            Text(displayMessage, style: const TextStyle(color: Colors.white70)),
           ],
         ),
       ),
       background: bgColor,
-      duration: const Duration(seconds: 3),
-      slideDismissDirection: DismissDirection.up,
+      duration: const Duration(seconds: 7),
+      slideDismissDirection: DismissDirection.horizontal,
     );
   }
 
