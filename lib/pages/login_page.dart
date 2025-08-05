@@ -375,19 +375,18 @@ class _LoginPageState extends State<LoginPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.black, width: 3),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black, width: 3), // Border here
+        color: const Color(0xFFAEDDFF), // Background color
       ),
       child: TextField(
         controller: controller,
         obscureText: isPassword,
         decoration: InputDecoration(
           filled: true,
-          fillColor: const Color(0xFFAEDDFF),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide.none,
-          ),
+          fillColor: Colors.transparent, // Important!
+          border: InputBorder.none, // Remove default border
+          contentPadding: const EdgeInsets.all(16),
         ),
       ),
     );
@@ -395,10 +394,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildLoginButton() {
     return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black, width: 3),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
       child: ElevatedButton(
         onPressed: _isLoadingIndicatorActive ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
@@ -406,6 +402,10 @@ class _LoginPageState extends State<LoginPage> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(
+              color: Colors.black, // Black border
+              width: 3, // 3px width to match other elements
+            ),
           ),
           elevation: 0,
         ),

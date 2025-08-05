@@ -497,20 +497,45 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black, width: 3),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            validator: _validateEmail, // Updated function
+                            validator: _validateEmail,
                             decoration: InputDecoration(
-                              filled: true,
                               fillColor: const Color(0xFFAEDDFF),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
                               ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.red,
+                                  width: 3,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.all(16),
+                              filled: true,
+                              hintText: 'example@email.com',
                             ),
                           ),
                         ),
@@ -526,7 +551,6 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black, width: 3),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: TextFormField(
@@ -534,12 +558,37 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                             obscureText: _obscurePassword,
                             validator: _validatePassword,
                             decoration: InputDecoration(
-                              filled: true,
                               fillColor: const Color(0xFFAEDDFF),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
                               ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.red,
+                                  width: 3,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.all(16),
+                              filled: true,
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -567,7 +616,6 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black, width: 3),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: TextFormField(
@@ -576,12 +624,39 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                 ? 'Please enter a family name'
                                 : null,
                             decoration: InputDecoration(
-                              filled: true,
-                              fillColor: const Color(0xFFAEDDFF),
+                              fillColor: Color(0xFFAEDDFF),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
+                                borderSide: const BorderSide(
+                                  color: Colors.black, // Set border color here
+                                  width: 3,
+                                ),
                               ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.red, // Error state border
+                                  width: 3,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.all(
+                                16,
+                              ), // Add padding for better text alignment
+                              filled: true,
                             ),
                           ),
                         ),
@@ -614,7 +689,6 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black, width: 3),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: TextFormField(
@@ -623,15 +697,43 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                 ? 'Please enter the name on card'
                                 : null,
                             decoration: InputDecoration(
-                              filled: true,
-                              fillColor: const Color(0xFFAEDDFF),
+                              fillColor: Color(0xFFAEDDFF),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
+                                borderSide: const BorderSide(
+                                  color: Colors.black, // Set border color here
+                                  width: 3,
+                                ),
                               ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.red, // Error state border
+                                  width: 3,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.all(
+                                16,
+                              ), // Add padding for better text alignment
+                              filled: true,
                             ),
                           ),
                         ),
+
                         const SizedBox(height: 16),
                         // Card Number
                         Text(
@@ -644,13 +746,17 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black, width: 3),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(
+                              20,
+                            ), // Background color moved here
                           ),
                           child: TextFormField(
                             controller: _cardNumberController,
                             keyboardType: TextInputType.number,
                             maxLength: 14,
+                            validator: (value) => value!.isEmpty
+                                ? 'Please enter card number'
+                                : null,
                             onChanged: (value) {
                               final cleaned = value.replaceAll(
                                 RegExp(r'[^0-9]'),
@@ -665,12 +771,39 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                               }
                             },
                             decoration: InputDecoration(
-                              filled: true,
-                              fillColor: const Color(0xFFAEDDFF),
+                              fillColor: Color(0xFFAEDDFF),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
                               ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 3,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: const BorderSide(
+                                  color: Colors.red,
+                                  width: 3,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.all(16),
+                              filled:
+                                  true, // Keep filled true but color comes from Container
+                              // Hide default counter
                             ),
                           ),
                         ),
@@ -683,7 +816,7 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Exp',
+                                    'Expiry Date',
                                     style: GoogleFonts.fredoka(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -692,10 +825,6 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                   const SizedBox(height: 8),
                                   Container(
                                     decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: 3,
-                                      ),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: TextFormField(
@@ -708,14 +837,47 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                         _expInputFormatter(),
                                       ],
                                       decoration: InputDecoration(
-                                        filled: true,
                                         fillColor: const Color(0xFFAEDDFF),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(
                                             20,
                                           ),
-                                          borderSide: BorderSide.none,
+                                          borderSide: const BorderSide(
+                                            color: Colors.black,
+                                            width: 3,
+                                          ),
                                         ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black,
+                                            width: 3,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black,
+                                            width: 3,
+                                          ),
+                                        ),
+                                        errorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.red,
+                                            width: 3,
+                                          ),
+                                        ),
+                                        contentPadding: const EdgeInsets.all(
+                                          16,
+                                        ),
+                                        filled: true,
                                         hintText: 'MM/YY',
                                         counterText:
                                             '', // Hide character counter
@@ -740,32 +902,63 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                   const SizedBox(height: 8),
                                   Container(
                                     decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: 3,
-                                      ),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: TextFormField(
                                       controller: _ccvController,
-                                      obscureText: _obscureCcv,
+                                      obscureText:
+                                          true, // Always obscure CCV (changed from _obscureCcv)
                                       keyboardType: TextInputType.number,
                                       validator: _validateCcv,
-                                      maxLength: 4, // 3 or 4 digits
+                                      maxLength: 4,
                                       inputFormatters: [
                                         FilteringTextInputFormatter.digitsOnly,
                                       ],
                                       decoration: InputDecoration(
-                                        filled: true,
                                         fillColor: const Color(0xFFAEDDFF),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(
                                             20,
                                           ),
-                                          borderSide: BorderSide.none,
+                                          borderSide: const BorderSide(
+                                            color: Colors.black,
+                                            width: 3,
+                                          ),
                                         ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black,
+                                            width: 3,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.black,
+                                            width: 3,
+                                          ),
+                                        ),
+                                        errorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.red,
+                                            width: 3,
+                                          ),
+                                        ),
+                                        contentPadding: const EdgeInsets.all(
+                                          16,
+                                        ),
+                                        filled: true,
                                         counterText:
                                             '', // Hide character counter
+                                        hintText: '••••', // Shows dots as hint
                                       ),
                                     ),
                                   ),
@@ -779,7 +972,6 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                           width: double.infinity,
                           child: Container(
                             decoration: BoxDecoration(
-                              border: Border.all(color: Colors.black, width: 3),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: ElevatedButton(
@@ -803,6 +995,11 @@ class _RegisterAccountPageState extends State<RegisterAccountPage> {
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20),
+                                  side: const BorderSide(
+                                    color: Colors.black, // Black border
+                                    width:
+                                        3, // 3px width to match other elements
+                                  ),
                                 ),
                                 elevation: 0,
                               ),
