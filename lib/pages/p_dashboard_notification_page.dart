@@ -176,10 +176,15 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                         // Add kids_notification with type reward
                         await _firestore.collection('kids_notifications').add({
                           'kid_id': notif.kidId,
-                          'notification_title': notif.choreTitle ?? '',
-                          'notification_message': msg,
-                          'amount': rewardAmount,
-                          'timestamp': FieldValue.serverTimestamp(),
+                          'family_id': widget.family_id,
+                          'notification_title': notif.choreTitle?.isNotEmpty == true 
+                              ? notif.choreTitle 
+                              : 'Chore Rewarded',
+                          'notification_message': msg.isNotEmpty 
+                              ? msg 
+                              : 'You have received a reward!',
+                          'amount': rewardAmount > 0 ? rewardAmount : 0,
+                          'created_at': FieldValue.serverTimestamp(), // still okay
                           'type': 'reward',
                           'status': 'done',
                         });
@@ -227,7 +232,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
 
   /// Unified stream with Chores + Withdrawals
   Stream<List<UnifiedNotification>> getNotificationsStream() async* {
-    debugPrint("🔍 Fetching kids for family_id: ${widget.family_id}");
+    debugPrint("Fetching kids for family_id: ${widget.family_id}");
 
     final kidsSnapshot = await _firestore
         .collection('kids')
@@ -235,7 +240,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
         .get();
 
     if (kidsSnapshot.docs.isEmpty) {
-      debugPrint("⚠️ No kids found for family_id: ${widget.family_id}");
+      debugPrint("No kids found for family_id: ${widget.family_id}");
       yield [];
       return;
     }
@@ -257,10 +262,10 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
             : 'assets/avatar1.png'
     };
 
-    debugPrint("✅ Kids found: $kidIds");
+    debugPrint("Kids found: $kidIds");
     for (var id in kidIds) {
       debugPrint(
-          "👤 Kid: $id | Name: ${kidNames[id]} | Avatar: ${kidAvatars[id]}");
+          "Kid: $id | Name: ${kidNames[id]} | Avatar: ${kidAvatars[id]}");
     }
 
     //Chores Stream
@@ -269,12 +274,12 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
         .where('status', whereIn: ['completed', 'rewarded'])
         .snapshots()
         .map((snapshot) {
-      debugPrint("📥 Chores snapshot received: ${snapshot.docs.length} docs");
+      debugPrint("Chores snapshot received: ${snapshot.docs.length} docs");
       return snapshot.docs
           .where((doc) => kidIds.contains(doc['kid_id']))
           .map((doc) {
         final data = doc.data();
-        debugPrint("📄 Chore doc: ${doc.id} => $data");
+        debugPrint("Chore doc: ${doc.id} => $data");
 
         final kidId = data['kid_id'] ?? '';
         return UnifiedNotification(
@@ -309,12 +314,12 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
         .snapshots()
         .map((snapshot) {
       debugPrint(
-          "📥 Kids_notifications snapshot received: ${snapshot.docs.length} docs");
+          "Kids_notifications snapshot received: ${snapshot.docs.length} docs");
       return snapshot.docs
           .where((doc) => kidIds.contains(doc['kid_id']))
           .map((doc) {
         final data = doc.data();
-        debugPrint("📄 Notification doc: ${doc.id} => $data");
+        debugPrint("Notification doc: ${doc.id} => $data");
 
         final kidId = data['kid_id'] ?? '';
         return UnifiedNotification(
@@ -339,7 +344,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
           List<UnifiedNotification> withdrawals) {
         final all = [...chores, ...withdrawals]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        debugPrint("✅ Combined notifications: ${all.length} total");
+        debugPrint("Combined notifications: ${all.length} total");
         return all;
       },
     );
@@ -389,9 +394,9 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
           child: StreamBuilder<List<UnifiedNotification>>(
             stream: getNotificationsStream(),
             builder: (context, snapshot) {
-              debugPrint("🔄 StreamBuilder state: ${snapshot.connectionState}");
+              debugPrint("StreamBuilder state: ${snapshot.connectionState}");
               if (snapshot.hasError) {
-                debugPrint("❌ Stream error: ${snapshot.error}");
+                debugPrint("Stream error: ${snapshot.error}");
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -441,7 +446,7 @@ class _ParentNotificationsPageState extends State<ParentNotificationsPage> {
                               onTap: isRewarded 
                               ? null 
                               : () =>showRewardChoreModal(context, n, () {
-                                      debugPrint("🔔 UI refresh after reward");
+                                      debugPrint("UI refresh after reward");
                                     }),
                               child: Text(
                                 "\"${n.choreTitle}\" | Click to confirm & reward",

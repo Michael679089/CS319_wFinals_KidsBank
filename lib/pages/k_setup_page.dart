@@ -62,6 +62,9 @@ class _KidsSetupPageState extends State<KidsSetupPage> {
     'assets/avatar4.png',
     'assets/avatar5.png',
     'assets/avatar6.png',
+    'assets/avatar7.png',
+    'assets/avatar8.png',
+    'assets/avatar9.png',
   ];
 
   final formKey = GlobalKey<FormState>();

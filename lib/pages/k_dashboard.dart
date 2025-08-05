@@ -5,6 +5,7 @@ import 'package:wfinals_kidsbank/database/api/firestore_service.dart';
 import 'package:wfinals_kidsbank/database/models/notifications_model.dart';
 import 'package:wfinals_kidsbank/utilities/utilities.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 class KidsDashboard extends StatefulWidget {
   final String kidId;
@@ -143,10 +144,13 @@ Future<void> fetchKidInfo() async {
 void _showWithdrawModal(QueryDocumentSnapshot paymentDoc) {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController amountController = TextEditingController(text: "1.00");
+
   double withdrawAmount = 1.0;
 
   showDialog(
     context: context,
+    barrierDismissible: false,
     builder: (context) {
       return Center(
         child: Material(
@@ -167,15 +171,13 @@ void _showWithdrawModal(QueryDocumentSnapshot paymentDoc) {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Text(
-                    "No payment info found.",
-                    style: GoogleFonts.fredoka(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                    textAlign: TextAlign.center,
-                  );
+                  return Text("No payment info found.",
+                      style: GoogleFonts.fredoka(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                      textAlign: TextAlign.center);
                 }
 
                 final liveDoc = snapshot.data!.docs.first;
@@ -184,253 +186,264 @@ void _showWithdrawModal(QueryDocumentSnapshot paymentDoc) {
 
                 return StatefulBuilder(
                   builder: (context, setModalState) {
-                    if (liveBalance <= 0) {
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "Withdraw Money",
-                            style: GoogleFonts.fredoka(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            "You have no balance to withdraw.",
-                            style: GoogleFonts.fredoka(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                            ),
-                            child: const Text("Close"),
-                          )
-                        ],
-                      );
-                    }
+                    // Check if submit should be locked (only amount check)
+                    bool isSubmitLocked =
+                        withdrawAmount <= 0 || withdrawAmount > liveBalance;
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Withdraw Money',
-                          style: GoogleFonts.fredoka(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                        Text("Withdraw Money",
+                            style: GoogleFonts.fredoka(
+                                fontSize: 24, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center),
                         const SizedBox(height: 16),
 
+                        // Title
                         TextField(
                           controller: titleController,
                           decoration: InputDecoration(
-                            hintText: "Reason for withdrawal",
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(15),
-                              borderSide:
-                                  const BorderSide(color: Colors.black),
-                            ),
-                          ),
+                              hintText: "Reason for withdrawal",
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide:
+                                      const BorderSide(color: Colors.black))),
                         ),
                         const SizedBox(height: 10),
 
+                        // Description
                         TextField(
                           controller: descriptionController,
                           maxLines: 2,
                           decoration: InputDecoration(
-                            hintText: "Description",
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(15),
-                              borderSide:
-                                  const BorderSide(color: Colors.black),
-                            ),
-                          ),
+                              hintText: "Description",
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide:
+                                      const BorderSide(color: Colors.black))),
                         ),
                         const SizedBox(height: 20),
 
+                        // Amount controls
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             IconButton(
                               onPressed: () {
                                 if (withdrawAmount > 1) {
-                                  setModalState(
-                                      () => withdrawAmount -= 1);
+                                  setModalState(() {
+                                    withdrawAmount -= 1;
+                                    amountController.text =
+                                        withdrawAmount.toStringAsFixed(2);
+                                  });
                                 }
                               },
                               icon: const Icon(Icons.remove, size: 20),
                               style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xFFFFCA26),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: const BorderSide(
-                                    color: Colors.black,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
+                                  backgroundColor: const Color(0xFFFFCA26),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: const BorderSide(
+                                          color: Colors.black, width: 2))),
                             ),
                             const SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 30,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.black),
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: Text(
-                                "\$${withdrawAmount.toStringAsFixed(2)}",
+                            SizedBox(
+                              width: 100,
+                              child: TextField(
+                                controller: amountController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                textAlign: TextAlign.center,
+                                decoration: InputDecoration(
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: const BorderSide(
+                                            color: Colors.black)),
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(vertical: 8)),
                                 style: GoogleFonts.fredoka(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold),
+                                onChanged: (value) {
+                                  double? parsed = double.tryParse(value);
+                                  setModalState(() {
+                                    if (parsed != null) {
+                                      withdrawAmount = parsed;
+                                    } else {
+                                      withdrawAmount = 0;
+                                    }
+                                    //Update submit lock dynamically on input
+                                    isSubmitLocked = withdrawAmount <= 0 || withdrawAmount > liveBalance;
+                                  });
+                                },
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d*\.?\d{0,2}$'))
+                                ],
                               ),
                             ),
                             const SizedBox(width: 10),
                             IconButton(
                               onPressed: withdrawAmount < liveBalance
-                                  ? () => setModalState(
-                                      () => withdrawAmount += 1)
+                                  ? () {
+                                      setModalState(() {
+                                        withdrawAmount += 1;
+                                        if (withdrawAmount > liveBalance) {
+                                          withdrawAmount = liveBalance;
+                                        }
+                                        amountController.text =
+                                            withdrawAmount.toStringAsFixed(2);
+                                      });
+                                    }
                                   : null,
                               icon: const Icon(Icons.add, size: 20),
                               style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xFFFFCA26),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: const BorderSide(
-                                    color: Colors.black,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
+                                  backgroundColor: const Color(0xFFFFCA26),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: const BorderSide(
+                                          color: Colors.black, width: 2))),
                             ),
                           ],
                         ),
                         const SizedBox(height: 20),
 
+                        // Actions
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
-                              child: Text(
-                                'Cancel',
-                                style: GoogleFonts.fredoka(
-                                  fontSize: 18,
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: Text("Cancel",
+                                  style: GoogleFonts.fredoka(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red)),
                             ),
                             ElevatedButton(
-                              onPressed: (withdrawAmount <= 0 ||
-                                      withdrawAmount > liveBalance)
-                                  ? null
-                                  : () async {
-                                      final title =
-                                          titleController.text.trim();
-                                      final desc =
-                                          descriptionController.text.trim();
+                            onPressed: isSubmitLocked
+                                ? null
+                                : () async {
+                                    final title = titleController.text.trim();
+                                    final desc = descriptionController.text.trim();
 
-                                      if (title.isEmpty || desc.isEmpty) {
-                                        UtilityTopSnackBar.show(
-                                          context: context,
-                                          message:
-                                              "Please fill all fields.",
-                                          isError: true,
-                                        );
-                                        return;
-                                      }
+                                    //Text fields check (snack only, no lock)
+                                    if (title.isEmpty || desc.isEmpty) {
+                                      UtilityTopSnackBar.show(
+                                        context: context,
+                                        message: "Please fill all the fields.",
+                                        isError: true,
+                                      );
+                                      return;
+                                    }
 
-                                      try {
-                                        await FirebaseFirestore.instance
-                                            .runTransaction(
-                                                (transaction) async {
-                                          final freshSnap =
-                                              await transaction.get(
-                                                  liveDoc.reference);
-                                          final currentBal =
-                                              (freshSnap['total_amount_left'] ?? 
-                                                      0)
-                                                  .toDouble();
-                                          if (withdrawAmount > currentBal) {
-                                            throw Exception("Insufficient funds.");
-                                          }
-                                          transaction.update(
-                                              liveDoc.reference, {
-                                            'total_amount_left':
-                                                FieldValue.increment(
-                                                    -withdrawAmount),
-                                            'totalWithdrawn':
-                                                FieldValue.increment(
-                                                    withdrawAmount),
-                                          });
+                                    try {
+                                      await FirebaseFirestore.instance.runTransaction((transaction) async {
+                                        final freshSnap = await transaction.get(liveDoc.reference);
+                                        final currentBal =
+                                            (freshSnap['total_amount_left'] ?? 0).toDouble();
+                                        if (withdrawAmount > currentBal) {
+                                          throw Exception("Insufficient funds.");
+                                        }
+                                        transaction.update(liveDoc.reference, {
+                                          'total_amount_left': FieldValue.increment(-withdrawAmount),
+                                          'totalWithdrawn': FieldValue.increment(withdrawAmount),
                                         });
+                                      });
 
-                                        // Create kids notification after withdrawal
-                                        await FirebaseFirestore.instance.collection('kids_notifications').add({
-                                          'kid_id': widget.kidId,
-                                          'notification_title': title,
-                                          'notification_message': desc,
-                                          'amount': withdrawAmount,
-                                          'type': 'withdrawal',
-                                          'timestamp': FieldValue.serverTimestamp(),
+                                      await FirebaseFirestore.instance.collection('kids_notifications').add({
+                                        'kid_id': widget.kidId,
+                                        'notification_title': title,
+                                        'notification_message': desc,
+                                        'amount': withdrawAmount,
+                                        'type': 'withdrawal',
+                                        'timestamp': FieldValue.serverTimestamp(),
+                                      });
+
+                                      //Show snack immediately
+                                      UtilityTopSnackBar.show(
+                                        context: context,
+                                        message:
+                                            "Withdrawal of \$${withdrawAmount.toStringAsFixed(2)} submitted!",
+                                        isError: false,
+                                      );
+
+                                      //Store a safe context before closing the modal
+                                      final safeContext = context;
+
+                                      //Wait before closing modal (so snack is visible)
+                                      await Future.delayed(const Duration(seconds: 1));
+                                      Navigator.pop(context);
+
+                                      //Check latest balance
+                                      final latestSnap = await FirebaseFirestore.instance
+                                          .collection('kids_payment_info')
+                                          .doc(liveDoc.id)
+                                          .get();
+                                      final latestBalance =
+                                          (latestSnap['total_amount_left'] ?? 0).toDouble();
+
+                                     //Show prompt if balance is 0
+                                      if (latestBalance <= 0) {
+                                        Future.delayed(const Duration(seconds: 3), () {
+                                          showDialog(
+                                            context: safeContext, // Use saved context
+                                            barrierDismissible: false,
+                                            builder: (ctx) => AlertDialog(
+                                              title: Text(
+                                                "Balance Update",
+                                                style: GoogleFonts.fredoka(
+                                                    fontSize: 24, fontWeight: FontWeight.bold),
+                                              ),
+                                              content: Text(
+                                                "You now have no current balance after withdrawing all.",
+                                                style: GoogleFonts.fredoka(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.red),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(ctx).pop(),
+                                                  child: Text(
+                                                    "OK",
+                                                    style: GoogleFonts.fredoka(
+                                                        fontSize: 18, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
                                         });
-
-                                        Navigator.pop(context);
-                                        UtilityTopSnackBar.show(
-                                          context: context,
-                                          message:
-                                              "Withdrawal of \$${withdrawAmount.toStringAsFixed(2)} submitted!",
-                                          isError: false,
-                                        );
-                                      } catch (e) {
-                                        UtilityTopSnackBar.show(
-                                          context: context,
-                                          message:
-                                              "Failed to process withdrawal: $e",
-                                          isError: true,
-                                        );
                                       }
-                                    },
+                                    } catch (e) {
+                                      UtilityTopSnackBar.show(
+                                        context: context,
+                                        message: "Failed to process withdrawal: $e",
+                                        isError: true,
+                                      );
+                                    }
+                                  },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF60C56F),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 40,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                  side: const BorderSide(
-                                    color: Colors.black,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                "Submit",
-                                style: GoogleFonts.fredoka(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
+                                  backgroundColor: const Color(0xFF60C56F),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 40, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                      side: const BorderSide(
+                                          color: Colors.black, width: 2))),
+                              child: Text("Submit",
+                                  style: GoogleFonts.fredoka(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black)),
                             ),
                           ],
                         ),
@@ -446,7 +459,7 @@ void _showWithdrawModal(QueryDocumentSnapshot paymentDoc) {
     },
   );
 }
-
+  
 @override
 Widget build(BuildContext context) {
   var navigator = Navigator.of(context);

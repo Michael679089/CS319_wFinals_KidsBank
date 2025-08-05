@@ -30,14 +30,16 @@ class NotificationModel {
   ) {
     final data = snapshot.data()!;
     return NotificationModel(
-      id: snapshot.id, // Get the document ID here
+      id: snapshot.id,
       family_id: data['family_id'] as String,
       kid_id: data['kid_id'] as String,
       notification_title: data['notification_title'] as String,
       notification_message: data['notification_message'] as String,
       type: data['type'] as String,
       amount: (data['amount'] ?? 0).toDouble(),
-      created_at: data["created_at"],
+      created_at: data["created_at"] != null
+          ? (data["created_at"] as Timestamp).toDate()
+          : null,
     );
   }
 

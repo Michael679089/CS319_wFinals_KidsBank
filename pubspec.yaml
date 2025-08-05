@@ -40,6 +40,7 @@ dependencies:
   rxdart: ^0.27.7
   async: ^2.8.2
   uuid: ^3.0.4 
+  overlay_support: ^2.1.0
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -76,6 +77,10 @@ flutter:
   - assets/piggy_bank1.png
   - assets/owl2.png
   - assets/hamburger_icon.png
+  - assets/avatar7.png
+  - assets/avatar8.png
+  - assets/avatar9.png
+  - assets/sounds/ping.mp3
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

@@ -203,168 +203,200 @@ class _KidsChoresPageState extends State<KidsChoresPage> {
         ),
         backgroundColor: const Color(0xFFFFCA26),
         body: SafeArea(
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      Row(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                //Live avatar & name
+                StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('kids')
+                      .doc(widget.kid_id)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Builder(
-                            builder: (context) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Scaffold.of(context).openDrawer();
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(0),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'assets/hamburger_icon.png',
-                                      height: 50,
-                                      width: 50,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 30,
-                                backgroundColor: Colors.white,
-                                backgroundImage: AssetImage(avatarPath),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                "$kidName's Chores",
-                                style: GoogleFonts.fredoka(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          const CircleAvatar(radius: 30, backgroundColor: Colors.white),
+                          const SizedBox(width: 10),
+                          Text(
+                            "Loading...",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 20),
-                      Expanded(
-                        child: StreamBuilder<List<ChoreModel>>(
-                          stream: getChoresStream(widget.kid_id),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator());
-                            }
-                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return Center(
-                                child: Text(
-                                  "No chores assigned yet! \uD83C\uDF89",
-                                  style: GoogleFonts.fredoka(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
+                      );
+                    }
+
+                    final kidData = snapshot.data!.data() as Map<String, dynamic>;
+                    final kidName = kidData['firstName'] ?? 'Kid';
+                    final avatarPath =
+                        kidData['avatar_file_path'] ?? 'assets/avatar1.png';
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Builder(
+                          builder: (context) {
+                            return GestureDetector(
+                              onTap: () {
+                                Scaffold.of(context).openDrawer();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(0),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
                                     color: Colors.black,
+                                    width: 2,
                                   ),
                                 ),
-                              );
-                            }
-
-                            final chores = snapshot.data!;
-                            return ListView.builder(
-                              itemCount: chores.length,
-                              itemBuilder: (context, index) {
-                                final chore = chores[index];
-                                final isLocked =
-                                    chore.status == 'completed' ||
-                                    chore.status == 'rewarded';
-
-                                return GestureDetector(
-                                  onTap: () => handleChoreTap(
-                                    chore.id!, // Access the chore id correctly
-                                    chore.chore_title,
-                                    isLocked,
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    'assets/hamburger_icon.png',
+                                    height: 50,
+                                    width: 50,
+                                    fit: BoxFit.cover,
                                   ),
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: getTileColor(chore.status),
-                                      borderRadius: BorderRadius.circular(15),
-                                      border: Border.all(color: Colors.black, width: 2),
-                                    ),
-                                    child: ListTile(
-                                      leading: Icon(
-                                        Icons.task_alt,
-                                        color: getIconColor(chore.status),
-                                        size: 30,
-                                      ),
-                                      title: Text(
-                                        chore.chore_title,
-                                        style: GoogleFonts.fredoka(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      subtitle: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            chore.chore_description,
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            chore.status == 'pending'
-                                                ? "\uD83D\uDFE0 Pending"
-                                                : chore.status == 'completed'
-                                                    ? "\uD83D\uDFE2 Completed! Waiting for Parent"
-                                                    : "\uD83D\uDD35 Rewarded",
-                                            style: GoogleFonts.fredoka(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: getIconColor(chore.status),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      trailing: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: Colors.black, width: 2),
-                                        ),
-                                        child: Text(
-                                          "\$${chore.reward_money.toStringAsFixed(2)}",
-                                          style: GoogleFonts.fredoka(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
+                                ),
+                              ),
                             );
                           },
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.white,
+                              backgroundImage: AssetImage(avatarPath),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              "$kidName's Chores",
+                              style: GoogleFonts.fredoka(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                //Chores list
+                Expanded(
+                  child: StreamBuilder<List<ChoreModel>>(
+                    stream: getChoresStream(widget.kid_id),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Text(
+                            "No chores assigned yet! 🎉",
+                            style: GoogleFonts.fredoka(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        );
+                      }
+
+                      final chores = snapshot.data!;
+                      return ListView.builder(
+                        itemCount: chores.length,
+                        itemBuilder: (context, index) {
+                          final chore = chores[index];
+                          final isLocked = chore.status == 'completed' ||
+                              chore.status == 'rewarded';
+
+                          return GestureDetector(
+                            onTap: () => handleChoreTap(
+                              chore.id!,
+                              chore.chore_title,
+                              isLocked,
+                            ),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: getTileColor(chore.status),
+                                borderRadius: BorderRadius.circular(15),
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
+                              ),
+                              child: ListTile(
+                                leading: Icon(
+                                  Icons.task_alt,
+                                  color: getIconColor(chore.status),
+                                  size: 30,
+                                ),
+                                title: Text(
+                                  chore.chore_title,
+                                  style: GoogleFonts.fredoka(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      chore.chore_description,
+                                      style: GoogleFonts.inter(fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      chore.status == 'pending'
+                                          ? "🟠 Pending"
+                                          : chore.status == 'completed'
+                                              ? "🟢 Completed! Waiting for Parent"
+                                              : "🔵 Rewarded",
+                                      style: GoogleFonts.fredoka(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: getIconColor(chore.status),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                        color: Colors.black, width: 2),
+                                  ),
+                                  child: Text(
+                                    "\$${chore.reward_money.toStringAsFixed(2)}",
+                                    style: GoogleFonts.fredoka(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
+              ],
+            ),
+          ),
         ),
       ),
     );

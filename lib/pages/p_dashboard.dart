@@ -199,7 +199,7 @@ void _handleAddChoreSubmission(
       'notification_title': 'Pending Chore Reward',
       'notification_message':
           'Chore "$title" was set with a reward of \$${rewardMoney.toStringAsFixed(2)}.',
-      'timestamp': Timestamp.now(),
+      'created_at': Timestamp.now(),
     });
 
     UtilityTopSnackBar.show(

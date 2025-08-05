@@ -18,6 +18,9 @@ import 'package:wfinals_kidsbank/pages/account_selector_page.dart';
 import 'package:wfinals_kidsbank/pages/verify_email_page.dart';
 import 'pages/welcomepage.dart';
 import 'firebase_options.dart';
+import 'package:overlay_support/overlay_support.dart';
+import 'package:wfinals_kidsbank/pages/kids_notification_listener.dart';
+import 'package:wfinals_kidsbank/pages/parent_notification_listener.dart';
 
 const bool isUnauthenticatedDebug = bool.fromEnvironment('DEBUG_UNAUTHENTICATED', defaultValue: false);
 
@@ -51,7 +54,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return OverlaySupport.global(
+    child: MaterialApp(
       debugShowCheckedModeBanner: false,
       initialRoute: '/welcome-page',
       routes: {'/welcome-page': (context) => const WelcomePage(), '/login-page': (context) => const LoginPage()},
@@ -93,19 +97,39 @@ class MyApp extends StatelessWidget {
               break;
             case '/kids-dashboard-page':
               validateArgs('/kids-dashboard-page', ['kid-id', 'family-user-id', 'there-are-parent-in-family']);
-              page = KidsDashboard(
+              page = KidsNotificationListener(
                 kidId: args['kid-id'],
                 familyUserId: args['family-user-id'],
-                there_are_parent_in_family: args['there-are-parent-in-family'] ?? false,
+                child: KidsDashboard(
+                  kidId: args['kid-id'],
+                  familyUserId: args['family-user-id'],
+                  there_are_parent_in_family: args['there-are-parent-in-family'] ?? false,
+                ),
               );
               break;
+
             case '/kids-notifications-page':
               validateArgs('/kids-notifications-page', ['kid-id', 'family-user-id']);
-              page = KidsNotificationsPage(kidId: args['kid-id'], familyUserId: args['family-user-id']);
+              page = KidsNotificationListener(
+                kidId: args['kid-id'],
+                familyUserId: args['family-user-id'],
+                child: KidsNotificationsPage(
+                  kidId: args['kid-id'],
+                  familyUserId: args['family-user-id'],
+                ),
+              );
               break;
+
             case '/kids-chores-page':
               validateArgs('/kids-chores-page', ['kid-id', 'family-user-id']);
-              page = KidsChoresPage(kid_id: args['kid-id'], familyUserId: args['family-user-id']);
+              page = KidsNotificationListener(
+                kidId: args['kid-id'],
+                familyUserId: args['family-user-id'],
+                child: KidsChoresPage(
+                  kid_id: args['kid-id'],
+                  familyUserId: args['family-user-id'],
+                ),
+              );
               break;
             case '/create-kids-account-page':
               validateArgs('/create-kids-account-page', ['parent-id', 'user-id', "came-from-parent-dashboard"]);
@@ -123,15 +147,43 @@ class MyApp extends StatelessWidget {
               break;
             case '/parent-dashboard-page':
               validateArgs('/parent-dashboard-page', ['user-id', 'parent-id', 'family_id']);
-              page = ParentDashboard(user_id: args['user-id'], parent_id: args['parent-id'], kidsData: args['kids-data'] as List<Map<String, dynamic>>? ?? [], family_id: args['family_id'],);
+              page = ParentNotificationListener(
+                familyId: args['family_id'],
+                parentId: args['parent-id'],
+                userId: args['user-id'],
+                child: ParentDashboard(
+                  user_id: args['user-id'],
+                  parent_id: args['parent-id'],
+                  kidsData: args['kids-data'] as List<Map<String, dynamic>>? ?? [],
+                  family_id: args['family_id'],
+                ),
+              );
               break;
             case '/parent-notifications-page':
               validateArgs('/parent-notifications-page', ['family_id', 'user-id', 'parent-id']);
-              page = ParentNotificationsPage(user_id: args['user-id'] as String, parent_id: args['parent-id'] as String, family_id: args['family_id'],);
+              page = ParentNotificationListener(
+                familyId: args['family_id'],
+                parentId: args['parent-id'],
+                userId: args['user-id'],
+                child: ParentNotificationsPage(
+                  user_id: args['user-id'] as String,
+                  parent_id: args['parent-id'] as String,
+                  family_id: args['family_id'],
+                ),
+              );
               break;
             case '/parent-chores-page':
               validateArgs('/parent-chores-page', ['family-user-id', 'parent-id', 'family_id']);
-              page = ParentChoresPage(user_id: args['family-user-id'], parentId: args['parent-id'], family_id: args['family_id']);
+              page = ParentNotificationListener(
+                familyId: args['family_id'],
+                parentId: args['parent-id'],
+                userId: args['family-user-id'],
+                child: ParentChoresPage(
+                  user_id: args['family-user-id'],
+                  parentId: args['parent-id'],
+                  family_id: args['family_id'],
+                ),
+              );
               break;
             default:
               page = Scaffold(
@@ -155,6 +207,7 @@ class MyApp extends StatelessWidget {
           body: Center(child: Text('No route defined for ${settings.name}')),
         ),
       ),
-    );
+    ),
+  );
   }
 }
