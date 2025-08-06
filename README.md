@@ -7,13 +7,20 @@ OUR MAIN REPO: https://github.com/Michael679089/CS319_Flutter-Application-Develo
 
 ----
 
-# CS222 Week 13 Finals Submission <br>
+# CS222 Week 13 Finals Submission 
+
 Submitted by:
+
 RJ Castellano
+
 Michael Jacob De los Santos 
+
 Paolo Enrico San Gabriel
+
 Andrei Nathaniel Malang
+
 Maria Franchesca Solomon
+
 	
 
 LIVE DEMO: https://drive.google.com/file/d/1Du-iJaA1pHbI6uD8OxXJKx-ioClp7mfh/view?usp=sharing
