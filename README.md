@@ -7,32 +7,17 @@ OUR MAIN REPO: https://github.com/Michael679089/CS319_Flutter-Application-Develo
 
 ----
 
-# Things Fixed so far:
+# CS222 Week 13 Finals Submission
+Submitted by:
+RJ Castellano
+Michael Jacob De los Santos 
+Paolo Enrico San Gabriel
+Andrei Nathaniel Malang
+Maria Franchesca Solomon
+	
 
-1. Currently I fixed the parent-dashboard-page
-2. Fixed the parent-chores-page
-3. Fixed the parent-notification-page
-4. Fixed the parent-setup-page
-5. Made the account-selector-page for each family. 
-
-
-
-Notifications, they are confusing.
-
-
-
-What if: 
-
-1. Notification if Child Withdraws money from the account.
-    - Notifies Parent of the Child that withdrawed.
-2. Notification if Parent Deposits to Child's Account.
-    - Notifies targeted child.
-3. Notification if Parent Withdraws from Child's Account.
-    - Notifies targeted child.
-
-
-4. If Parent and Child are at the notification page, chores page. There should be a ping noise if there's new notifications added. 
-
-
+LIVE DEMO: https://drive.google.com/file/d/1Du-iJaA1pHbI6uD8OxXJKx-ioClp7mfh/view?usp=sharing
+USER MANUAL: https://docs.google.com/document/d/1Z4q8etggtnRfHYQtnEncAWdAsGY-vUIo5ReFQHHS6o8/edit?tab=t.0#heading=h.pnbh06rvqpe
+ 
 
 
