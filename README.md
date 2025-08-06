@@ -7,7 +7,7 @@ OUR MAIN REPO: https://github.com/Michael679089/CS319_Flutter-Application-Develo
 
 ----
 
-# CS222 Week 13 Finals Submission
+# CS222 Week 13 Finals Submission <br>
 Submitted by:
 RJ Castellano
 Michael Jacob De los Santos 
